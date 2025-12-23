@@ -1,0 +1,125 @@
+# graylib.toml - gi-docgen configuration for Graylib
+#
+# Copyright 2025 Graylib Authors
+# SPDX-License-Identifier: Zlib
+#
+# Configuration file for generating API documentation using gi-docgen.
+#
+# Generate documentation with:
+#   gi-docgen generate --config docs/graylib.toml build/gir/Graylib-1.gir
+
+[library]
+version = "0.1.0"
+browse_url = "https://gitlab.com/your-username/graylib"
+repository_url = "https://gitlab.com/your-username/graylib.git"
+authors = "Graylib Authors"
+license = "Zlib"
+description = "GObject wrapper around raylib for game development"
+
+  [library.devhelp]
+  name = "Graylib"
+
+[theme]
+name = "basic"
+show_index_summary = true
+show_class_hierarchy = true
+
+[source-location]
+base_url = "https://gitlab.com/your-username/graylib/-/blob/master/"
+
+[dependencies]
+
+  [dependencies."GLib-2.0"]
+  name = "GLib"
+  description = "The base utility library"
+  docs_url = "https://docs.gtk.org/glib/"
+
+  [dependencies."GObject-2.0"]
+  name = "GObject"
+  description = "The base type system library"
+  docs_url = "https://docs.gtk.org/gobject/"
+
+  [dependencies."Gio-2.0"]
+  name = "GIO"
+  description = "GLib Input/Output library"
+  docs_url = "https://docs.gtk.org/gio/"
+
+[extra]
+
+  [[extra.docs]]
+  title = "Getting Started"
+  filename = "getting-started.md"
+
+  [[extra.docs]]
+  title = "Building"
+  filename = "guides/building.md"
+
+  [[extra.docs]]
+  title = "Math Types"
+  filename = "api/math-types.md"
+
+  [[extra.docs]]
+  title = "Core API"
+  filename = "api/core.md"
+
+  [[extra.docs]]
+  title = "Drawing API"
+  filename = "api/drawing.md"
+
+  [[extra.docs]]
+  title = "Graphics API"
+  filename = "api/graphics.md"
+
+  [[extra.docs]]
+  title = "Input API"
+  filename = "api/input.md"
+
+  [[extra.docs]]
+  title = "Audio API"
+  filename = "api/audio.md"
+
+  [[extra.docs]]
+  title = "Scene API"
+  filename = "api/scene.md"
+
+[object_hierarchy]
+
+  description = """
+  Graylib provides a GObject-based hierarchy for game development:
+
+  - **GrlApplication**: Application initialization and lifecycle
+  - **GrlWindow**: Window management and rendering context
+  - **GrlEntity**: Base class for game objects
+  - **GrlSprite**: 2D sprite rendering
+  - **GrlScene**: Scene management with entity collections
+  """
+
+[[object."Graylib.Application"]]
+  hidden = false
+  title = "Application"
+  description = "Application initialization and lifecycle management"
+
+[[object."Graylib.Window"]]
+  hidden = false
+  title = "Window"
+  description = "Window management, rendering context, and input handling"
+
+[[object."Graylib.Entity"]]
+  hidden = false
+  title = "Entity"
+  description = "Base class for game objects with position, rotation, and scale"
+
+[[object."Graylib.Sprite"]]
+  hidden = false
+  title = "Sprite"
+  description = "2D sprite entity with texture rendering"
+
+[[object."Graylib.Scene"]]
+  hidden = false
+  title = "Scene"
+  description = "Scene container for managing entities"
+
+[[object."Graylib.SceneManager"]]
+  hidden = false
+  title = "Scene Manager"
+  description = "Manages multiple scenes and scene transitions"

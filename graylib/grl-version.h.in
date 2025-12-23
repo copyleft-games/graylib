@@ -1,0 +1,134 @@
+/* grl-version.h.in
+ *
+ * Copyright 2025 Zach Podbielniak
+ *
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ *
+ * Version information macros for Graylib.
+ * This file is processed by sed to generate grl-version.h
+ */
+
+#pragma once
+
+#if !defined(GRAYLIB_INSIDE) && !defined(GRAYLIB_COMPILATION)
+#error "Only <graylib.h> can be included directly."
+#endif
+
+/**
+ * SECTION:grl-version
+ * @Title: Version Information
+ * @Short_description: Graylib version checking
+ *
+ * Graylib provides version information that can be used at compile-time
+ * to conditionally include code based on the library version.
+ */
+
+/**
+ * GRL_MAJOR_VERSION:
+ *
+ * The major version number of the Graylib library.
+ * Like grl_major_version, but from the headers used at compile-time,
+ * rather than from the library linked against at run-time.
+ */
+#define GRL_MAJOR_VERSION (@VERSION_MAJOR@)
+
+/**
+ * GRL_MINOR_VERSION:
+ *
+ * The minor version number of the Graylib library.
+ * Like grl_minor_version, but from the headers used at compile-time,
+ * rather than from the library linked against at run-time.
+ */
+#define GRL_MINOR_VERSION (@VERSION_MINOR@)
+
+/**
+ * GRL_MICRO_VERSION:
+ *
+ * The micro version number of the Graylib library.
+ * Like grl_micro_version, but from the headers used at compile-time,
+ * rather than from the library linked against at run-time.
+ */
+#define GRL_MICRO_VERSION (@VERSION_MICRO@)
+
+/**
+ * GRL_VERSION:
+ *
+ * The full version string of the Graylib library.
+ */
+#define GRL_VERSION "@VERSION@"
+
+/**
+ * GRL_API_VERSION:
+ *
+ * The API version of the Graylib library.
+ * Used for parallel installability.
+ */
+#define GRL_API_VERSION "@API_VERSION@"
+
+/**
+ * GRL_CHECK_VERSION:
+ * @major: The major version to check for
+ * @minor: The minor version to check for
+ * @micro: The micro version to check for
+ *
+ * Checks whether the Graylib library version is at least the
+ * specified version.
+ *
+ * Returns: %TRUE if the library version is at least @major.@minor.@micro
+ */
+#define GRL_CHECK_VERSION(major, minor, micro) \
+    (GRL_MAJOR_VERSION > (major) || \
+     (GRL_MAJOR_VERSION == (major) && GRL_MINOR_VERSION > (minor)) || \
+     (GRL_MAJOR_VERSION == (major) && GRL_MINOR_VERSION == (minor) && GRL_MICRO_VERSION >= (micro)))
+
+/**
+ * GRL_ENCODE_VERSION:
+ * @major: The major version number
+ * @minor: The minor version number
+ * @micro: The micro version number
+ *
+ * Encodes a version number into a single integer for comparison.
+ *
+ * Returns: An encoded version number
+ */
+#define GRL_ENCODE_VERSION(major, minor, micro) \
+    ((major) * 10000 + (minor) * 100 + (micro))
+
+/**
+ * GRL_VERSION_CUR:
+ *
+ * The current version of Graylib, encoded as an integer.
+ */
+#define GRL_VERSION_CUR \
+    GRL_ENCODE_VERSION(GRL_MAJOR_VERSION, GRL_MINOR_VERSION, GRL_MICRO_VERSION)
+
+/*
+ * Symbol visibility macros for public API
+ */
+#if defined(_WIN32) || defined(__CYGWIN__)
+#  if defined(GRAYLIB_COMPILATION)
+#    define GRL_AVAILABLE_IN_ALL __declspec(dllexport)
+#  else
+#    define GRL_AVAILABLE_IN_ALL __declspec(dllimport)
+#  endif
+#else
+#  if defined(GRAYLIB_COMPILATION)
+#    define GRL_AVAILABLE_IN_ALL __attribute__((visibility("default")))
+#  else
+#    define GRL_AVAILABLE_IN_ALL
+#  endif
+#endif
+
+/*
+ * Deprecation macros
+ */
+#if defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 5))
+#  define GRL_DEPRECATED __attribute__((deprecated))
+#  define GRL_DEPRECATED_FOR(f) __attribute__((deprecated("Use " #f " instead")))
+#elif defined(_MSC_VER)
+#  define GRL_DEPRECATED __declspec(deprecated)
+#  define GRL_DEPRECATED_FOR(f) __declspec(deprecated("Use " #f " instead"))
+#else
+#  define GRL_DEPRECATED
+#  define GRL_DEPRECATED_FOR(f)
+#endif

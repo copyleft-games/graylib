@@ -1,0 +1,13 @@
+Graylib - A GObject wrapper for raylib
+
+Copyright (C) 2025 Zach Podbielniak
+
+This program is licensed under the GNU Affero General Public License v3.0
+or later. See the LICENSE file for the full license text.
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+
+---
+
+Note: The raylib library (in deps/raylib) is licensed under the Zlib license.
+See deps/raylib/LICENSE for details.

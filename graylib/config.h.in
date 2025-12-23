@@ -1,0 +1,33 @@
+/* config.h.in
+ *
+ * Copyright 2025 Zach Podbielniak
+ *
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ *
+ * Build configuration header (generated from config.h.in).
+ */
+
+#pragma once
+
+/* Define if compiling the library itself */
+#define GRAYLIB_COMPILATION 1
+
+/* Library version */
+#define GRAYLIB_VERSION "@VERSION@"
+#define GRAYLIB_VERSION_MAJOR @VERSION_MAJOR@
+#define GRAYLIB_VERSION_MINOR @VERSION_MINOR@
+#define GRAYLIB_VERSION_MICRO @VERSION_MICRO@
+
+/* Platform detection */
+#if defined(__linux__)
+#define GRAYLIB_PLATFORM_LINUX 1
+#elif defined(_WIN32)
+#define GRAYLIB_PLATFORM_WINDOWS 1
+#elif defined(__APPLE__)
+#define GRAYLIB_PLATFORM_MACOS 1
+#endif
+
+/* Debug mode */
+#ifdef GRL_DEBUG
+#define GRAYLIB_DEBUG 1
+#endif

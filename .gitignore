@@ -1,0 +1,48 @@
+# Build output
+build/
+
+# Generated files
+graylib/grl-version.h
+graylib/config.h
+
+# Example binaries
+examples/basic-window
+examples/shapes-demo
+examples/input-demo
+examples/textures-text
+examples/audio-demo
+examples/entity-demo
+examples/scene-demo
+examples/camera-demo
+examples/model-demo
+examples/collision-demo
+
+# Test binaries
+tests/test-*
+!tests/test-*.c
+
+# Object files
+*.o
+*.a
+*.so
+*.so.*
+
+# Editor/IDE
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+*.kate-swp
+.dir-locals.el
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Backup files
+*.bak
+*.orig
+
+# pkg-config generated
+*.pc
