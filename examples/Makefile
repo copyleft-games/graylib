@@ -38,7 +38,8 @@ EXAMPLE_SOURCES := \
 	doodlejump3d.c \
 	asteroids3d.c \
 	firstperson-demo.c \
-	roguelike3d.c
+	roguelike3d.c \
+	voxelcraft3d.c
 
 # Example executables (with output directory)
 EXAMPLE_PROGRAMS := $(addprefix $(EXAMPLEOUTDIR)/,$(patsubst %.c,%,$(EXAMPLE_SOURCES)))
@@ -122,6 +123,9 @@ $(EXAMPLEOUTDIR)/firstperson-demo: firstperson-demo.c | $(LIBOUTDIR)/$(LIB_SHARE
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
 $(EXAMPLEOUTDIR)/roguelike3d: roguelike3d.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
+	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
+
+$(EXAMPLEOUTDIR)/voxelcraft3d: voxelcraft3d.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
 # Run an example (usage: make run-basic-window)
