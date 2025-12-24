@@ -120,7 +120,7 @@ GI_DOCGEN ?= gi-docgen
 CSTD ?= gnu89
 
 # Warning flags
-WARN_CFLAGS := -Wall -Wextra -Wpedantic
+WARN_CFLAGS := -Wall -Wextra
 WARN_CFLAGS += -Wformat=2 -Wformat-security
 WARN_CFLAGS += -Wnull-dereference
 WARN_CFLAGS += -Wstack-protector

@@ -11,7 +11,8 @@
 # =============================================================================
 
 # GLib/GObject dependencies (required)
-GLIB_CFLAGS := $(shell $(PKG_CONFIG) --cflags glib-2.0 gobject-2.0 gio-2.0)
+# Use -isystem instead of -I to suppress warnings from system headers
+GLIB_CFLAGS := $(shell $(PKG_CONFIG) --cflags glib-2.0 gobject-2.0 gio-2.0 | sed 's/-I/-isystem /g')
 GLIB_LIBS := $(shell $(PKG_CONFIG) --libs glib-2.0 gobject-2.0 gio-2.0)
 GLIB_VERSION := $(shell $(PKG_CONFIG) --modversion glib-2.0)
 

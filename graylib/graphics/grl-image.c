@@ -9,6 +9,7 @@
 
 #include "config.h"
 #include "grl-image.h"
+#include "grl-graphics-private.h"
 #include <raylib.h>
 
 /**
@@ -678,7 +679,8 @@ grl_image_export_to_memory (GrlImage    *self,
                             gsize       *out_size)
 {
     unsigned char *data;
-    int size;
+    guint8        *result;
+    int            size;
 
     g_return_val_if_fail (GRL_IS_IMAGE (self), NULL);
     g_return_val_if_fail (file_type != NULL, NULL);
@@ -689,7 +691,7 @@ grl_image_export_to_memory (GrlImage    *self,
     {
         *out_size = (gsize)size;
         /* ExportImageToMemory uses RL_MALLOC, need to copy to g_malloc */
-        guint8 *result = g_memdup2 (data, size);
+        result = g_memdup2 (data, size);
         RL_FREE (data);
         return result;
     }

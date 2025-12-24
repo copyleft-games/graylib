@@ -3,6 +3,9 @@
 # Copyright 2025 Zach Podbielniak
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
+# Set default goal before including other files
+.DEFAULT_GOAL := all
+
 # Include configuration from parent
 include ../config.mk
 include ../rules.mk

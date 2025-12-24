@@ -1859,14 +1859,14 @@ grl_window_poll_input (GrlWindow *self)
 void
 grl_window_run (GrlWindow *self)
 {
-    GrlWindowClass *klass;
     gfloat delta_time;
-    gint prev_width, prev_height;
-    gint new_width, new_height;
+    gint   prev_width;
+    gint   prev_height;
+    gint   new_width;
+    gint   new_height;
 
     g_return_if_fail (GRL_IS_WINDOW (self));
 
-    klass = GRL_WINDOW_GET_CLASS (self);
     prev_width = GetScreenWidth ();
     prev_height = GetScreenHeight ();
 

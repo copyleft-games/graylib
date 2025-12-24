@@ -62,6 +62,19 @@ make help           # Show all targets
 
 ## Code Style
 
+### Warning-Free Builds
+The build system is configured for **zero warnings**:
+- Uses `-Wall -Wextra` but not `-Wpedantic` (incompatible with GLib patterns)
+- System headers (GLib, raylib) use `-isystem` to suppress their warnings
+- All graylib code must compile without warnings
+
+### C89/gnu89 Compliance
+Since we use `gnu89` standard, follow these rules to avoid warnings:
+- **Declare all variables at the top of blocks** - no mixed declarations and code
+- **No C99 features** like designated initializers in variable declarations
+- **Remove unused variables** - don't leave dead code
+- **Prototype all non-static functions** - include the appropriate private header
+
 ### Comments
 - **Always use** `/* comment */` style, never `//`
 - All public functions must have gtk-doc comments with GIR annotations

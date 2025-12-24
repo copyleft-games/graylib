@@ -565,10 +565,9 @@ GrlColor *
 grl_color_contrast (const GrlColor *self,
                     gfloat          contrast)
 {
-    gfloat factor;
-    gint   r;
-    gint   g;
-    gint   b;
+    gint r;
+    gint g;
+    gint b;
 
     g_return_val_if_fail (self != NULL, NULL);
 

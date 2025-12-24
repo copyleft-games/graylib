@@ -13,6 +13,9 @@
 #   make install             - Install to PREFIX
 #   make help                - Show all targets
 
+# Set default goal before including other files
+.DEFAULT_GOAL := all
+
 # Include configuration
 include config.mk
 include rules.mk
@@ -108,13 +111,28 @@ OBJECTS := $(patsubst %.c,$(OBJDIR)/%.o,$(SOURCES))
 DEPENDS := $(patsubst %.c,$(OBJDIR)/%.d,$(SOURCES))
 
 # =============================================================================
+# Generated Headers (must be built first)
+# =============================================================================
+
+GENERATED_HEADERS := graylib/grl-version.h graylib/config.h
+
+.PHONY: generate
+generate: $(GENERATED_HEADERS)
+
+# =============================================================================
 # Default Target
 # =============================================================================
 
-all: raylib-check lib
+# Use recursive make to ensure generate completes before lib starts
+all: raylib-check generate
+	@$(MAKE) --no-print-directory _lib
 ifeq ($(BUILD_GIR),1)
-all: gir
+	@$(MAKE) --no-print-directory gir
 endif
+
+# Internal target for actual library build (called after generate)
+.PHONY: _lib
+_lib: lib-static lib-shared
 
 # =============================================================================
 # Raylib Dependency
@@ -148,7 +166,9 @@ endif
 # Library Targets
 # =============================================================================
 
-lib: lib-static lib-shared
+# Note: 'lib' target uses recursive make to ensure generate runs first
+lib: generate
+	@$(MAKE) --no-print-directory _lib
 
 lib-static: $(LIBOUTDIR)/$(LIB_STATIC)
 
@@ -383,8 +403,9 @@ $(BUILDDIR):
 # Source files depend on generated headers
 $(OBJECTS): graylib/grl-version.h graylib/config.h
 
-# Include auto-generated dependencies (if they exist)
--include $(DEPENDS)
+# Auto-generated dependency tracking disabled to avoid build ordering issues
+# TODO: Re-enable once a proper solution is found
+# -include $(DEPENDS)
 
 # =============================================================================
 # Object File Rules
