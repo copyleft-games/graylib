@@ -9,8 +9,8 @@
 
 #include <glib.h>
 #include <math.h>
-#include "graylib/math/grl-rectangle.h"
-#include "graylib/math/grl-vector2.h"
+#include "src/math/grl-rectangle.h"
+#include "src/math/grl-vector2.h"
 
 #define EPSILON 0.0001f
 

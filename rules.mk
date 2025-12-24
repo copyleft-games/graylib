@@ -78,12 +78,12 @@ LIB_CFLAGS += -DGRAYLIB_COMPILATION
 
 # Include paths for library source
 LIB_CFLAGS += -I$(CURDIR)
-LIB_CFLAGS += -I$(CURDIR)/graylib
+LIB_CFLAGS += -I$(CURDIR)/src
 
 # Executable compilation flags (tests, examples)
 EXE_CFLAGS := $(BASE_CFLAGS) $(OPT_CFLAGS)
 EXE_CFLAGS += -I$(CURDIR)
-EXE_CFLAGS += -I$(CURDIR)/graylib
+EXE_CFLAGS += -I$(CURDIR)/src
 
 # =============================================================================
 # Linker Flag Assembly
@@ -116,7 +116,7 @@ ifeq ($(BUILD_GIR),1)
     GIR_SCANNER_FLAGS += --pkg=gobject-2.0
     GIR_SCANNER_FLAGS += --pkg=gio-2.0
     GIR_SCANNER_FLAGS += -I$(CURDIR)
-    GIR_SCANNER_FLAGS += -I$(CURDIR)/graylib
+    GIR_SCANNER_FLAGS += -I$(CURDIR)/src
     GIR_SCANNER_FLAGS += -DGRAYLIB_COMPILATION
 
     GIR_COMPILER_FLAGS := --includedir=$(CURDIR)
@@ -130,10 +130,11 @@ BUILDDIR := $(CURDIR)/build
 OBJDIR := $(BUILDDIR)/obj
 LIBOUTDIR := $(BUILDDIR)/lib
 BINDIR_BUILD := $(BUILDDIR)/bin
+EXAMPLEOUTDIR := $(BUILDDIR)/examples
 GIROUTDIR := $(BUILDDIR)/gir
 
 # Create build directories
-$(OBJDIR) $(LIBOUTDIR) $(BINDIR_BUILD) $(GIROUTDIR):
+$(OBJDIR) $(LIBOUTDIR) $(BINDIR_BUILD) $(EXAMPLEOUTDIR) $(GIROUTDIR):
 	$(MKDIR_P) $@
 
 # =============================================================================

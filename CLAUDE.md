@@ -166,7 +166,7 @@ Heap-allocated, reference-counted objects:
 
 ```
 graylib/
-├── graylib/                # Library source code
+├── src/                    # Library source code
 │   ├── graylib.h          # Main public header (includes all)
 │   ├── grl-version.h.in   # Version macros (generated)
 │   ├── grl-types.h        # Forward declarations
@@ -180,11 +180,12 @@ graylib/
 │   └── collision/         # Collision detection functions
 ├── deps/                   # Dependencies (raylib submodule)
 ├── tests/                  # Unit tests (GTest)
-├── examples/               # Example programs (C and Python)
+├── examples/               # Example source files (C and Python)
 ├── docs/                   # Documentation
 ├── build/                  # Build output
 │   ├── lib/               # libgraylib.a, libgraylib.so
 │   ├── gir/               # Graylib-1.gir, Graylib-1.typelib
+│   ├── examples/          # Compiled example binaries
 │   └── obj/               # Object files
 ├── Makefile               # Main build file
 ├── config.mk              # Build configuration
@@ -430,11 +431,11 @@ G_DEFINE_BOXED_TYPE (GrlVector2, grl_vector2,
 # Build examples
 make examples
 
-# Run C examples
-cd examples
-LD_LIBRARY_PATH=../build/lib:$LD_LIBRARY_PATH ./basic-window
+# Run C examples (from project root)
+LD_LIBRARY_PATH=build/lib:$LD_LIBRARY_PATH ./build/examples/basic-window
 
-# Run Python examples
+# Run Python examples (from examples directory)
+cd examples
 GI_TYPELIB_PATH=../build/gir LD_LIBRARY_PATH=../build/lib python3 basic-window.py
 ```
 
@@ -481,8 +482,8 @@ When adding a new type:
 
 1. **Add AGPLv3 license header** to all new files (see Header File Template above)
 2. Create `grl-typename.h` and `grl-typename.c` in appropriate module
-3. Add forward declaration to `graylib/grl-types.h`
-4. Add include to `graylib/graylib.h`
+3. Add forward declaration to `src/grl-types.h`
+4. Add include to `src/graylib.h`
 5. Add to `PUBLIC_HEADERS` and `SOURCES` in `Makefile`
 6. Add object file rule to `Makefile`
 7. Add `GRL_AVAILABLE_IN_ALL` before `G_DECLARE_*_TYPE` for GIR visibility

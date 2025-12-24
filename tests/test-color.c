@@ -9,7 +9,7 @@
 
 #include <glib.h>
 #include <math.h>
-#include "graylib/math/grl-color.h"
+#include "src/math/grl-color.h"
 
 #define EPSILON 0.0001f
 

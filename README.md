@@ -38,8 +38,7 @@ make
 make examples
 
 # Run an example
-cd examples
-LD_LIBRARY_PATH=../build/lib:$LD_LIBRARY_PATH ./basic-window
+LD_LIBRARY_PATH=build/lib:$LD_LIBRARY_PATH ./build/examples/basic-window
 ```
 
 ## Build Options
@@ -115,16 +114,14 @@ gcc -o myapp myapp.c -I/path/to/graylib -L/path/to/build/lib -lgraylib -lraylib 
 After building:
 
 ```bash
-cd examples
-
-# Set library path and run
-LD_LIBRARY_PATH=../build/lib:$LD_LIBRARY_PATH ./basic-window
-LD_LIBRARY_PATH=../build/lib:$LD_LIBRARY_PATH ./shapes-demo
-LD_LIBRARY_PATH=../build/lib:$LD_LIBRARY_PATH ./input-demo
-LD_LIBRARY_PATH=../build/lib:$LD_LIBRARY_PATH ./audio-demo
-LD_LIBRARY_PATH=../build/lib:$LD_LIBRARY_PATH ./entity-demo
-LD_LIBRARY_PATH=../build/lib:$LD_LIBRARY_PATH ./collision-demo
-LD_LIBRARY_PATH=../build/lib:$LD_LIBRARY_PATH ./model-demo
+# Set library path and run (from project root)
+LD_LIBRARY_PATH=build/lib:$LD_LIBRARY_PATH ./build/examples/basic-window
+LD_LIBRARY_PATH=build/lib:$LD_LIBRARY_PATH ./build/examples/shapes-demo
+LD_LIBRARY_PATH=build/lib:$LD_LIBRARY_PATH ./build/examples/input-demo
+LD_LIBRARY_PATH=build/lib:$LD_LIBRARY_PATH ./build/examples/audio-demo
+LD_LIBRARY_PATH=build/lib:$LD_LIBRARY_PATH ./build/examples/entity-demo
+LD_LIBRARY_PATH=build/lib:$LD_LIBRARY_PATH ./build/examples/collision-demo
+LD_LIBRARY_PATH=build/lib:$LD_LIBRARY_PATH ./build/examples/model-demo
 ```
 
 ## Python Bindings
@@ -176,7 +173,7 @@ GI_TYPELIB_PATH=../build/gir LD_LIBRARY_PATH=../build/lib python3 basic-window.p
 
 ```
 graylib/
-├── graylib/                # Library source code
+├── src/                    # Library source code
 │   ├── math/              # Math types (GBoxed): Vector2, Color, Rectangle
 │   ├── core/              # Core types: Application, Window
 │   ├── input/             # Input handling: Keyboard, Mouse, Gamepad
@@ -186,11 +183,12 @@ graylib/
 │   └── scene/             # Entity system: Entity, Sprite, Scene, SceneManager
 ├── deps/                   # Dependencies (raylib submodule)
 ├── tests/                  # Unit tests
-├── examples/               # Example programs (C and Python)
+├── examples/               # Example source files (C and Python)
 ├── docs/                   # Documentation
 └── build/                  # Build output
     ├── lib/               # Libraries (libgraylib.a, libgraylib.so)
     ├── gir/               # GObject Introspection files
+    ├── examples/          # Compiled example binaries
     └── obj/               # Object files
 ```
 

@@ -15,6 +15,7 @@ PROJROOT := $(abspath ..)
 
 # Override paths to use parent's directories
 LIBOUTDIR := $(PROJROOT)/build/lib
+EXAMPLEOUTDIR := $(PROJROOT)/build/examples
 RAYLIB_LIBDIR := $(PROJROOT)/deps/raylib/src
 
 # Example sources
@@ -39,15 +40,15 @@ EXAMPLE_SOURCES := \
 	firstperson-demo.c \
 	roguelike3d.c
 
-# Example executables
-EXAMPLE_PROGRAMS := $(patsubst %.c,%,$(EXAMPLE_SOURCES))
+# Example executables (with output directory)
+EXAMPLE_PROGRAMS := $(addprefix $(EXAMPLEOUTDIR)/,$(patsubst %.c,%,$(EXAMPLE_SOURCES)))
 
 # Compiler flags for examples
 EXAMPLE_CFLAGS := \
 	$(CFLAGS) \
 	$(GLIB_CFLAGS) \
 	-I$(PROJROOT) \
-	-I$(PROJROOT)/graylib \
+	-I$(PROJROOT)/src \
 	-DGRAYLIB_COMPILATION
 
 # Linker flags for examples
@@ -59,72 +60,76 @@ EXAMPLE_LDFLAGS := \
 	-lGL -lm -lpthread -ldl -lrt -lX11
 
 # Default target
-all: $(EXAMPLE_PROGRAMS)
+all: $(EXAMPLEOUTDIR) $(EXAMPLE_PROGRAMS)
+
+# Create output directory
+$(EXAMPLEOUTDIR):
+	$(MKDIR_P) $@
 
 # Build example programs
-basic-window: basic-window.c | $(LIBOUTDIR)/$(LIB_SHARED)
+$(EXAMPLEOUTDIR)/basic-window: basic-window.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-shapes-demo: shapes-demo.c | $(LIBOUTDIR)/$(LIB_SHARED)
+$(EXAMPLEOUTDIR)/shapes-demo: shapes-demo.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-textures-text: textures-text.c | $(LIBOUTDIR)/$(LIB_SHARED)
+$(EXAMPLEOUTDIR)/textures-text: textures-text.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-input-demo: input-demo.c | $(LIBOUTDIR)/$(LIB_SHARED)
+$(EXAMPLEOUTDIR)/input-demo: input-demo.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-audio-demo: audio-demo.c | $(LIBOUTDIR)/$(LIB_SHARED)
+$(EXAMPLEOUTDIR)/audio-demo: audio-demo.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-entity-demo: entity-demo.c | $(LIBOUTDIR)/$(LIB_SHARED)
+$(EXAMPLEOUTDIR)/entity-demo: entity-demo.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-scene-demo: scene-demo.c | $(LIBOUTDIR)/$(LIB_SHARED)
+$(EXAMPLEOUTDIR)/scene-demo: scene-demo.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-camera-demo: camera-demo.c | $(LIBOUTDIR)/$(LIB_SHARED)
+$(EXAMPLEOUTDIR)/camera-demo: camera-demo.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-model-demo: model-demo.c | $(LIBOUTDIR)/$(LIB_SHARED)
+$(EXAMPLEOUTDIR)/model-demo: model-demo.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-collision-demo: collision-demo.c | $(LIBOUTDIR)/$(LIB_SHARED)
+$(EXAMPLEOUTDIR)/collision-demo: collision-demo.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-pong: pong.c | $(LIBOUTDIR)/$(LIB_SHARED)
+$(EXAMPLEOUTDIR)/pong: pong.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-pong3d: pong3d.c | $(LIBOUTDIR)/$(LIB_SHARED)
+$(EXAMPLEOUTDIR)/pong3d: pong3d.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-snake3d: snake3d.c | $(LIBOUTDIR)/$(LIB_SHARED)
+$(EXAMPLEOUTDIR)/snake3d: snake3d.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-tetris3d: tetris3d.c | $(LIBOUTDIR)/$(LIB_SHARED)
+$(EXAMPLEOUTDIR)/tetris3d: tetris3d.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-flappybird3d: flappybird3d.c | $(LIBOUTDIR)/$(LIB_SHARED)
+$(EXAMPLEOUTDIR)/flappybird3d: flappybird3d.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-doodlejump3d: doodlejump3d.c | $(LIBOUTDIR)/$(LIB_SHARED)
+$(EXAMPLEOUTDIR)/doodlejump3d: doodlejump3d.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-asteroids3d: asteroids3d.c | $(LIBOUTDIR)/$(LIB_SHARED)
+$(EXAMPLEOUTDIR)/asteroids3d: asteroids3d.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-firstperson-demo: firstperson-demo.c | $(LIBOUTDIR)/$(LIB_SHARED)
+$(EXAMPLEOUTDIR)/firstperson-demo: firstperson-demo.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-roguelike3d: roguelike3d.c | $(LIBOUTDIR)/$(LIB_SHARED)
+$(EXAMPLEOUTDIR)/roguelike3d: roguelike3d.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
 # Run an example (usage: make run-basic-window)
-run-%: %
-	LD_LIBRARY_PATH=$(LIBOUTDIR):$$LD_LIBRARY_PATH ./$<
+run-%: $(EXAMPLEOUTDIR)/%
+	LD_LIBRARY_PATH=$(LIBOUTDIR):$$LD_LIBRARY_PATH $<
 
 # Clean
 clean:
-	$(RM) $(EXAMPLE_PROGRAMS)
+	$(RM) -r $(EXAMPLEOUTDIR)
 
 .PHONY: all clean

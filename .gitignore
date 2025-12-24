@@ -2,33 +2,8 @@
 build/
 
 # Generated files
-graylib/grl-version.h
-graylib/config.h
-
-# Example binaries
-examples/basic-window
-examples/shapes-demo
-examples/input-demo
-examples/textures-text
-examples/audio-demo
-examples/entity-demo
-examples/scene-demo
-examples/camera-demo
-examples/model-demo
-examples/collision-demo
-examples/pong 
-examples/pong3d
-examples/asteroids3d
-examples/doodlejump3d
-examples/firstperson-demo
-examples/flappybird3d
-examples/snake3d
-examples/tetris3d
-examples/roguelike3d
-
-# Test binaries
-tests/test-*
-!tests/test-*.c
+src/grl-version.h
+src/config.h
 
 # Object files
 *.o

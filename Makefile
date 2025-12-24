@@ -26,85 +26,85 @@ include rules.mk
 
 # Public headers (for installation and GIR)
 PUBLIC_HEADERS := \
-	graylib/graylib.h \
-	graylib/grl-version.h \
-	graylib/grl-types.h \
-	graylib/grl-enums.h \
-	graylib/math/grl-vector2.h \
-	graylib/math/grl-vector3.h \
-	graylib/math/grl-vector4.h \
-	graylib/math/grl-matrix.h \
-	graylib/math/grl-bounding-box.h \
-	graylib/math/grl-color.h \
-	graylib/math/grl-rectangle.h \
-	graylib/core/grl-application.h \
-	graylib/core/grl-window.h \
-	graylib/core/grl-input.h \
-	graylib/graphics/grl-image.h \
-	graylib/graphics/grl-texture.h \
-	graylib/graphics/grl-font.h \
-	graylib/graphics/grl-camera2d.h \
-	graylib/graphics/grl-camera3d.h \
-	graylib/graphics/grl-shader.h \
-	graylib/graphics/grl-render-texture.h \
-	graylib/graphics/grl-mesh.h \
-	graylib/graphics/grl-material.h \
-	graylib/graphics/grl-model.h \
-	graylib/graphics/grl-model-animation.h \
-	graylib/drawing/grl-draw.h \
-	graylib/audio/grl-audio-device.h \
-	graylib/audio/grl-sound.h \
-	graylib/audio/grl-music.h \
-	graylib/scene/grl-drawable.h \
-	graylib/scene/grl-updatable.h \
-	graylib/scene/grl-collidable.h \
-	graylib/scene/grl-entity.h \
-	graylib/scene/grl-sprite.h \
-	graylib/scene/grl-animated-texture.h \
-	graylib/scene/grl-scene.h \
-	graylib/scene/grl-scene-manager.h \
-	graylib/collision/grl-collision.h
+	src/graylib.h \
+	src/grl-version.h \
+	src/grl-types.h \
+	src/grl-enums.h \
+	src/math/grl-vector2.h \
+	src/math/grl-vector3.h \
+	src/math/grl-vector4.h \
+	src/math/grl-matrix.h \
+	src/math/grl-bounding-box.h \
+	src/math/grl-color.h \
+	src/math/grl-rectangle.h \
+	src/core/grl-application.h \
+	src/core/grl-window.h \
+	src/core/grl-input.h \
+	src/graphics/grl-image.h \
+	src/graphics/grl-texture.h \
+	src/graphics/grl-font.h \
+	src/graphics/grl-camera2d.h \
+	src/graphics/grl-camera3d.h \
+	src/graphics/grl-shader.h \
+	src/graphics/grl-render-texture.h \
+	src/graphics/grl-mesh.h \
+	src/graphics/grl-material.h \
+	src/graphics/grl-model.h \
+	src/graphics/grl-model-animation.h \
+	src/drawing/grl-draw.h \
+	src/audio/grl-audio-device.h \
+	src/audio/grl-sound.h \
+	src/audio/grl-music.h \
+	src/scene/grl-drawable.h \
+	src/scene/grl-updatable.h \
+	src/scene/grl-collidable.h \
+	src/scene/grl-entity.h \
+	src/scene/grl-sprite.h \
+	src/scene/grl-animated-texture.h \
+	src/scene/grl-scene.h \
+	src/scene/grl-scene-manager.h \
+	src/collision/grl-collision.h
 
 # Source files
 SOURCES := \
-	graylib/grl-enums.c \
-	graylib/math/grl-vector2.c \
-	graylib/math/grl-vector3.c \
-	graylib/math/grl-vector4.c \
-	graylib/math/grl-matrix.c \
-	graylib/math/grl-bounding-box.c \
-	graylib/math/grl-color.c \
-	graylib/math/grl-rectangle.c \
-	graylib/core/grl-application.c \
-	graylib/core/grl-window.c \
-	graylib/core/grl-input.c \
-	graylib/graphics/grl-image.c \
-	graylib/graphics/grl-texture.c \
-	graylib/graphics/grl-font.c \
-	graylib/graphics/grl-camera2d.c \
-	graylib/graphics/grl-camera3d.c \
-	graylib/graphics/grl-shader.c \
-	graylib/graphics/grl-render-texture.c \
-	graylib/graphics/grl-mesh.c \
-	graylib/graphics/grl-material.c \
-	graylib/graphics/grl-model.c \
-	graylib/graphics/grl-model-animation.c \
-	graylib/drawing/grl-draw-shapes.c \
-	graylib/drawing/grl-draw-textures.c \
-	graylib/drawing/grl-draw-text.c \
-	graylib/drawing/grl-draw-3d.c \
-	graylib/audio/grl-audio-device.c \
-	graylib/audio/grl-sound.c \
-	graylib/audio/grl-music.c \
-	graylib/scene/grl-drawable.c \
-	graylib/scene/grl-updatable.c \
-	graylib/scene/grl-collidable.c \
-	graylib/scene/grl-entity.c \
-	graylib/scene/grl-sprite.c \
-	graylib/scene/grl-animated-texture.c \
-	graylib/scene/grl-scene.c \
-	graylib/scene/grl-scene-manager.c \
-	graylib/collision/grl-collision.c
+	src/grl-enums.c \
+	src/math/grl-vector2.c \
+	src/math/grl-vector3.c \
+	src/math/grl-vector4.c \
+	src/math/grl-matrix.c \
+	src/math/grl-bounding-box.c \
+	src/math/grl-color.c \
+	src/math/grl-rectangle.c \
+	src/core/grl-application.c \
+	src/core/grl-window.c \
+	src/core/grl-input.c \
+	src/graphics/grl-image.c \
+	src/graphics/grl-texture.c \
+	src/graphics/grl-font.c \
+	src/graphics/grl-camera2d.c \
+	src/graphics/grl-camera3d.c \
+	src/graphics/grl-shader.c \
+	src/graphics/grl-render-texture.c \
+	src/graphics/grl-mesh.c \
+	src/graphics/grl-material.c \
+	src/graphics/grl-model.c \
+	src/graphics/grl-model-animation.c \
+	src/drawing/grl-draw-shapes.c \
+	src/drawing/grl-draw-textures.c \
+	src/drawing/grl-draw-text.c \
+	src/drawing/grl-draw-3d.c \
+	src/audio/grl-audio-device.c \
+	src/audio/grl-sound.c \
+	src/audio/grl-music.c \
+	src/scene/grl-drawable.c \
+	src/scene/grl-updatable.c \
+	src/scene/grl-collidable.c \
+	src/scene/grl-entity.c \
+	src/scene/grl-sprite.c \
+	src/scene/grl-animated-texture.c \
+	src/scene/grl-scene.c \
+	src/scene/grl-scene-manager.c \
+	src/collision/grl-collision.c
 
 # Object files
 OBJECTS := $(patsubst %.c,$(OBJDIR)/%.o,$(SOURCES))
@@ -114,7 +114,7 @@ DEPENDS := $(patsubst %.c,$(OBJDIR)/%.d,$(SOURCES))
 # Generated Headers (must be built first)
 # =============================================================================
 
-GENERATED_HEADERS := graylib/grl-version.h graylib/config.h
+GENERATED_HEADERS := src/grl-version.h src/config.h
 
 .PHONY: generate
 generate: $(GENERATED_HEADERS)
@@ -192,7 +192,7 @@ $(LIBOUTDIR)/$(LIB_SHARED): $(OBJECTS) | $(LIBOUTDIR)
 # =============================================================================
 
 # Generate version header from template
-graylib/grl-version.h: graylib/grl-version.h.in config.mk
+src/grl-version.h: src/grl-version.h.in config.mk
 	$(call print_status,"Generating grl-version.h")
 	$(SED) -e 's/@VERSION_MAJOR@/$(VERSION_MAJOR)/g' \
 	       -e 's/@VERSION_MINOR@/$(VERSION_MINOR)/g' \
@@ -202,7 +202,7 @@ graylib/grl-version.h: graylib/grl-version.h.in config.mk
 	       $< > $@
 
 # Generate config header from template
-graylib/config.h: graylib/config.h.in config.mk
+src/config.h: src/config.h.in config.mk
 	$(call print_status,"Generating config.h")
 	$(SED) -e 's/@VERSION_MAJOR@/$(VERSION_MAJOR)/g' \
 	       -e 's/@VERSION_MINOR@/$(VERSION_MINOR)/g' \
@@ -307,44 +307,44 @@ ifeq ($(BUILD_SHARED),1)
 	cd $(DESTDIR)$(LIBDIR) && ln -sf $(LIB_SHARED_SONAME) $(LIB_SHARED)
 endif
 	# Install headers
-	$(INSTALL_DATA) graylib/graylib.h $(DESTDIR)$(INCLUDEDIR)/graylib/
-	$(INSTALL_DATA) graylib/grl-version.h $(DESTDIR)$(INCLUDEDIR)/graylib/
-	$(INSTALL_DATA) graylib/grl-types.h $(DESTDIR)$(INCLUDEDIR)/graylib/
-	$(INSTALL_DATA) graylib/grl-enums.h $(DESTDIR)$(INCLUDEDIR)/graylib/
-	$(INSTALL_DATA) graylib/math/grl-vector2.h $(DESTDIR)$(INCLUDEDIR)/graylib/math/
-	$(INSTALL_DATA) graylib/math/grl-vector3.h $(DESTDIR)$(INCLUDEDIR)/graylib/math/
-	$(INSTALL_DATA) graylib/math/grl-vector4.h $(DESTDIR)$(INCLUDEDIR)/graylib/math/
-	$(INSTALL_DATA) graylib/math/grl-matrix.h $(DESTDIR)$(INCLUDEDIR)/graylib/math/
-	$(INSTALL_DATA) graylib/math/grl-bounding-box.h $(DESTDIR)$(INCLUDEDIR)/graylib/math/
-	$(INSTALL_DATA) graylib/math/grl-color.h $(DESTDIR)$(INCLUDEDIR)/graylib/math/
-	$(INSTALL_DATA) graylib/math/grl-rectangle.h $(DESTDIR)$(INCLUDEDIR)/graylib/math/
-	$(INSTALL_DATA) graylib/core/grl-application.h $(DESTDIR)$(INCLUDEDIR)/graylib/core/
-	$(INSTALL_DATA) graylib/core/grl-window.h $(DESTDIR)$(INCLUDEDIR)/graylib/core/
-	$(INSTALL_DATA) graylib/core/grl-input.h $(DESTDIR)$(INCLUDEDIR)/graylib/core/
-	$(INSTALL_DATA) graylib/graphics/grl-image.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
-	$(INSTALL_DATA) graylib/graphics/grl-texture.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
-	$(INSTALL_DATA) graylib/graphics/grl-font.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
-	$(INSTALL_DATA) graylib/graphics/grl-camera2d.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
-	$(INSTALL_DATA) graylib/graphics/grl-camera3d.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
-	$(INSTALL_DATA) graylib/graphics/grl-shader.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
-	$(INSTALL_DATA) graylib/graphics/grl-render-texture.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
-	$(INSTALL_DATA) graylib/graphics/grl-mesh.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
-	$(INSTALL_DATA) graylib/graphics/grl-material.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
-	$(INSTALL_DATA) graylib/graphics/grl-model.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
-	$(INSTALL_DATA) graylib/graphics/grl-model-animation.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
-	$(INSTALL_DATA) graylib/drawing/grl-draw.h $(DESTDIR)$(INCLUDEDIR)/graylib/drawing/
-	$(INSTALL_DATA) graylib/audio/grl-audio-device.h $(DESTDIR)$(INCLUDEDIR)/graylib/audio/
-	$(INSTALL_DATA) graylib/audio/grl-sound.h $(DESTDIR)$(INCLUDEDIR)/graylib/audio/
-	$(INSTALL_DATA) graylib/audio/grl-music.h $(DESTDIR)$(INCLUDEDIR)/graylib/audio/
-	$(INSTALL_DATA) graylib/scene/grl-drawable.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
-	$(INSTALL_DATA) graylib/scene/grl-updatable.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
-	$(INSTALL_DATA) graylib/scene/grl-collidable.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
-	$(INSTALL_DATA) graylib/scene/grl-entity.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
-	$(INSTALL_DATA) graylib/scene/grl-sprite.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
-	$(INSTALL_DATA) graylib/scene/grl-animated-texture.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
-	$(INSTALL_DATA) graylib/scene/grl-scene.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
-	$(INSTALL_DATA) graylib/scene/grl-scene-manager.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
-	$(INSTALL_DATA) graylib/collision/grl-collision.h $(DESTDIR)$(INCLUDEDIR)/graylib/collision/
+	$(INSTALL_DATA) src/graylib.h $(DESTDIR)$(INCLUDEDIR)/graylib/
+	$(INSTALL_DATA) src/grl-version.h $(DESTDIR)$(INCLUDEDIR)/graylib/
+	$(INSTALL_DATA) src/grl-types.h $(DESTDIR)$(INCLUDEDIR)/graylib/
+	$(INSTALL_DATA) src/grl-enums.h $(DESTDIR)$(INCLUDEDIR)/graylib/
+	$(INSTALL_DATA) src/math/grl-vector2.h $(DESTDIR)$(INCLUDEDIR)/graylib/math/
+	$(INSTALL_DATA) src/math/grl-vector3.h $(DESTDIR)$(INCLUDEDIR)/graylib/math/
+	$(INSTALL_DATA) src/math/grl-vector4.h $(DESTDIR)$(INCLUDEDIR)/graylib/math/
+	$(INSTALL_DATA) src/math/grl-matrix.h $(DESTDIR)$(INCLUDEDIR)/graylib/math/
+	$(INSTALL_DATA) src/math/grl-bounding-box.h $(DESTDIR)$(INCLUDEDIR)/graylib/math/
+	$(INSTALL_DATA) src/math/grl-color.h $(DESTDIR)$(INCLUDEDIR)/graylib/math/
+	$(INSTALL_DATA) src/math/grl-rectangle.h $(DESTDIR)$(INCLUDEDIR)/graylib/math/
+	$(INSTALL_DATA) src/core/grl-application.h $(DESTDIR)$(INCLUDEDIR)/graylib/core/
+	$(INSTALL_DATA) src/core/grl-window.h $(DESTDIR)$(INCLUDEDIR)/graylib/core/
+	$(INSTALL_DATA) src/core/grl-input.h $(DESTDIR)$(INCLUDEDIR)/graylib/core/
+	$(INSTALL_DATA) src/graphics/grl-image.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
+	$(INSTALL_DATA) src/graphics/grl-texture.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
+	$(INSTALL_DATA) src/graphics/grl-font.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
+	$(INSTALL_DATA) src/graphics/grl-camera2d.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
+	$(INSTALL_DATA) src/graphics/grl-camera3d.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
+	$(INSTALL_DATA) src/graphics/grl-shader.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
+	$(INSTALL_DATA) src/graphics/grl-render-texture.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
+	$(INSTALL_DATA) src/graphics/grl-mesh.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
+	$(INSTALL_DATA) src/graphics/grl-material.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
+	$(INSTALL_DATA) src/graphics/grl-model.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
+	$(INSTALL_DATA) src/graphics/grl-model-animation.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
+	$(INSTALL_DATA) src/drawing/grl-draw.h $(DESTDIR)$(INCLUDEDIR)/graylib/drawing/
+	$(INSTALL_DATA) src/audio/grl-audio-device.h $(DESTDIR)$(INCLUDEDIR)/graylib/audio/
+	$(INSTALL_DATA) src/audio/grl-sound.h $(DESTDIR)$(INCLUDEDIR)/graylib/audio/
+	$(INSTALL_DATA) src/audio/grl-music.h $(DESTDIR)$(INCLUDEDIR)/graylib/audio/
+	$(INSTALL_DATA) src/scene/grl-drawable.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
+	$(INSTALL_DATA) src/scene/grl-updatable.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
+	$(INSTALL_DATA) src/scene/grl-collidable.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
+	$(INSTALL_DATA) src/scene/grl-entity.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
+	$(INSTALL_DATA) src/scene/grl-sprite.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
+	$(INSTALL_DATA) src/scene/grl-animated-texture.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
+	$(INSTALL_DATA) src/scene/grl-scene.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
+	$(INSTALL_DATA) src/scene/grl-scene-manager.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
+	$(INSTALL_DATA) src/collision/grl-collision.h $(DESTDIR)$(INCLUDEDIR)/graylib/collision/
 	# Install pkg-config
 	$(INSTALL_DATA) $(BUILDDIR)/$(PC_FILE) $(DESTDIR)$(PKGCONFIGDIR)/
 	# Install GIR
@@ -374,13 +374,13 @@ endif
 clean:
 	$(call print_status,"Cleaning build artifacts...")
 	$(RMDIR) $(BUILDDIR)
-	$(RM) graylib/grl-version.h
-	$(RM) graylib/config.h
+	$(RM) src/grl-version.h
+	$(RM) src/config.h
 
 distclean: clean raylib-clean
 	$(call print_status,"Cleaning all generated files...")
-	$(RM) graylib/grl-enums.c
-	$(RM) graylib/grl-enums.h
+	$(RM) src/grl-enums.c
+	$(RM) src/grl-enums.h
 
 # =============================================================================
 # Debug Target (shorthand for DEBUG=1)
@@ -401,7 +401,7 @@ $(BUILDDIR):
 # =============================================================================
 
 # Source files depend on generated headers
-$(OBJECTS): graylib/grl-version.h graylib/config.h
+$(OBJECTS): src/grl-version.h src/config.h
 
 # Auto-generated dependency tracking disabled to avoid build ordering issues
 # TODO: Re-enable once a proper solution is found
@@ -412,161 +412,161 @@ $(OBJECTS): graylib/grl-version.h graylib/config.h
 # =============================================================================
 
 # Math module
-$(OBJDIR)/graylib/math/grl-vector2.o: graylib/math/grl-vector2.c
+$(OBJDIR)/src/math/grl-vector2.o: src/math/grl-vector2.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/graylib/math/grl-color.o: graylib/math/grl-color.c
+$(OBJDIR)/src/math/grl-color.o: src/math/grl-color.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/graylib/math/grl-rectangle.o: graylib/math/grl-rectangle.c
+$(OBJDIR)/src/math/grl-rectangle.o: src/math/grl-rectangle.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/graylib/math/grl-vector3.o: graylib/math/grl-vector3.c
+$(OBJDIR)/src/math/grl-vector3.o: src/math/grl-vector3.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/graylib/math/grl-vector4.o: graylib/math/grl-vector4.c
+$(OBJDIR)/src/math/grl-vector4.o: src/math/grl-vector4.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/graylib/math/grl-matrix.o: graylib/math/grl-matrix.c
+$(OBJDIR)/src/math/grl-matrix.o: src/math/grl-matrix.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/graylib/math/grl-bounding-box.o: graylib/math/grl-bounding-box.c
+$(OBJDIR)/src/math/grl-bounding-box.o: src/math/grl-bounding-box.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
 # Core module
-$(OBJDIR)/graylib/core/grl-application.o: graylib/core/grl-application.c
+$(OBJDIR)/src/core/grl-application.o: src/core/grl-application.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/graylib/core/grl-window.o: graylib/core/grl-window.c
+$(OBJDIR)/src/core/grl-window.o: src/core/grl-window.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/graylib/core/grl-input.o: graylib/core/grl-input.c
+$(OBJDIR)/src/core/grl-input.o: src/core/grl-input.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
 # Graphics module
-$(OBJDIR)/graylib/graphics/grl-image.o: graylib/graphics/grl-image.c
+$(OBJDIR)/src/graphics/grl-image.o: src/graphics/grl-image.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/graylib/graphics/grl-texture.o: graylib/graphics/grl-texture.c
+$(OBJDIR)/src/graphics/grl-texture.o: src/graphics/grl-texture.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/graylib/graphics/grl-font.o: graylib/graphics/grl-font.c
+$(OBJDIR)/src/graphics/grl-font.o: src/graphics/grl-font.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/graylib/graphics/grl-camera2d.o: graylib/graphics/grl-camera2d.c
+$(OBJDIR)/src/graphics/grl-camera2d.o: src/graphics/grl-camera2d.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/graylib/graphics/grl-camera3d.o: graylib/graphics/grl-camera3d.c
+$(OBJDIR)/src/graphics/grl-camera3d.o: src/graphics/grl-camera3d.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/graylib/graphics/grl-shader.o: graylib/graphics/grl-shader.c
+$(OBJDIR)/src/graphics/grl-shader.o: src/graphics/grl-shader.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/graylib/graphics/grl-render-texture.o: graylib/graphics/grl-render-texture.c
+$(OBJDIR)/src/graphics/grl-render-texture.o: src/graphics/grl-render-texture.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/graylib/graphics/grl-mesh.o: graylib/graphics/grl-mesh.c
+$(OBJDIR)/src/graphics/grl-mesh.o: src/graphics/grl-mesh.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/graylib/graphics/grl-material.o: graylib/graphics/grl-material.c
+$(OBJDIR)/src/graphics/grl-material.o: src/graphics/grl-material.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/graylib/graphics/grl-model.o: graylib/graphics/grl-model.c
+$(OBJDIR)/src/graphics/grl-model.o: src/graphics/grl-model.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/graylib/graphics/grl-model-animation.o: graylib/graphics/grl-model-animation.c
+$(OBJDIR)/src/graphics/grl-model-animation.o: src/graphics/grl-model-animation.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
 # Drawing module
-$(OBJDIR)/graylib/drawing/grl-draw-shapes.o: graylib/drawing/grl-draw-shapes.c
+$(OBJDIR)/src/drawing/grl-draw-shapes.o: src/drawing/grl-draw-shapes.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/graylib/drawing/grl-draw-textures.o: graylib/drawing/grl-draw-textures.c
+$(OBJDIR)/src/drawing/grl-draw-textures.o: src/drawing/grl-draw-textures.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/graylib/drawing/grl-draw-text.o: graylib/drawing/grl-draw-text.c
+$(OBJDIR)/src/drawing/grl-draw-text.o: src/drawing/grl-draw-text.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/graylib/drawing/grl-draw-3d.o: graylib/drawing/grl-draw-3d.c
+$(OBJDIR)/src/drawing/grl-draw-3d.o: src/drawing/grl-draw-3d.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
 # Audio module
-$(OBJDIR)/graylib/audio/grl-audio-device.o: graylib/audio/grl-audio-device.c
+$(OBJDIR)/src/audio/grl-audio-device.o: src/audio/grl-audio-device.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/graylib/audio/grl-sound.o: graylib/audio/grl-sound.c
+$(OBJDIR)/src/audio/grl-sound.o: src/audio/grl-sound.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/graylib/audio/grl-music.o: graylib/audio/grl-music.c
+$(OBJDIR)/src/audio/grl-music.o: src/audio/grl-music.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
 # Scene module
-$(OBJDIR)/graylib/scene/grl-drawable.o: graylib/scene/grl-drawable.c
+$(OBJDIR)/src/scene/grl-drawable.o: src/scene/grl-drawable.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/graylib/scene/grl-updatable.o: graylib/scene/grl-updatable.c
+$(OBJDIR)/src/scene/grl-updatable.o: src/scene/grl-updatable.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/graylib/scene/grl-collidable.o: graylib/scene/grl-collidable.c
+$(OBJDIR)/src/scene/grl-collidable.o: src/scene/grl-collidable.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/graylib/scene/grl-entity.o: graylib/scene/grl-entity.c
+$(OBJDIR)/src/scene/grl-entity.o: src/scene/grl-entity.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/graylib/scene/grl-sprite.o: graylib/scene/grl-sprite.c
+$(OBJDIR)/src/scene/grl-sprite.o: src/scene/grl-sprite.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/graylib/scene/grl-animated-texture.o: graylib/scene/grl-animated-texture.c
+$(OBJDIR)/src/scene/grl-animated-texture.o: src/scene/grl-animated-texture.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/graylib/scene/grl-scene.o: graylib/scene/grl-scene.c
+$(OBJDIR)/src/scene/grl-scene.o: src/scene/grl-scene.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/graylib/scene/grl-scene-manager.o: graylib/scene/grl-scene-manager.c
+$(OBJDIR)/src/scene/grl-scene-manager.o: src/scene/grl-scene-manager.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
 # Collision
-$(OBJDIR)/graylib/collision/grl-collision.o: graylib/collision/grl-collision.c
+$(OBJDIR)/src/collision/grl-collision.o: src/collision/grl-collision.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
 # Enums
-$(OBJDIR)/graylib/grl-enums.o: graylib/grl-enums.c
+$(OBJDIR)/src/grl-enums.o: src/grl-enums.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<

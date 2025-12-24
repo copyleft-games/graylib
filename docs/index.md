@@ -115,7 +115,7 @@ main (int argc, char *argv[])
 
 ```
 graylib/
-├── graylib/                # Library source code
+├── src/                    # Library source code
 │   ├── math/              # Math types (GBoxed): Vector2, Color, Rectangle
 │   ├── core/              # Core types: Application, Window, Input
 │   ├── graphics/          # Graphics types: Image, Texture, Font
@@ -124,6 +124,11 @@ graylib/
 │   └── scene/             # Entity system: Entity, Sprite, AnimatedTexture
 ├── deps/                   # Dependencies (raylib submodule)
 ├── tests/                  # Unit tests
-├── examples/               # Example programs
-└── docs/                   # Documentation
+├── examples/               # Example source files
+├── docs/                   # Documentation
+└── build/                  # Build output
+    ├── lib/               # Libraries (libgraylib.a, libgraylib.so)
+    ├── gir/               # GObject Introspection files
+    ├── examples/          # Compiled example binaries
+    └── obj/               # Object files
 ```
