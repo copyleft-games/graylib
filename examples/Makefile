@@ -28,7 +28,9 @@ EXAMPLE_SOURCES := \
 	scene-demo.c \
 	camera-demo.c \
 	model-demo.c \
-	collision-demo.c
+	collision-demo.c \
+	pong.c \
+	pong3d.c
 
 # Example executables
 EXAMPLE_PROGRAMS := $(patsubst %.c,%,$(EXAMPLE_SOURCES))
@@ -81,6 +83,12 @@ model-demo: model-demo.c | $(LIBOUTDIR)/$(LIB_SHARED)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
 collision-demo: collision-demo.c | $(LIBOUTDIR)/$(LIB_SHARED)
+	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
+
+pong: pong.c | $(LIBOUTDIR)/$(LIB_SHARED)
+	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
+
+pong3d: pong3d.c | $(LIBOUTDIR)/$(LIB_SHARED)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
 # Run an example (usage: make run-basic-window)

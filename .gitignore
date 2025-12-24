@@ -16,6 +16,8 @@ examples/scene-demo
 examples/camera-demo
 examples/model-demo
 examples/collision-demo
+examples/pong 
+examples/pong3d
 
 # Test binaries
 tests/test-*
