@@ -286,6 +286,243 @@ grl_draw_text_pro (font, "Rotated", position, origin, 45.0f, 24.0f, 2.0f, white)
 grl_draw_text_codepoint (font, 0x263A, position, 32.0f, white);  /* Smiley face */
 ```
 
+## GrlShader
+
+Custom shader programs for advanced rendering effects.
+
+### Creating Shaders
+
+```c
+/* Load from files */
+g_autoptr(GError) error = NULL;
+g_autoptr(GrlShader) shader = grl_shader_new_from_file (
+    "shaders/vertex.vs",
+    "shaders/fragment.fs",
+    &error
+);
+
+/* Use default vertex shader with custom fragment */
+g_autoptr(GrlShader) shader = grl_shader_new_from_file (
+    NULL,                    /* Use default vertex shader */
+    "shaders/fragment.fs",
+    &error
+);
+
+/* Create from code strings */
+const gchar *fs_code =
+    "#version 330\n"
+    "in vec2 fragTexCoord;\n"
+    "in vec4 fragColor;\n"
+    "uniform sampler2D texture0;\n"
+    "uniform float time;\n"
+    "out vec4 finalColor;\n"
+    "void main() {\n"
+    "    vec4 texColor = texture(texture0, fragTexCoord);\n"
+    "    finalColor = texColor * fragColor;\n"
+    "}\n";
+
+g_autoptr(GrlShader) shader = grl_shader_new_from_memory (
+    NULL,      /* Default vertex shader */
+    fs_code,
+    &error
+);
+```
+
+### Using Shaders
+
+```c
+/* Check if valid */
+if (!grl_shader_is_valid (shader))
+{
+    g_printerr ("Shader failed to compile\n");
+    return;
+}
+
+/* Begin shader mode */
+grl_shader_begin (shader);
+
+/* Draw with shader applied */
+grl_draw_texture (texture, x, y, white);
+
+/* End shader mode */
+grl_shader_end (shader);
+```
+
+### Setting Uniform Values
+
+```c
+/* Get uniform location (cache this for performance) */
+gint time_loc = grl_shader_get_location (shader, "time");
+gint resolution_loc = grl_shader_get_location (shader, "resolution");
+gint color_loc = grl_shader_get_location (shader, "tintColor");
+
+/* Set values */
+grl_shader_set_value_float (shader, time_loc, elapsed_time);
+grl_shader_set_value_vec2 (shader, resolution_loc, 800.0f, 600.0f);
+grl_shader_set_value_vec4 (shader, color_loc, 1.0f, 0.5f, 0.2f, 1.0f);
+
+/* Set texture uniform */
+gint tex_loc = grl_shader_get_location (shader, "noiseTexture");
+grl_shader_set_value_texture (shader, tex_loc, noise_texture);
+```
+
+### Shader Methods
+
+| Method | Description |
+|--------|-------------|
+| `is_valid()` | Check if shader compiled successfully |
+| `begin()` | Begin using this shader for drawing |
+| `end()` | Return to default shader |
+| `get_location(name)` | Get uniform location by name |
+| `get_location_attrib(name)` | Get attribute location by name |
+| `set_value_float(loc, value)` | Set float uniform |
+| `set_value_int(loc, value)` | Set integer uniform |
+| `set_value_vec2(loc, x, y)` | Set vec2 uniform |
+| `set_value_vec3(loc, x, y, z)` | Set vec3 uniform |
+| `set_value_vec4(loc, x, y, z, w)` | Set vec4 uniform |
+| `set_value_texture(loc, texture)` | Set sampler2D uniform |
+
+### Example: Grayscale Shader
+
+```c
+const gchar *grayscale_fs =
+    "#version 330\n"
+    "in vec2 fragTexCoord;\n"
+    "in vec4 fragColor;\n"
+    "uniform sampler2D texture0;\n"
+    "out vec4 finalColor;\n"
+    "void main() {\n"
+    "    vec4 texColor = texture(texture0, fragTexCoord);\n"
+    "    float gray = dot(texColor.rgb, vec3(0.299, 0.587, 0.114));\n"
+    "    finalColor = vec4(gray, gray, gray, texColor.a) * fragColor;\n"
+    "}\n";
+
+g_autoptr(GrlShader) grayscale = grl_shader_new_from_memory (NULL, grayscale_fs, NULL);
+
+/* In render loop */
+grl_shader_begin (grayscale);
+grl_draw_texture (sprite, x, y, white);
+grl_shader_end (grayscale);
+```
+
+## GrlRenderTexture
+
+Off-screen rendering target (framebuffer). Useful for post-processing, minimap rendering, or caching complex scenes.
+
+### Creating Render Textures
+
+```c
+/* Create render texture matching window size */
+g_autoptr(GrlRenderTexture) target = grl_render_texture_new (800, 600);
+
+/* Check if valid */
+if (!grl_render_texture_is_valid (target))
+{
+    g_printerr ("Failed to create render texture\n");
+}
+
+/* Get dimensions */
+gint width = grl_render_texture_get_width (target);
+gint height = grl_render_texture_get_height (target);
+```
+
+### Rendering to Texture
+
+```c
+/* Begin rendering to texture */
+grl_render_texture_begin (target);
+
+/* Clear the render texture */
+g_autoptr(GrlColor) bg = grl_color_new (0, 0, 0, 255);
+grl_window_clear_background (window, bg);
+
+/* Draw scene to render texture */
+grl_draw_circle (400, 300, 100, red);
+grl_draw_rectangle (100, 100, 200, 150, blue);
+
+/* End rendering to texture */
+grl_render_texture_end (target);
+```
+
+### Drawing Render Texture to Screen
+
+```c
+/* Get the texture from render target */
+g_autoptr(GrlTexture) tex = grl_render_texture_get_texture (target);
+
+/* Draw to screen (note: Y is flipped in OpenGL framebuffers) */
+g_autoptr(GrlRectangle) source = grl_rectangle_new (0, 600, 800, -600);  /* Flip Y */
+g_autoptr(GrlRectangle) dest = grl_rectangle_new (0, 0, 800, 600);
+g_autoptr(GrlVector2) origin = grl_vector2_new (0, 0);
+g_autoptr(GrlColor) white = grl_color_new_white ();
+
+grl_draw_texture_pro (tex, source, dest, origin, 0.0f, white);
+```
+
+### Methods
+
+| Method | Description |
+|--------|-------------|
+| `is_valid()` | Check if render texture is valid |
+| `get_width()` | Get width in pixels |
+| `get_height()` | Get height in pixels |
+| `begin()` | Begin rendering to this texture |
+| `end()` | End rendering and return to screen |
+| `get_texture()` | Get the color buffer as a texture |
+
+### Example: Post-Processing Effect
+
+```c
+#include <graylib.h>
+
+int
+main (int argc, char *argv[])
+{
+    g_autoptr(GrlWindow) window = grl_window_new (800, 600, "Post-Processing");
+    grl_window_set_target_fps (window, 60);
+
+    /* Create render texture for scene */
+    g_autoptr(GrlRenderTexture) scene_target = grl_render_texture_new (800, 600);
+
+    /* Load post-processing shader */
+    g_autoptr(GrlShader) blur_shader = grl_shader_new_from_file (
+        NULL, "shaders/blur.fs", NULL);
+    gint resolution_loc = grl_shader_get_location (blur_shader, "resolution");
+
+    g_autoptr(GrlColor) bg = grl_color_new (30, 30, 45, 255);
+    g_autoptr(GrlColor) white = grl_color_new_white ();
+    g_autoptr(GrlColor) red = grl_color_new_red ();
+
+    while (!grl_window_should_close (window))
+    {
+        /* 1. Render scene to texture */
+        grl_render_texture_begin (scene_target);
+        grl_window_clear_background (window, bg);
+        grl_draw_circle (400, 300, 100, red);
+        grl_render_texture_end (scene_target);
+
+        /* 2. Draw scene texture to screen with shader */
+        grl_window_begin_drawing (window);
+
+        grl_shader_begin (blur_shader);
+        grl_shader_set_value_vec2 (blur_shader, resolution_loc, 800.0f, 600.0f);
+
+        g_autoptr(GrlTexture) scene_tex = grl_render_texture_get_texture (scene_target);
+        g_autoptr(GrlRectangle) src = grl_rectangle_new (0, 600, 800, -600);
+        g_autoptr(GrlRectangle) dst = grl_rectangle_new (0, 0, 800, 600);
+        g_autoptr(GrlVector2) origin = grl_vector2_new (0, 0);
+        grl_draw_texture_pro (scene_tex, src, dst, origin, 0.0f, white);
+
+        grl_shader_end (blur_shader);
+
+        grl_draw_fps (10, 10);
+        grl_window_end_drawing (window);
+    }
+
+    return 0;
+}
+```
+
 ## Complete Example
 
 ```c

@@ -197,13 +197,17 @@ graylib/
 - [Getting Started](docs/getting-started.md)
 - [Building Guide](docs/guides/building.md)
 - [API Reference](docs/api/)
-  - [Math Types](docs/api/math-types.md) - Vector2, Color, Rectangle
+  - [Math Types](docs/api/math-types.md) - Vector2, Vector3, Vector4, Color, Rectangle, Matrix, BoundingBox
   - [Core Types](docs/api/core.md) - Application, Window
   - [Input System](docs/api/input.md) - Keyboard, Mouse, Gamepad
-  - [Graphics Types](docs/api/graphics.md) - Image, Texture, Font, Camera, Shader
+  - [Graphics Types](docs/api/graphics.md) - Image, Texture, Font, Shader, RenderTexture
   - [Drawing Functions](docs/api/drawing.md) - Shapes, textures, text
   - [Audio System](docs/api/audio.md) - Sound effects and music
   - [Scene System](docs/api/scene.md) - Entity, Sprite, Scene, SceneManager
+  - [Cameras](docs/api/cameras.md) - Camera2D, Camera3D
+  - [Models](docs/api/models.md) - Mesh, Material, Model, ModelAnimation
+  - [Collision](docs/api/collision.md) - 2D and 3D collision detection
+  - [Enumerations](docs/api/enums.md) - Key codes, blend modes, and constants
 
 ## Examples
 

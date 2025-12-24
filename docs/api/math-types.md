@@ -254,3 +254,282 @@ g_autoptr(GrlRectangle) united = grl_rectangle_union (rect1, rect2);
 gboolean eq = grl_rectangle_equal (rect1, rect2);
 gboolean is_empty = grl_rectangle_is_empty (rect);  /* width or height <= 0 */
 ```
+
+## GrlVector3
+
+A 3D vector with float components for positions, directions, and 3D math.
+
+### Structure
+
+```c
+struct _GrlVector3
+{
+    gfloat x;
+    gfloat y;
+    gfloat z;
+};
+```
+
+### Creating Vectors
+
+```c
+/* Heap allocated */
+g_autoptr(GrlVector3) v1 = grl_vector3_new (10.0f, 20.0f, 30.0f);
+
+/* Common vectors */
+g_autoptr(GrlVector3) zero = grl_vector3_new_zero ();        /* (0, 0, 0) */
+g_autoptr(GrlVector3) one = grl_vector3_new_one ();          /* (1, 1, 1) */
+g_autoptr(GrlVector3) up = grl_vector3_new_up ();            /* (0, 1, 0) */
+g_autoptr(GrlVector3) forward = grl_vector3_new_forward ();  /* (0, 0, -1) */
+g_autoptr(GrlVector3) right = grl_vector3_new_right ();      /* (1, 0, 0) */
+```
+
+### Operations
+
+```c
+g_autoptr(GrlVector3) a = grl_vector3_new (1.0f, 2.0f, 3.0f);
+g_autoptr(GrlVector3) b = grl_vector3_new (4.0f, 5.0f, 6.0f);
+
+/* Arithmetic */
+g_autoptr(GrlVector3) sum = grl_vector3_add (a, b);
+g_autoptr(GrlVector3) diff = grl_vector3_subtract (a, b);
+g_autoptr(GrlVector3) scaled = grl_vector3_scale (a, 2.0f);
+g_autoptr(GrlVector3) neg = grl_vector3_negate (a);
+
+/* Scalar operations */
+gfloat len = grl_vector3_length (a);
+gfloat len_sq = grl_vector3_length_sqr (a);
+gfloat dist = grl_vector3_distance (a, b);
+
+/* Vector products */
+gfloat dot = grl_vector3_dot (a, b);
+g_autoptr(GrlVector3) cross = grl_vector3_cross (a, b);
+
+/* Normalization */
+g_autoptr(GrlVector3) norm = grl_vector3_normalize (a);
+
+/* Interpolation */
+g_autoptr(GrlVector3) lerped = grl_vector3_lerp (a, b, 0.5f);
+
+/* Comparison */
+gboolean eq = grl_vector3_equal (a, b);
+```
+
+## GrlVector4
+
+A 4D vector for colors, quaternions, and homogeneous coordinates.
+
+### Structure
+
+```c
+struct _GrlVector4
+{
+    gfloat x;
+    gfloat y;
+    gfloat z;
+    gfloat w;
+};
+```
+
+### Creating Vectors
+
+```c
+/* Heap allocated */
+g_autoptr(GrlVector4) v1 = grl_vector4_new (1.0f, 2.0f, 3.0f, 4.0f);
+
+/* Common vectors */
+g_autoptr(GrlVector4) zero = grl_vector4_new_zero ();        /* (0, 0, 0, 0) */
+g_autoptr(GrlVector4) one = grl_vector4_new_one ();          /* (1, 1, 1, 1) */
+g_autoptr(GrlVector4) identity = grl_vector4_new_identity (); /* (0, 0, 0, 1) - identity quaternion */
+```
+
+### Operations
+
+```c
+g_autoptr(GrlVector4) a = grl_vector4_new (1.0f, 2.0f, 3.0f, 4.0f);
+g_autoptr(GrlVector4) b = grl_vector4_new (5.0f, 6.0f, 7.0f, 8.0f);
+
+/* Arithmetic */
+g_autoptr(GrlVector4) sum = grl_vector4_add (a, b);
+g_autoptr(GrlVector4) diff = grl_vector4_subtract (a, b);
+g_autoptr(GrlVector4) scaled = grl_vector4_scale (a, 2.0f);
+g_autoptr(GrlVector4) neg = grl_vector4_negate (a);
+
+/* Scalar operations */
+gfloat len = grl_vector4_length (a);
+gfloat len_sq = grl_vector4_length_sqr (a);
+gfloat dot = grl_vector4_dot (a, b);
+
+/* Normalization */
+g_autoptr(GrlVector4) norm = grl_vector4_normalize (a);
+
+/* Interpolation */
+g_autoptr(GrlVector4) lerped = grl_vector4_lerp (a, b, 0.5f);
+
+/* Comparison */
+gboolean eq = grl_vector4_equal (a, b);
+```
+
+## GrlMatrix
+
+A 4x4 transformation matrix stored in column-major order (OpenGL style).
+
+### Structure
+
+```c
+struct _GrlMatrix
+{
+    gfloat m0, m4, m8, m12;     /* Row 0 */
+    gfloat m1, m5, m9, m13;     /* Row 1 */
+    gfloat m2, m6, m10, m14;    /* Row 2 */
+    gfloat m3, m7, m11, m15;    /* Row 3 */
+};
+```
+
+### Creating Matrices
+
+```c
+/* Identity matrix */
+g_autoptr(GrlMatrix) identity = grl_matrix_new_identity ();
+
+/* Transformation matrices */
+g_autoptr(GrlMatrix) translate = grl_matrix_new_translate (10.0f, 20.0f, 30.0f);
+g_autoptr(GrlMatrix) scale = grl_matrix_new_scale (2.0f, 2.0f, 2.0f);
+
+/* Rotation matrices */
+g_autoptr(GrlVector3) axis = grl_vector3_new (0.0f, 1.0f, 0.0f);
+g_autoptr(GrlMatrix) rotate = grl_matrix_new_rotate (axis, 1.57f);  /* 90 degrees */
+g_autoptr(GrlMatrix) rotate_xyz = grl_matrix_new_rotate_xyz (0.1f, 0.2f, 0.3f);  /* Euler angles */
+```
+
+### Projection Matrices
+
+```c
+/* Perspective projection */
+g_autoptr(GrlMatrix) persp = grl_matrix_new_perspective (
+    0.785f,   /* FOV Y (45 degrees in radians) */
+    1.333f,   /* Aspect ratio (4:3) */
+    0.1,      /* Near plane */
+    1000.0    /* Far plane */
+);
+
+/* Orthographic projection */
+g_autoptr(GrlMatrix) ortho = grl_matrix_new_ortho (
+    0.0, 800.0,   /* Left, Right */
+    600.0, 0.0,   /* Bottom, Top */
+    -1.0, 1.0     /* Near, Far */
+);
+
+/* Frustum projection */
+g_autoptr(GrlMatrix) frustum = grl_matrix_new_frustum (
+    -1.0, 1.0,   /* Left, Right */
+    -1.0, 1.0,   /* Bottom, Top */
+    0.1, 100.0   /* Near, Far */
+);
+```
+
+### View Matrices
+
+```c
+/* Look-at view matrix */
+g_autoptr(GrlVector3) eye = grl_vector3_new (0.0f, 5.0f, 10.0f);
+g_autoptr(GrlVector3) target = grl_vector3_new (0.0f, 0.0f, 0.0f);
+g_autoptr(GrlVector3) up = grl_vector3_new_up ();
+
+g_autoptr(GrlMatrix) view = grl_matrix_new_look_at (eye, target, up);
+```
+
+### Operations
+
+```c
+/* Multiply matrices */
+g_autoptr(GrlMatrix) mv = grl_matrix_multiply (model, view);
+g_autoptr(GrlMatrix) mvp = grl_matrix_multiply (mv, projection);
+
+/* Inverse and transpose */
+g_autoptr(GrlMatrix) inv = grl_matrix_invert (matrix);
+g_autoptr(GrlMatrix) trans = grl_matrix_transpose (matrix);
+
+/* Scalar properties */
+gfloat det = grl_matrix_determinant (matrix);
+gfloat trace = grl_matrix_trace (matrix);
+```
+
+## GrlBoundingBox
+
+An axis-aligned bounding box (AABB) for 3D collision detection.
+
+### Structure
+
+```c
+struct _GrlBoundingBox
+{
+    GrlVector3 min;  /* Minimum corner */
+    GrlVector3 max;  /* Maximum corner */
+};
+```
+
+### Creating Bounding Boxes
+
+```c
+/* From vectors */
+g_autoptr(GrlVector3) min = grl_vector3_new (-1.0f, -1.0f, -1.0f);
+g_autoptr(GrlVector3) max = grl_vector3_new (1.0f, 1.0f, 1.0f);
+g_autoptr(GrlBoundingBox) box = grl_bounding_box_new (min, max);
+
+/* From coordinates */
+g_autoptr(GrlBoundingBox) box2 = grl_bounding_box_new_xyz (
+    -1.0f, -1.0f, -1.0f,  /* Min X, Y, Z */
+    1.0f, 1.0f, 1.0f       /* Max X, Y, Z */
+);
+```
+
+### Properties
+
+```c
+/* Get corners and measurements */
+g_autoptr(GrlVector3) min = grl_bounding_box_get_min (box);
+g_autoptr(GrlVector3) max = grl_bounding_box_get_max (box);
+g_autoptr(GrlVector3) center = grl_bounding_box_get_center (box);
+g_autoptr(GrlVector3) size = grl_bounding_box_get_size (box);
+```
+
+### Collision Detection
+
+```c
+/* Point containment */
+g_autoptr(GrlVector3) point = grl_vector3_new (0.5f, 0.5f, 0.5f);
+if (grl_bounding_box_contains_point (box, point))
+{
+    g_print ("Point is inside the box\n");
+}
+
+/* Box-box intersection */
+if (grl_bounding_box_intersects (box1, box2))
+{
+    g_print ("Boxes overlap!\n");
+}
+```
+
+### Operations
+
+```c
+/* Expand to include a point */
+g_autoptr(GrlBoundingBox) expanded = grl_bounding_box_expand (box, point);
+
+/* Merge two boxes */
+g_autoptr(GrlBoundingBox) merged = grl_bounding_box_merge (box1, box2);
+```
+
+### Example: Computing Model Bounds
+
+```c
+g_autoptr(GrlModel) model = grl_model_new_from_file ("model.glb", NULL);
+g_autoptr(GrlBoundingBox) bounds = grl_model_get_bounding_box (model);
+
+g_autoptr(GrlVector3) center = grl_bounding_box_get_center (bounds);
+g_autoptr(GrlVector3) size = grl_bounding_box_get_size (bounds);
+
+g_print ("Model center: (%.2f, %.2f, %.2f)\n", center->x, center->y, center->z);
+g_print ("Model size: %.2f x %.2f x %.2f\n", size->x, size->y, size->z);
+```

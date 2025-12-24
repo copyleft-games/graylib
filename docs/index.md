@@ -26,13 +26,17 @@ See the [Building Guide](guides/building.md) for build instructions.
 
 ## API Reference
 
-- [Math Types](api/math-types.md) - Vector2, Color, Rectangle
+- [Math Types](api/math-types.md) - Vector2, Vector3, Vector4, Color, Rectangle, Matrix, BoundingBox
 - [Core](api/core.md) - Application, Window
 - [Input](api/input.md) - Keyboard, mouse, and gamepad input
-- [Graphics](api/graphics.md) - Images, textures, and fonts
+- [Graphics](api/graphics.md) - Images, textures, fonts, shaders, and render textures
 - [Drawing](api/drawing.md) - Shape, texture, and text drawing functions
 - [Audio](api/audio.md) - Sound effects and music
 - [Scene](api/scene.md) - Entity system, sprites, and animations
+- [Cameras](api/cameras.md) - 2D and 3D camera systems
+- [Models](api/models.md) - 3D meshes, materials, models, and animations
+- [Collision](api/collision.md) - 2D and 3D collision detection
+- [Enumerations](api/enums.md) - Key codes, blend modes, and other constants
 
 ## Examples
 
