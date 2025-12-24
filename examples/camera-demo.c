@@ -238,6 +238,9 @@ main (int    argc,
         gfloat dt = grl_window_get_frame_time (window);
         time += dt;
 
+        /* Poll input (required for input functions to work) */
+        grl_window_poll_input (window);
+
         /* Switch demo mode with TAB */
         if (grl_input_is_key_pressed (GRL_KEY_TAB))
         {

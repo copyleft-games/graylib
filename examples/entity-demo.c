@@ -199,6 +199,9 @@ main (int   argc,
         width = grl_window_get_width (window);
         height = grl_window_get_height (window);
 
+        /* Poll input (required for input functions to work) */
+        grl_window_poll_input (window);
+
         /* Reset collision states */
         player->is_colliding = FALSE;
 
