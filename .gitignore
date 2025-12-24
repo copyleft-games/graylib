@@ -24,6 +24,7 @@ examples/firstperson-demo
 examples/flappybird3d
 examples/snake3d
 examples/tetris3d
+examples/roguelike3d
 
 # Test binaries
 tests/test-*

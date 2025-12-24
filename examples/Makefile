@@ -36,7 +36,8 @@ EXAMPLE_SOURCES := \
 	flappybird3d.c \
 	doodlejump3d.c \
 	asteroids3d.c \
-	firstperson-demo.c
+	firstperson-demo.c \
+	roguelike3d.c
 
 # Example executables
 EXAMPLE_PROGRAMS := $(patsubst %.c,%,$(EXAMPLE_SOURCES))
@@ -113,6 +114,9 @@ asteroids3d: asteroids3d.c | $(LIBOUTDIR)/$(LIB_SHARED)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
 firstperson-demo: firstperson-demo.c | $(LIBOUTDIR)/$(LIB_SHARED)
+	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
+
+roguelike3d: roguelike3d.c | $(LIBOUTDIR)/$(LIB_SHARED)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
 # Run an example (usage: make run-basic-window)
