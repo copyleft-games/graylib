@@ -18,6 +18,12 @@ examples/model-demo
 examples/collision-demo
 examples/pong 
 examples/pong3d
+examples/asteroids3d
+examples/doodlejump3d
+examples/firstperson-demo
+examples/flappybird3d
+examples/snake3d
+examples/tetris3d
 
 # Test binaries
 tests/test-*

@@ -30,7 +30,13 @@ EXAMPLE_SOURCES := \
 	model-demo.c \
 	collision-demo.c \
 	pong.c \
-	pong3d.c
+	pong3d.c \
+	snake3d.c \
+	tetris3d.c \
+	flappybird3d.c \
+	doodlejump3d.c \
+	asteroids3d.c \
+	firstperson-demo.c
 
 # Example executables
 EXAMPLE_PROGRAMS := $(patsubst %.c,%,$(EXAMPLE_SOURCES))
@@ -89,6 +95,24 @@ pong: pong.c | $(LIBOUTDIR)/$(LIB_SHARED)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
 pong3d: pong3d.c | $(LIBOUTDIR)/$(LIB_SHARED)
+	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
+
+snake3d: snake3d.c | $(LIBOUTDIR)/$(LIB_SHARED)
+	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
+
+tetris3d: tetris3d.c | $(LIBOUTDIR)/$(LIB_SHARED)
+	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
+
+flappybird3d: flappybird3d.c | $(LIBOUTDIR)/$(LIB_SHARED)
+	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
+
+doodlejump3d: doodlejump3d.c | $(LIBOUTDIR)/$(LIB_SHARED)
+	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
+
+asteroids3d: asteroids3d.c | $(LIBOUTDIR)/$(LIB_SHARED)
+	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
+
+firstperson-demo: firstperson-demo.c | $(LIBOUTDIR)/$(LIB_SHARED)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
 # Run an example (usage: make run-basic-window)
