@@ -501,3 +501,34 @@ When adding a new type:
 4. **Include order**: Always include `"config.h"` first in source files
 
 5. **Memory ownership**: Document transfer semantics with `(transfer full)` or `(transfer none)` annotations
+
+6. **bool vs gboolean ABI mismatch**: When wrapping raylib functions that return C99 `bool` (1 byte), you MUST use an `unsigned char` intermediate variable before returning `gboolean` (4 bytes). The compiler may otherwise read garbage from upper register bytes.
+
+   **WRONG** (garbage in upper 24 bits):
+   ```c
+   gboolean
+   grl_input_is_key_down (GrlKey key)
+   {
+       return IsKeyDown ((int)key);  /* BAD: tail-call leaves upper bytes dirty */
+   }
+
+   gboolean
+   grl_input_is_key_down (GrlKey key)
+   {
+       return IsKeyDown ((int)key) ? TRUE : FALSE;  /* BAD: compiler tests full %eax */
+   }
+   ```
+
+   **CORRECT** (forces 8-bit read, then zero-extends):
+   ```c
+   gboolean
+   grl_input_is_key_down (GrlKey key)
+   {
+       unsigned char raw = IsKeyDown ((int)key);
+       return raw != 0;
+   }
+   ```
+
+   This generates proper assembly: `test %al,%al` + `movzbl %al,%eax` instead of `test %eax,%eax`.
+
+   **Affected functions**: All raylib functions returning `bool` - input functions (`IsKeyDown`, `IsMouseButtonPressed`, etc.), collision detection (`CheckCollision*`), and any other boolean-returning APIs. See `docs/api/input.md` for the full list.

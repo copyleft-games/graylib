@@ -483,3 +483,72 @@ main (int argc, char *argv[])
 | `gamepad-button-pressed` | int gamepad, GrlGamepadButton | Gamepad button pressed |
 | `gamepad-button-released` | int gamepad, GrlGamepadButton | Gamepad button released |
 | `gamepad-axis-moved` | int gamepad, GrlGamepadAxis, float | Gamepad axis changed |
+
+---
+
+## Implementation Notes: bool vs gboolean ABI
+
+All input polling functions that check state (pressed, down, released, up) wrap raylib functions that return C99 `bool`. Since `bool` is 1 byte and `gboolean` is 4 bytes, special care is needed to avoid ABI mismatches.
+
+### The Problem
+
+Raylib's `IsKeyDown()` and similar functions return `bool`, which sets only the low byte (`%al`) of the return register. When our wrapper returns `gboolean`, the caller reads all 4 bytes (`%eax`), but the upper 3 bytes may contain garbage.
+
+### The Solution
+
+All boolean-returning wrappers use an `unsigned char` intermediate to force the compiler to read only the low byte:
+
+```c
+gboolean
+grl_input_is_key_down (GrlKey key)
+{
+    unsigned char raw = IsKeyDown ((int)key);
+    return raw != 0;
+}
+```
+
+This generates correct assembly:
+```asm
+call   IsKeyDown@plt
+test   %al,%al          ; Only test low byte
+setne  %al
+movzbl %al,%eax         ; Zero-extend to 32-bit gboolean
+ret
+```
+
+### Affected Functions
+
+The following wrapper functions use this pattern:
+
+**Keyboard:**
+- `grl_input_is_key_pressed()`
+- `grl_input_is_key_pressed_repeat()`
+- `grl_input_is_key_down()`
+- `grl_input_is_key_released()`
+- `grl_input_is_key_up()`
+
+**Mouse:**
+- `grl_input_is_mouse_button_pressed()`
+- `grl_input_is_mouse_button_down()`
+- `grl_input_is_mouse_button_released()`
+- `grl_input_is_mouse_button_up()`
+
+**Gamepad:**
+- `grl_input_is_gamepad_available()`
+- `grl_input_is_gamepad_button_pressed()`
+- `grl_input_is_gamepad_button_down()`
+- `grl_input_is_gamepad_button_released()`
+- `grl_input_is_gamepad_button_up()`
+
+**Gestures:**
+- `grl_input_is_gesture_detected()`
+
+### Verification
+
+You can verify correct code generation with objdump:
+
+```bash
+objdump -d build/lib/libgraylib.so | grep -A10 '<grl_input_is_key_down>:'
+```
+
+Look for `test %al,%al` (correct) rather than `test %eax,%eax` (wrong).

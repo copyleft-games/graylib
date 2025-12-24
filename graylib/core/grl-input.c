@@ -81,9 +81,8 @@
 gboolean
 grl_input_is_key_pressed (GrlKey key)
 {
-    /* Explicit conversion from bool (1 byte) to gboolean (4 bytes) to prevent
-     * tail-call optimization from passing through garbage in upper bytes */
-    return IsKeyPressed ((int)key) ? TRUE : FALSE;
+    unsigned char raw = IsKeyPressed ((int)key);
+    return raw != 0;
 }
 
 /**
@@ -97,7 +96,8 @@ grl_input_is_key_pressed (GrlKey key)
 gboolean
 grl_input_is_key_pressed_repeat (GrlKey key)
 {
-    return IsKeyPressedRepeat ((int)key) ? TRUE : FALSE;
+    unsigned char raw = IsKeyPressedRepeat ((int)key);
+    return raw != 0;
 }
 
 /**
@@ -111,7 +111,11 @@ grl_input_is_key_pressed_repeat (GrlKey key)
 gboolean
 grl_input_is_key_down (GrlKey key)
 {
-    return IsKeyDown ((int)key) ? TRUE : FALSE;
+    /* Use unsigned char to properly capture the 1-byte bool return value.
+     * Without this, the compiler may test the full 32-bit register which
+     * can contain garbage in the upper bytes. */
+    unsigned char raw = IsKeyDown ((int)key);
+    return raw != 0;
 }
 
 /**
@@ -125,7 +129,8 @@ grl_input_is_key_down (GrlKey key)
 gboolean
 grl_input_is_key_released (GrlKey key)
 {
-    return IsKeyReleased ((int)key) ? TRUE : FALSE;
+    unsigned char raw = IsKeyReleased ((int)key);
+    return raw != 0;
 }
 
 /**
@@ -139,7 +144,8 @@ grl_input_is_key_released (GrlKey key)
 gboolean
 grl_input_is_key_up (GrlKey key)
 {
-    return IsKeyUp ((int)key) ? TRUE : FALSE;
+    unsigned char raw = IsKeyUp ((int)key);
+    return raw != 0;
 }
 
 /**
@@ -185,7 +191,8 @@ grl_input_get_char_pressed (void)
 gboolean
 grl_input_is_mouse_button_pressed (GrlMouseButton button)
 {
-    return IsMouseButtonPressed ((int)button) ? TRUE : FALSE;
+    unsigned char raw = IsMouseButtonPressed ((int)button);
+    return raw != 0;
 }
 
 /**
@@ -199,7 +206,8 @@ grl_input_is_mouse_button_pressed (GrlMouseButton button)
 gboolean
 grl_input_is_mouse_button_down (GrlMouseButton button)
 {
-    return IsMouseButtonDown ((int)button) ? TRUE : FALSE;
+    unsigned char raw = IsMouseButtonDown ((int)button);
+    return raw != 0;
 }
 
 /**
@@ -213,7 +221,8 @@ grl_input_is_mouse_button_down (GrlMouseButton button)
 gboolean
 grl_input_is_mouse_button_released (GrlMouseButton button)
 {
-    return IsMouseButtonReleased ((int)button) ? TRUE : FALSE;
+    unsigned char raw = IsMouseButtonReleased ((int)button);
+    return raw != 0;
 }
 
 /**
@@ -227,7 +236,8 @@ grl_input_is_mouse_button_released (GrlMouseButton button)
 gboolean
 grl_input_is_mouse_button_up (GrlMouseButton button)
 {
-    return IsMouseButtonUp ((int)button) ? TRUE : FALSE;
+    unsigned char raw = IsMouseButtonUp ((int)button);
+    return raw != 0;
 }
 
 /**
@@ -382,7 +392,8 @@ grl_input_set_mouse_cursor (GrlMouseCursor cursor)
 gboolean
 grl_input_is_gamepad_available (gint gamepad)
 {
-    return IsGamepadAvailable (gamepad) ? TRUE : FALSE;
+    unsigned char raw = IsGamepadAvailable (gamepad);
+    return raw != 0;
 }
 
 /**
@@ -412,7 +423,8 @@ gboolean
 grl_input_is_gamepad_button_pressed (gint             gamepad,
                                      GrlGamepadButton button)
 {
-    return IsGamepadButtonPressed (gamepad, (int)button) ? TRUE : FALSE;
+    unsigned char raw = IsGamepadButtonPressed (gamepad, (int)button);
+    return raw != 0;
 }
 
 /**
@@ -428,7 +440,8 @@ gboolean
 grl_input_is_gamepad_button_down (gint             gamepad,
                                   GrlGamepadButton button)
 {
-    return IsGamepadButtonDown (gamepad, (int)button) ? TRUE : FALSE;
+    unsigned char raw = IsGamepadButtonDown (gamepad, (int)button);
+    return raw != 0;
 }
 
 /**
@@ -444,7 +457,8 @@ gboolean
 grl_input_is_gamepad_button_released (gint             gamepad,
                                       GrlGamepadButton button)
 {
-    return IsGamepadButtonReleased (gamepad, (int)button) ? TRUE : FALSE;
+    unsigned char raw = IsGamepadButtonReleased (gamepad, (int)button);
+    return raw != 0;
 }
 
 /**
@@ -460,7 +474,8 @@ gboolean
 grl_input_is_gamepad_button_up (gint             gamepad,
                                 GrlGamepadButton button)
 {
-    return IsGamepadButtonUp (gamepad, (int)button) ? TRUE : FALSE;
+    unsigned char raw = IsGamepadButtonUp (gamepad, (int)button);
+    return raw != 0;
 }
 
 /**
@@ -643,7 +658,8 @@ grl_input_set_gestures_enabled (GrlGesture flags)
 gboolean
 grl_input_is_gesture_detected (GrlGesture gesture)
 {
-    return IsGestureDetected ((unsigned int)gesture) ? TRUE : FALSE;
+    unsigned char raw = IsGestureDetected ((unsigned int)gesture);
+    return raw != 0;
 }
 
 /**
