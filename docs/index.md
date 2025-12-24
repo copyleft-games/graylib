@@ -24,6 +24,10 @@ See the [Getting Started Guide](getting-started.md) for installation and basic u
 
 See the [Building Guide](guides/building.md) for build instructions.
 
+## Best Practices
+
+See [Best Practices](best_practices.md) for common pitfalls and solutions when working with graylib (depth buffer clearing, z-fighting, color operations, etc.).
+
 ## API Reference
 
 - [Math Types](api/math-types.md) - Vector2, Vector3, Vector4, Color, Rectangle, Matrix, BoundingBox
