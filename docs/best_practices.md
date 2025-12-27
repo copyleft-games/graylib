@@ -108,3 +108,28 @@ When possible, use graylib's built-in drawing functions (`grl_draw_cube()`, `grl
 - Handle winding order correctly
 - Are optimized for raylib's renderer
 - Reduce code complexity and potential for bugs
+
+## Memory Management
+
+### GrlModel and GrlMesh Ownership
+
+**Problem:** Double-free crash or use-after-free when using `grl_model_new_from_mesh()`.
+
+**Cause:** raylib's `LoadModelFromMesh()` performs a shallow copy - the model's internal mesh shares pointers with the original `GrlMesh`. If the mesh is freed while the model still exists, the model has dangling pointers.
+
+**Solution:** This is handled automatically. When you call `grl_model_new_from_mesh()`, the model takes a reference to the mesh and keeps it alive. You can safely let the mesh go out of scope:
+
+```c
+static GrlModel *
+create_cube_model (void)
+{
+    g_autoptr(GrlMesh) mesh = grl_mesh_new_cube (1.0f, 1.0f, 1.0f);
+    grl_mesh_upload (mesh, FALSE);
+
+    /* Model refs the mesh internally - safe to return even though
+     * mesh will be unreffed when this function returns */
+    return grl_model_new_from_mesh (mesh);
+}
+```
+
+**Note:** This only applies to `grl_model_new_from_mesh()`. Models loaded from files with `grl_model_new_from_file()` own their mesh data directly and don't have shared ownership concerns.
