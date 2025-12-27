@@ -535,3 +535,154 @@ typedef enum
 | `GRL_MATERIAL_MAP_IRRADIANCE` | Diffuse IBL |
 | `GRL_MATERIAL_MAP_PREFILTER` | Specular IBL |
 | `GRL_MATERIAL_MAP_BRDF` | BRDF lookup table |
+
+## RLGL (Low-Level OpenGL)
+
+### GrlRlglDrawMode
+
+Primitive draw modes for RLGL immediate mode rendering.
+
+```c
+typedef enum
+{
+    GRL_RLGL_LINES     = 0x0001,
+    GRL_RLGL_TRIANGLES = 0x0004,
+    GRL_RLGL_QUADS     = 0x0007
+} GrlRlglDrawMode;
+```
+
+| Mode | Description |
+|------|-------------|
+| `GRL_RLGL_LINES` | Draw lines |
+| `GRL_RLGL_TRIANGLES` | Draw triangles |
+| `GRL_RLGL_QUADS` | Draw quads (converted to triangles internally) |
+
+### GrlRlglMatrixMode
+
+Matrix mode for RLGL matrix stack operations.
+
+```c
+typedef enum
+{
+    GRL_RLGL_MODELVIEW  = 0x1700,
+    GRL_RLGL_PROJECTION = 0x1701,
+    GRL_RLGL_TEXTURE    = 0x1702
+} GrlRlglMatrixMode;
+```
+
+| Mode | Description |
+|------|-------------|
+| `GRL_RLGL_MODELVIEW` | Model-view transformation matrix |
+| `GRL_RLGL_PROJECTION` | Projection matrix |
+| `GRL_RLGL_TEXTURE` | Texture coordinate matrix |
+
+### GrlRlglCullMode
+
+Face culling modes.
+
+```c
+typedef enum
+{
+    GRL_RLGL_CULL_FRONT = 0,
+    GRL_RLGL_CULL_BACK  = 1
+} GrlRlglCullMode;
+```
+
+| Mode | Description |
+|------|-------------|
+| `GRL_RLGL_CULL_FRONT` | Cull front-facing polygons |
+| `GRL_RLGL_CULL_BACK` | Cull back-facing polygons |
+
+### GrlRlglGlVersion
+
+OpenGL version identifiers.
+
+```c
+typedef enum
+{
+    GRL_RLGL_OPENGL_11    = 1,
+    GRL_RLGL_OPENGL_21    = 2,
+    GRL_RLGL_OPENGL_33    = 3,
+    GRL_RLGL_OPENGL_43    = 4,
+    GRL_RLGL_OPENGL_ES_20 = 5,
+    GRL_RLGL_OPENGL_ES_30 = 6
+} GrlRlglGlVersion;
+```
+
+| Version | Description |
+|---------|-------------|
+| `GRL_RLGL_OPENGL_11` | OpenGL 1.1 |
+| `GRL_RLGL_OPENGL_21` | OpenGL 2.1 |
+| `GRL_RLGL_OPENGL_33` | OpenGL 3.3 Core |
+| `GRL_RLGL_OPENGL_43` | OpenGL 4.3 |
+| `GRL_RLGL_OPENGL_ES_20` | OpenGL ES 2.0 |
+| `GRL_RLGL_OPENGL_ES_30` | OpenGL ES 3.0 |
+
+### GrlRlglFramebufferAttachType
+
+Framebuffer attachment types.
+
+```c
+typedef enum
+{
+    GRL_RLGL_FRAMEBUFFER_ATTACH_COLOR_CHANNEL0 = 0,
+    GRL_RLGL_FRAMEBUFFER_ATTACH_COLOR_CHANNEL1 = 1,
+    GRL_RLGL_FRAMEBUFFER_ATTACH_COLOR_CHANNEL2 = 2,
+    GRL_RLGL_FRAMEBUFFER_ATTACH_COLOR_CHANNEL3 = 3,
+    GRL_RLGL_FRAMEBUFFER_ATTACH_COLOR_CHANNEL4 = 4,
+    GRL_RLGL_FRAMEBUFFER_ATTACH_COLOR_CHANNEL5 = 5,
+    GRL_RLGL_FRAMEBUFFER_ATTACH_COLOR_CHANNEL6 = 6,
+    GRL_RLGL_FRAMEBUFFER_ATTACH_COLOR_CHANNEL7 = 7,
+    GRL_RLGL_FRAMEBUFFER_ATTACH_DEPTH          = 100,
+    GRL_RLGL_FRAMEBUFFER_ATTACH_STENCIL        = 200
+} GrlRlglFramebufferAttachType;
+```
+
+| Type | Description |
+|------|-------------|
+| `GRL_RLGL_FRAMEBUFFER_ATTACH_COLOR_CHANNEL0-7` | Color attachment slots 0-7 |
+| `GRL_RLGL_FRAMEBUFFER_ATTACH_DEPTH` | Depth buffer attachment |
+| `GRL_RLGL_FRAMEBUFFER_ATTACH_STENCIL` | Stencil buffer attachment |
+
+### GrlRlglFramebufferTexType
+
+Framebuffer texture types.
+
+```c
+typedef enum
+{
+    GRL_RLGL_FRAMEBUFFER_TEX_CUBEMAP_POSITIVE_X = 0,
+    GRL_RLGL_FRAMEBUFFER_TEX_CUBEMAP_NEGATIVE_X = 1,
+    GRL_RLGL_FRAMEBUFFER_TEX_CUBEMAP_POSITIVE_Y = 2,
+    GRL_RLGL_FRAMEBUFFER_TEX_CUBEMAP_NEGATIVE_Y = 3,
+    GRL_RLGL_FRAMEBUFFER_TEX_CUBEMAP_POSITIVE_Z = 4,
+    GRL_RLGL_FRAMEBUFFER_TEX_CUBEMAP_NEGATIVE_Z = 5,
+    GRL_RLGL_FRAMEBUFFER_TEX_TEXTURE2D          = 100,
+    GRL_RLGL_FRAMEBUFFER_TEX_RENDERBUFFER       = 200
+} GrlRlglFramebufferTexType;
+```
+
+| Type | Description |
+|------|-------------|
+| `GRL_RLGL_FRAMEBUFFER_TEX_CUBEMAP_*` | Cubemap face attachments |
+| `GRL_RLGL_FRAMEBUFFER_TEX_TEXTURE2D` | 2D texture attachment |
+| `GRL_RLGL_FRAMEBUFFER_TEX_RENDERBUFFER` | Renderbuffer attachment |
+
+### GrlRlglShaderType
+
+Shader types for compilation.
+
+```c
+typedef enum
+{
+    GRL_RLGL_SHADER_FRAGMENT = 0x8B30,
+    GRL_RLGL_SHADER_VERTEX   = 0x8B31,
+    GRL_RLGL_SHADER_COMPUTE  = 0x91B9
+} GrlRlglShaderType;
+```
+
+| Type | Description |
+|------|-------------|
+| `GRL_RLGL_SHADER_FRAGMENT` | Fragment (pixel) shader |
+| `GRL_RLGL_SHADER_VERTEX` | Vertex shader |
+| `GRL_RLGL_SHADER_COMPUTE` | Compute shader |

@@ -524,3 +524,184 @@ grl_gesture_get_type (void)
 
     return g_define_type_id__volatile;
 }
+
+/*
+ * =============================================================================
+ * RLGL Enums
+ * =============================================================================
+ */
+
+/*
+ * GrlRlglDrawMode
+ */
+GType
+grl_rlgl_draw_mode_get_type (void)
+{
+    static volatile gsize g_define_type_id__volatile = 0;
+
+    if (g_once_init_enter (&g_define_type_id__volatile))
+    {
+        static const GEnumValue values[] = {
+            { GRL_RLGL_LINES, "GRL_RLGL_LINES", "lines" },
+            { GRL_RLGL_TRIANGLES, "GRL_RLGL_TRIANGLES", "triangles" },
+            { GRL_RLGL_QUADS, "GRL_RLGL_QUADS", "quads" },
+            { 0, NULL, NULL }
+        };
+        GType g_define_type_id = g_enum_register_static ("GrlRlglDrawMode", values);
+        g_once_init_leave (&g_define_type_id__volatile, g_define_type_id);
+    }
+
+    return g_define_type_id__volatile;
+}
+
+/*
+ * GrlRlglMatrixMode
+ */
+GType
+grl_rlgl_matrix_mode_get_type (void)
+{
+    static volatile gsize g_define_type_id__volatile = 0;
+
+    if (g_once_init_enter (&g_define_type_id__volatile))
+    {
+        static const GEnumValue values[] = {
+            { GRL_RLGL_MODELVIEW, "GRL_RLGL_MODELVIEW", "modelview" },
+            { GRL_RLGL_PROJECTION, "GRL_RLGL_PROJECTION", "projection" },
+            { GRL_RLGL_TEXTURE, "GRL_RLGL_TEXTURE", "texture" },
+            { 0, NULL, NULL }
+        };
+        GType g_define_type_id = g_enum_register_static ("GrlRlglMatrixMode", values);
+        g_once_init_leave (&g_define_type_id__volatile, g_define_type_id);
+    }
+
+    return g_define_type_id__volatile;
+}
+
+/*
+ * GrlRlglCullMode
+ */
+GType
+grl_rlgl_cull_mode_get_type (void)
+{
+    static volatile gsize g_define_type_id__volatile = 0;
+
+    if (g_once_init_enter (&g_define_type_id__volatile))
+    {
+        static const GEnumValue values[] = {
+            { GRL_RLGL_CULL_FRONT, "GRL_RLGL_CULL_FRONT", "front" },
+            { GRL_RLGL_CULL_BACK, "GRL_RLGL_CULL_BACK", "back" },
+            { 0, NULL, NULL }
+        };
+        GType g_define_type_id = g_enum_register_static ("GrlRlglCullMode", values);
+        g_once_init_leave (&g_define_type_id__volatile, g_define_type_id);
+    }
+
+    return g_define_type_id__volatile;
+}
+
+/*
+ * GrlRlglGlVersion
+ */
+GType
+grl_rlgl_gl_version_get_type (void)
+{
+    static volatile gsize g_define_type_id__volatile = 0;
+
+    if (g_once_init_enter (&g_define_type_id__volatile))
+    {
+        static const GEnumValue values[] = {
+            { GRL_RLGL_OPENGL_11, "GRL_RLGL_OPENGL_11", "opengl-11" },
+            { GRL_RLGL_OPENGL_21, "GRL_RLGL_OPENGL_21", "opengl-21" },
+            { GRL_RLGL_OPENGL_33, "GRL_RLGL_OPENGL_33", "opengl-33" },
+            { GRL_RLGL_OPENGL_43, "GRL_RLGL_OPENGL_43", "opengl-43" },
+            { GRL_RLGL_OPENGL_ES_20, "GRL_RLGL_OPENGL_ES_20", "opengl-es-20" },
+            { GRL_RLGL_OPENGL_ES_30, "GRL_RLGL_OPENGL_ES_30", "opengl-es-30" },
+            { 0, NULL, NULL }
+        };
+        GType g_define_type_id = g_enum_register_static ("GrlRlglGlVersion", values);
+        g_once_init_leave (&g_define_type_id__volatile, g_define_type_id);
+    }
+
+    return g_define_type_id__volatile;
+}
+
+/*
+ * GrlRlglFramebufferAttachType
+ */
+GType
+grl_rlgl_framebuffer_attach_type_get_type (void)
+{
+    static volatile gsize g_define_type_id__volatile = 0;
+
+    if (g_once_init_enter (&g_define_type_id__volatile))
+    {
+        static const GEnumValue values[] = {
+            { GRL_RLGL_ATTACHMENT_COLOR_CHANNEL0, "GRL_RLGL_ATTACHMENT_COLOR_CHANNEL0", "color-channel0" },
+            { GRL_RLGL_ATTACHMENT_COLOR_CHANNEL1, "GRL_RLGL_ATTACHMENT_COLOR_CHANNEL1", "color-channel1" },
+            { GRL_RLGL_ATTACHMENT_COLOR_CHANNEL2, "GRL_RLGL_ATTACHMENT_COLOR_CHANNEL2", "color-channel2" },
+            { GRL_RLGL_ATTACHMENT_COLOR_CHANNEL3, "GRL_RLGL_ATTACHMENT_COLOR_CHANNEL3", "color-channel3" },
+            { GRL_RLGL_ATTACHMENT_COLOR_CHANNEL4, "GRL_RLGL_ATTACHMENT_COLOR_CHANNEL4", "color-channel4" },
+            { GRL_RLGL_ATTACHMENT_COLOR_CHANNEL5, "GRL_RLGL_ATTACHMENT_COLOR_CHANNEL5", "color-channel5" },
+            { GRL_RLGL_ATTACHMENT_COLOR_CHANNEL6, "GRL_RLGL_ATTACHMENT_COLOR_CHANNEL6", "color-channel6" },
+            { GRL_RLGL_ATTACHMENT_COLOR_CHANNEL7, "GRL_RLGL_ATTACHMENT_COLOR_CHANNEL7", "color-channel7" },
+            { GRL_RLGL_ATTACHMENT_DEPTH, "GRL_RLGL_ATTACHMENT_DEPTH", "depth" },
+            { GRL_RLGL_ATTACHMENT_STENCIL, "GRL_RLGL_ATTACHMENT_STENCIL", "stencil" },
+            { 0, NULL, NULL }
+        };
+        GType g_define_type_id = g_enum_register_static ("GrlRlglFramebufferAttachType", values);
+        g_once_init_leave (&g_define_type_id__volatile, g_define_type_id);
+    }
+
+    return g_define_type_id__volatile;
+}
+
+/*
+ * GrlRlglFramebufferTexType
+ */
+GType
+grl_rlgl_framebuffer_tex_type_get_type (void)
+{
+    static volatile gsize g_define_type_id__volatile = 0;
+
+    if (g_once_init_enter (&g_define_type_id__volatile))
+    {
+        static const GEnumValue values[] = {
+            { GRL_RLGL_ATTACHMENT_CUBEMAP_POSITIVE_X, "GRL_RLGL_ATTACHMENT_CUBEMAP_POSITIVE_X", "cubemap-positive-x" },
+            { GRL_RLGL_ATTACHMENT_CUBEMAP_NEGATIVE_X, "GRL_RLGL_ATTACHMENT_CUBEMAP_NEGATIVE_X", "cubemap-negative-x" },
+            { GRL_RLGL_ATTACHMENT_CUBEMAP_POSITIVE_Y, "GRL_RLGL_ATTACHMENT_CUBEMAP_POSITIVE_Y", "cubemap-positive-y" },
+            { GRL_RLGL_ATTACHMENT_CUBEMAP_NEGATIVE_Y, "GRL_RLGL_ATTACHMENT_CUBEMAP_NEGATIVE_Y", "cubemap-negative-y" },
+            { GRL_RLGL_ATTACHMENT_CUBEMAP_POSITIVE_Z, "GRL_RLGL_ATTACHMENT_CUBEMAP_POSITIVE_Z", "cubemap-positive-z" },
+            { GRL_RLGL_ATTACHMENT_CUBEMAP_NEGATIVE_Z, "GRL_RLGL_ATTACHMENT_CUBEMAP_NEGATIVE_Z", "cubemap-negative-z" },
+            { GRL_RLGL_ATTACHMENT_TEXTURE2D, "GRL_RLGL_ATTACHMENT_TEXTURE2D", "texture2d" },
+            { GRL_RLGL_ATTACHMENT_RENDERBUFFER, "GRL_RLGL_ATTACHMENT_RENDERBUFFER", "renderbuffer" },
+            { 0, NULL, NULL }
+        };
+        GType g_define_type_id = g_enum_register_static ("GrlRlglFramebufferTexType", values);
+        g_once_init_leave (&g_define_type_id__volatile, g_define_type_id);
+    }
+
+    return g_define_type_id__volatile;
+}
+
+/*
+ * GrlRlglShaderType
+ */
+GType
+grl_rlgl_shader_type_get_type (void)
+{
+    static volatile gsize g_define_type_id__volatile = 0;
+
+    if (g_once_init_enter (&g_define_type_id__volatile))
+    {
+        static const GEnumValue values[] = {
+            { GRL_RLGL_SHADER_FRAGMENT, "GRL_RLGL_SHADER_FRAGMENT", "fragment" },
+            { GRL_RLGL_SHADER_VERTEX, "GRL_RLGL_SHADER_VERTEX", "vertex" },
+            { GRL_RLGL_SHADER_COMPUTE, "GRL_RLGL_SHADER_COMPUTE", "compute" },
+            { 0, NULL, NULL }
+        };
+        GType g_define_type_id = g_enum_register_static ("GrlRlglShaderType", values);
+        g_once_init_leave (&g_define_type_id__volatile, g_define_type_id);
+    }
+
+    return g_define_type_id__volatile;
+}

@@ -63,7 +63,8 @@ PUBLIC_HEADERS := \
 	src/scene/grl-animated-texture.h \
 	src/scene/grl-scene.h \
 	src/scene/grl-scene-manager.h \
-	src/collision/grl-collision.h
+	src/collision/grl-collision.h \
+	src/rlgl/grl-rlgl.h
 
 # Source files
 SOURCES := \
@@ -104,7 +105,15 @@ SOURCES := \
 	src/scene/grl-animated-texture.c \
 	src/scene/grl-scene.c \
 	src/scene/grl-scene-manager.c \
-	src/collision/grl-collision.c
+	src/collision/grl-collision.c \
+	src/rlgl/grl-rlgl-core.c \
+	src/rlgl/grl-rlgl-matrix.c \
+	src/rlgl/grl-rlgl-vertex.c \
+	src/rlgl/grl-rlgl-state.c \
+	src/rlgl/grl-rlgl-texture.c \
+	src/rlgl/grl-rlgl-buffer.c \
+	src/rlgl/grl-rlgl-framebuffer.c \
+	src/rlgl/grl-rlgl-shader.c
 
 # Object files
 OBJECTS := $(patsubst %.c,$(OBJDIR)/%.o,$(SOURCES))
@@ -292,6 +301,7 @@ install: lib $(BUILDDIR)/$(PC_FILE)
 	$(MKDIR_P) $(DESTDIR)$(INCLUDEDIR)/graylib/audio
 	$(MKDIR_P) $(DESTDIR)$(INCLUDEDIR)/graylib/scene
 	$(MKDIR_P) $(DESTDIR)$(INCLUDEDIR)/graylib/collision
+	$(MKDIR_P) $(DESTDIR)$(INCLUDEDIR)/graylib/rlgl
 	$(MKDIR_P) $(DESTDIR)$(PKGCONFIGDIR)
 ifeq ($(BUILD_GIR),1)
 	$(MKDIR_P) $(DESTDIR)$(GIRDIR)
@@ -345,6 +355,7 @@ endif
 	$(INSTALL_DATA) src/scene/grl-scene.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
 	$(INSTALL_DATA) src/scene/grl-scene-manager.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
 	$(INSTALL_DATA) src/collision/grl-collision.h $(DESTDIR)$(INCLUDEDIR)/graylib/collision/
+	$(INSTALL_DATA) src/rlgl/grl-rlgl.h $(DESTDIR)$(INCLUDEDIR)/graylib/rlgl/
 	# Install pkg-config
 	$(INSTALL_DATA) $(BUILDDIR)/$(PC_FILE) $(DESTDIR)$(PKGCONFIGDIR)/
 	# Install GIR
@@ -568,5 +579,38 @@ $(OBJDIR)/src/collision/grl-collision.o: src/collision/grl-collision.c
 
 # Enums
 $(OBJDIR)/src/grl-enums.o: src/grl-enums.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(LIB_CFLAGS) -c -o $@ $<
+
+# RLGL module
+$(OBJDIR)/src/rlgl/grl-rlgl-core.o: src/rlgl/grl-rlgl-core.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(LIB_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/rlgl/grl-rlgl-matrix.o: src/rlgl/grl-rlgl-matrix.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(LIB_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/rlgl/grl-rlgl-vertex.o: src/rlgl/grl-rlgl-vertex.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(LIB_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/rlgl/grl-rlgl-state.o: src/rlgl/grl-rlgl-state.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(LIB_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/rlgl/grl-rlgl-texture.o: src/rlgl/grl-rlgl-texture.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(LIB_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/rlgl/grl-rlgl-buffer.o: src/rlgl/grl-rlgl-buffer.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(LIB_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/rlgl/grl-rlgl-framebuffer.o: src/rlgl/grl-rlgl-framebuffer.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(LIB_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/rlgl/grl-rlgl-shader.o: src/rlgl/grl-rlgl-shader.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<

@@ -40,6 +40,7 @@ See [Best Practices](best_practices.md) for common pitfalls and solutions when w
 - [Cameras](api/cameras.md) - 2D and 3D camera systems
 - [Models](api/models.md) - 3D meshes, materials, models, and animations
 - [Collision](api/collision.md) - 2D and 3D collision detection
+- [RLGL](api/rlgl.md) - Low-level OpenGL abstraction layer
 - [Enumerations](api/enums.md) - Key codes, blend modes, and other constants
 
 ## Examples
@@ -129,7 +130,8 @@ graylib/
 │   ├── graphics/          # Graphics types: Image, Texture, Font
 │   ├── drawing/           # Drawing functions
 │   ├── audio/             # Audio types: AudioDevice, Sound, Music
-│   └── scene/             # Entity system: Entity, Sprite, AnimatedTexture
+│   ├── scene/             # Entity system: Entity, Sprite, AnimatedTexture
+│   └── rlgl/              # Low-level OpenGL abstraction layer
 ├── deps/                   # Dependencies (raylib submodule)
 ├── tests/                  # Unit tests
 ├── examples/               # Example source files

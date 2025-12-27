@@ -97,6 +97,9 @@
 /* Collision module */
 #include "collision/grl-collision.h"
 
+/* RLGL module (low-level OpenGL abstraction) */
+#include "rlgl/grl-rlgl.h"
+
 /*
  * Future includes:
  *

@@ -726,4 +726,171 @@ GRL_AVAILABLE_IN_ALL
 GType grl_gesture_get_type (void) G_GNUC_CONST;
 #define GRL_TYPE_GESTURE (grl_gesture_get_type ())
 
+/*
+ * =============================================================================
+ * RLGL Enums (Low-level OpenGL Abstraction)
+ * =============================================================================
+ */
+
+/**
+ * GrlRlglDrawMode:
+ * @GRL_RLGL_LINES: Draw lines
+ * @GRL_RLGL_TRIANGLES: Draw triangles
+ * @GRL_RLGL_QUADS: Draw quads
+ *
+ * Primitive drawing modes for immediate mode rendering.
+ */
+typedef enum
+{
+    GRL_RLGL_LINES     = 0x0001,
+    GRL_RLGL_TRIANGLES = 0x0004,
+    GRL_RLGL_QUADS     = 0x0007
+} GrlRlglDrawMode;
+
+GRL_AVAILABLE_IN_ALL
+GType grl_rlgl_draw_mode_get_type (void) G_GNUC_CONST;
+#define GRL_TYPE_RLGL_DRAW_MODE (grl_rlgl_draw_mode_get_type ())
+
+/**
+ * GrlRlglMatrixMode:
+ * @GRL_RLGL_MODELVIEW: Modelview matrix
+ * @GRL_RLGL_PROJECTION: Projection matrix
+ * @GRL_RLGL_TEXTURE: Texture matrix
+ *
+ * Matrix modes for rlgl matrix operations.
+ */
+typedef enum
+{
+    GRL_RLGL_MODELVIEW  = 0x1700,
+    GRL_RLGL_PROJECTION = 0x1701,
+    GRL_RLGL_TEXTURE    = 0x1702
+} GrlRlglMatrixMode;
+
+GRL_AVAILABLE_IN_ALL
+GType grl_rlgl_matrix_mode_get_type (void) G_GNUC_CONST;
+#define GRL_TYPE_RLGL_MATRIX_MODE (grl_rlgl_matrix_mode_get_type ())
+
+/**
+ * GrlRlglCullMode:
+ * @GRL_RLGL_CULL_FRONT: Cull front faces
+ * @GRL_RLGL_CULL_BACK: Cull back faces
+ *
+ * Face culling modes.
+ */
+typedef enum
+{
+    GRL_RLGL_CULL_FRONT = 0,
+    GRL_RLGL_CULL_BACK  = 1
+} GrlRlglCullMode;
+
+GRL_AVAILABLE_IN_ALL
+GType grl_rlgl_cull_mode_get_type (void) G_GNUC_CONST;
+#define GRL_TYPE_RLGL_CULL_MODE (grl_rlgl_cull_mode_get_type ())
+
+/**
+ * GrlRlglGlVersion:
+ * @GRL_RLGL_OPENGL_11: OpenGL 1.1
+ * @GRL_RLGL_OPENGL_21: OpenGL 2.1
+ * @GRL_RLGL_OPENGL_33: OpenGL 3.3
+ * @GRL_RLGL_OPENGL_43: OpenGL 4.3
+ * @GRL_RLGL_OPENGL_ES_20: OpenGL ES 2.0
+ * @GRL_RLGL_OPENGL_ES_30: OpenGL ES 3.0
+ *
+ * OpenGL version identifiers.
+ */
+typedef enum
+{
+    GRL_RLGL_OPENGL_11    = 1,
+    GRL_RLGL_OPENGL_21    = 2,
+    GRL_RLGL_OPENGL_33    = 3,
+    GRL_RLGL_OPENGL_43    = 4,
+    GRL_RLGL_OPENGL_ES_20 = 5,
+    GRL_RLGL_OPENGL_ES_30 = 6
+} GrlRlglGlVersion;
+
+GRL_AVAILABLE_IN_ALL
+GType grl_rlgl_gl_version_get_type (void) G_GNUC_CONST;
+#define GRL_TYPE_RLGL_GL_VERSION (grl_rlgl_gl_version_get_type ())
+
+/**
+ * GrlRlglFramebufferAttachType:
+ * @GRL_RLGL_ATTACHMENT_COLOR_CHANNEL0: Color attachment 0
+ * @GRL_RLGL_ATTACHMENT_COLOR_CHANNEL1: Color attachment 1
+ * @GRL_RLGL_ATTACHMENT_COLOR_CHANNEL2: Color attachment 2
+ * @GRL_RLGL_ATTACHMENT_COLOR_CHANNEL3: Color attachment 3
+ * @GRL_RLGL_ATTACHMENT_COLOR_CHANNEL4: Color attachment 4
+ * @GRL_RLGL_ATTACHMENT_COLOR_CHANNEL5: Color attachment 5
+ * @GRL_RLGL_ATTACHMENT_COLOR_CHANNEL6: Color attachment 6
+ * @GRL_RLGL_ATTACHMENT_COLOR_CHANNEL7: Color attachment 7
+ * @GRL_RLGL_ATTACHMENT_DEPTH: Depth attachment
+ * @GRL_RLGL_ATTACHMENT_STENCIL: Stencil attachment
+ *
+ * Framebuffer attachment types.
+ */
+typedef enum
+{
+    GRL_RLGL_ATTACHMENT_COLOR_CHANNEL0 = 0,
+    GRL_RLGL_ATTACHMENT_COLOR_CHANNEL1 = 1,
+    GRL_RLGL_ATTACHMENT_COLOR_CHANNEL2 = 2,
+    GRL_RLGL_ATTACHMENT_COLOR_CHANNEL3 = 3,
+    GRL_RLGL_ATTACHMENT_COLOR_CHANNEL4 = 4,
+    GRL_RLGL_ATTACHMENT_COLOR_CHANNEL5 = 5,
+    GRL_RLGL_ATTACHMENT_COLOR_CHANNEL6 = 6,
+    GRL_RLGL_ATTACHMENT_COLOR_CHANNEL7 = 7,
+    GRL_RLGL_ATTACHMENT_DEPTH          = 100,
+    GRL_RLGL_ATTACHMENT_STENCIL        = 200
+} GrlRlglFramebufferAttachType;
+
+GRL_AVAILABLE_IN_ALL
+GType grl_rlgl_framebuffer_attach_type_get_type (void) G_GNUC_CONST;
+#define GRL_TYPE_RLGL_FRAMEBUFFER_ATTACH_TYPE (grl_rlgl_framebuffer_attach_type_get_type ())
+
+/**
+ * GrlRlglFramebufferTexType:
+ * @GRL_RLGL_ATTACHMENT_CUBEMAP_POSITIVE_X: Cubemap +X face
+ * @GRL_RLGL_ATTACHMENT_CUBEMAP_NEGATIVE_X: Cubemap -X face
+ * @GRL_RLGL_ATTACHMENT_CUBEMAP_POSITIVE_Y: Cubemap +Y face
+ * @GRL_RLGL_ATTACHMENT_CUBEMAP_NEGATIVE_Y: Cubemap -Y face
+ * @GRL_RLGL_ATTACHMENT_CUBEMAP_POSITIVE_Z: Cubemap +Z face
+ * @GRL_RLGL_ATTACHMENT_CUBEMAP_NEGATIVE_Z: Cubemap -Z face
+ * @GRL_RLGL_ATTACHMENT_TEXTURE2D: 2D texture
+ * @GRL_RLGL_ATTACHMENT_RENDERBUFFER: Renderbuffer
+ *
+ * Framebuffer texture types for attachment.
+ */
+typedef enum
+{
+    GRL_RLGL_ATTACHMENT_CUBEMAP_POSITIVE_X = 0,
+    GRL_RLGL_ATTACHMENT_CUBEMAP_NEGATIVE_X = 1,
+    GRL_RLGL_ATTACHMENT_CUBEMAP_POSITIVE_Y = 2,
+    GRL_RLGL_ATTACHMENT_CUBEMAP_NEGATIVE_Y = 3,
+    GRL_RLGL_ATTACHMENT_CUBEMAP_POSITIVE_Z = 4,
+    GRL_RLGL_ATTACHMENT_CUBEMAP_NEGATIVE_Z = 5,
+    GRL_RLGL_ATTACHMENT_TEXTURE2D          = 100,
+    GRL_RLGL_ATTACHMENT_RENDERBUFFER       = 200
+} GrlRlglFramebufferTexType;
+
+GRL_AVAILABLE_IN_ALL
+GType grl_rlgl_framebuffer_tex_type_get_type (void) G_GNUC_CONST;
+#define GRL_TYPE_RLGL_FRAMEBUFFER_TEX_TYPE (grl_rlgl_framebuffer_tex_type_get_type ())
+
+/**
+ * GrlRlglShaderType:
+ * @GRL_RLGL_SHADER_FRAGMENT: Fragment shader
+ * @GRL_RLGL_SHADER_VERTEX: Vertex shader
+ * @GRL_RLGL_SHADER_COMPUTE: Compute shader
+ *
+ * Shader types for compilation.
+ */
+typedef enum
+{
+    GRL_RLGL_SHADER_FRAGMENT = 0x8B30,
+    GRL_RLGL_SHADER_VERTEX   = 0x8B31,
+    GRL_RLGL_SHADER_COMPUTE  = 0x91B9
+} GrlRlglShaderType;
+
+GRL_AVAILABLE_IN_ALL
+GType grl_rlgl_shader_type_get_type (void) G_GNUC_CONST;
+#define GRL_TYPE_RLGL_SHADER_TYPE (grl_rlgl_shader_type_get_type ())
+
 G_END_DECLS
