@@ -186,6 +186,28 @@ GrlMesh *           grl_mesh_new_polygon            (gint                sides,
                                                      gfloat              radius);
 
 /**
+ * grl_mesh_new_custom:
+ * @vertices: (array length=n_vertices) (element-type gfloat): Vertex positions (x,y,z per vertex)
+ * @n_vertices: Number of vertices
+ * @normals: (array length=n_vertices) (element-type gfloat) (nullable): Vertex normals (x,y,z per vertex), or %NULL to compute
+ * @indices: (array length=n_indices) (element-type guint16): Triangle indices
+ * @n_indices: Number of indices (must be multiple of 3)
+ *
+ * Creates a custom mesh from vertex and index data.
+ * The mesh copies the provided arrays.
+ *
+ * If @normals is %NULL, normals will be computed from the triangle geometry.
+ *
+ * Returns: (transfer full) (nullable): A new #GrlMesh, or %NULL on error
+ */
+GRL_AVAILABLE_IN_ALL
+GrlMesh *           grl_mesh_new_custom             (const gfloat       *vertices,
+                                                     guint               n_vertices,
+                                                     const gfloat       *normals,
+                                                     const guint16      *indices,
+                                                     guint               n_indices);
+
+/**
  * grl_mesh_get_vertex_count:
  * @self: A #GrlMesh
  *

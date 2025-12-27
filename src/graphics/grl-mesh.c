@@ -7,6 +7,7 @@
 
 #include "grl-mesh.h"
 #include <gio/gio.h>
+#include <math.h>
 #include <raylib.h>
 
 /**
@@ -382,6 +383,160 @@ grl_mesh_new_polygon (gint   sides,
                       gfloat radius)
 {
     return grl_mesh_from_raylib (GenMeshPoly (sides, radius));
+}
+
+/*
+ * Compute normals for a mesh from triangle indices.
+ * Uses cross product of triangle edges, averaged at shared vertices.
+ */
+static void
+compute_mesh_normals (float              *normals,
+                      const float        *vertices,
+                      guint               n_vertices,
+                      const unsigned short *indices,
+                      guint               n_indices)
+{
+    guint i;
+
+    /* Initialize normals to zero */
+    memset (normals, 0, n_vertices * 3 * sizeof (float));
+
+    /* Accumulate face normals at each vertex */
+    for (i = 0; i < n_indices; i += 3)
+    {
+        unsigned short i0 = indices[i + 0];
+        unsigned short i1 = indices[i + 1];
+        unsigned short i2 = indices[i + 2];
+
+        float v0x = vertices[i0 * 3 + 0];
+        float v0y = vertices[i0 * 3 + 1];
+        float v0z = vertices[i0 * 3 + 2];
+
+        float v1x = vertices[i1 * 3 + 0];
+        float v1y = vertices[i1 * 3 + 1];
+        float v1z = vertices[i1 * 3 + 2];
+
+        float v2x = vertices[i2 * 3 + 0];
+        float v2y = vertices[i2 * 3 + 1];
+        float v2z = vertices[i2 * 3 + 2];
+
+        /* Edge vectors */
+        float e1x = v1x - v0x;
+        float e1y = v1y - v0y;
+        float e1z = v1z - v0z;
+
+        float e2x = v2x - v0x;
+        float e2y = v2y - v0y;
+        float e2z = v2z - v0z;
+
+        /* Cross product (face normal) */
+        float nx = e1y * e2z - e1z * e2y;
+        float ny = e1z * e2x - e1x * e2z;
+        float nz = e1x * e2y - e1y * e2x;
+
+        /* Accumulate at each vertex */
+        normals[i0 * 3 + 0] += nx;
+        normals[i0 * 3 + 1] += ny;
+        normals[i0 * 3 + 2] += nz;
+
+        normals[i1 * 3 + 0] += nx;
+        normals[i1 * 3 + 1] += ny;
+        normals[i1 * 3 + 2] += nz;
+
+        normals[i2 * 3 + 0] += nx;
+        normals[i2 * 3 + 1] += ny;
+        normals[i2 * 3 + 2] += nz;
+    }
+
+    /* Normalize all vertex normals */
+    for (i = 0; i < n_vertices; i++)
+    {
+        float nx = normals[i * 3 + 0];
+        float ny = normals[i * 3 + 1];
+        float nz = normals[i * 3 + 2];
+        float len = sqrtf (nx * nx + ny * ny + nz * nz);
+
+        if (len > 0.0001f)
+        {
+            normals[i * 3 + 0] = nx / len;
+            normals[i * 3 + 1] = ny / len;
+            normals[i * 3 + 2] = nz / len;
+        }
+        else
+        {
+            /* Default to up vector if degenerate */
+            normals[i * 3 + 0] = 0.0f;
+            normals[i * 3 + 1] = 1.0f;
+            normals[i * 3 + 2] = 0.0f;
+        }
+    }
+}
+
+/**
+ * grl_mesh_new_custom:
+ * @vertices: (array length=n_vertices): Vertex positions (x,y,z per vertex)
+ * @n_vertices: Number of vertices
+ * @normals: (nullable): Vertex normals (x,y,z per vertex), or %NULL to compute
+ * @indices: Triangle indices
+ * @n_indices: Number of indices (must be multiple of 3)
+ *
+ * Creates a custom mesh from vertex and index data.
+ * The mesh copies the provided arrays.
+ *
+ * If @normals is %NULL, normals will be computed from the triangle geometry
+ * using cross products and vertex averaging for smooth shading.
+ *
+ * Returns: (transfer full) (nullable): A new #GrlMesh, or %NULL on error
+ */
+GrlMesh *
+grl_mesh_new_custom (const gfloat  *vertices,
+                     guint          n_vertices,
+                     const gfloat  *normals,
+                     const guint16 *indices,
+                     guint          n_indices)
+{
+    Mesh mesh;
+    guint vertex_size;
+    guint index_size;
+
+    g_return_val_if_fail (vertices != NULL, NULL);
+    g_return_val_if_fail (n_vertices > 0, NULL);
+    g_return_val_if_fail (indices != NULL, NULL);
+    g_return_val_if_fail (n_indices > 0, NULL);
+    g_return_val_if_fail ((n_indices % 3) == 0, NULL);
+
+    memset (&mesh, 0, sizeof (Mesh));
+
+    mesh.vertexCount = (int)n_vertices;
+    mesh.triangleCount = (int)(n_indices / 3);
+
+    /* Allocate and copy vertex positions */
+    vertex_size = n_vertices * 3 * sizeof (float);
+    mesh.vertices = RL_MALLOC (vertex_size);
+    memcpy (mesh.vertices, vertices, vertex_size);
+
+    /* Allocate normals */
+    mesh.normals = RL_MALLOC (vertex_size);
+    if (normals != NULL)
+    {
+        memcpy (mesh.normals, normals, vertex_size);
+    }
+    else
+    {
+        /* Compute normals from triangle geometry */
+        compute_mesh_normals (mesh.normals, mesh.vertices,
+                              n_vertices, indices, n_indices);
+    }
+
+    /* Allocate and copy indices */
+    index_size = n_indices * sizeof (unsigned short);
+    mesh.indices = RL_MALLOC (index_size);
+    memcpy (mesh.indices, indices, index_size);
+
+    /* Upload to GPU */
+    UploadMesh (&mesh, FALSE);
+
+    return grl_mesh_from_raylib (mesh);
 }
 
 /**
