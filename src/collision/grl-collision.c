@@ -166,9 +166,14 @@ static GrlRayCollision *
 grl_ray_collision_from_raylib (RayCollision rc)
 {
     GrlRayCollision *self;
+    unsigned char raw_hit;
 
     self = g_slice_new (GrlRayCollision);
-    self->hit = rc.hit;
+
+    /* Fix bool/gboolean ABI mismatch */
+    raw_hit = rc.hit;
+    self->hit = raw_hit != 0;
+
     self->distance = rc.distance;
     self->point.x = rc.point.x;
     self->point.y = rc.point.y;
@@ -213,7 +218,9 @@ grl_collision_point_rect (const GrlVector2   *point,
     r.width = rect->width;
     r.height = rect->height;
 
-    return CheckCollisionPointRec (p, r);
+    /* Fix bool/gboolean ABI mismatch */
+    unsigned char raw = CheckCollisionPointRec (p, r);
+    return raw != 0;
 }
 
 /**
@@ -241,7 +248,9 @@ grl_collision_point_circle (const GrlVector2 *point,
     c.x = center->x;
     c.y = center->y;
 
-    return CheckCollisionPointCircle (p, c, radius);
+    /* Fix bool/gboolean ABI mismatch */
+    unsigned char raw = CheckCollisionPointCircle (p, c, radius);
+    return raw != 0;
 }
 
 /**
@@ -277,7 +286,9 @@ grl_collision_point_triangle (const GrlVector2 *point,
     v3.x = p3->x;
     v3.y = p3->y;
 
-    return CheckCollisionPointTriangle (pt, v1, v2, v3);
+    /* Fix bool/gboolean ABI mismatch */
+    unsigned char raw = CheckCollisionPointTriangle (pt, v1, v2, v3);
+    return raw != 0;
 }
 
 /**
@@ -315,7 +326,9 @@ grl_collision_point_poly (const GrlVector2 *point,
         poly[i].y = points[i].y;
     }
 
-    result = CheckCollisionPointPoly (pt, poly, point_count);
+    /* Fix bool/gboolean ABI mismatch */
+    unsigned char raw = CheckCollisionPointPoly (pt, poly, point_count);
+    result = raw != 0;
 
     g_free (poly);
 
@@ -352,7 +365,9 @@ grl_collision_point_line (const GrlVector2 *point,
     v2.x = p2->x;
     v2.y = p2->y;
 
-    return CheckCollisionPointLine (pt, v1, v2, threshold);
+    /* Fix bool/gboolean ABI mismatch */
+    unsigned char raw = CheckCollisionPointLine (pt, v1, v2, threshold);
+    return raw != 0;
 }
 
 /*
@@ -389,7 +404,9 @@ grl_collision_rects (const GrlRectangle *rect1,
     r2.width = rect2->width;
     r2.height = rect2->height;
 
-    return CheckCollisionRecs (r1, r2);
+    /* Fix bool/gboolean ABI mismatch */
+    unsigned char raw = CheckCollisionRecs (r1, r2);
+    return raw != 0;
 }
 
 /**
@@ -419,7 +436,9 @@ grl_collision_circles (const GrlVector2 *center1,
     c2.x = center2->x;
     c2.y = center2->y;
 
-    return CheckCollisionCircles (c1, radius1, c2, radius2);
+    /* Fix bool/gboolean ABI mismatch */
+    unsigned char raw = CheckCollisionCircles (c1, radius1, c2, radius2);
+    return raw != 0;
 }
 
 /**
@@ -451,7 +470,9 @@ grl_collision_circle_rect (const GrlVector2   *center,
     r.width = rect->width;
     r.height = rect->height;
 
-    return CheckCollisionCircleRec (c, radius, r);
+    /* Fix bool/gboolean ABI mismatch */
+    unsigned char raw = CheckCollisionCircleRec (c, radius, r);
+    return raw != 0;
 }
 
 /**
@@ -484,7 +505,9 @@ grl_collision_circle_line (const GrlVector2 *center,
     v2.x = p2->x;
     v2.y = p2->y;
 
-    return CheckCollisionCircleLine (c, radius, v1, v2);
+    /* Fix bool/gboolean ABI mismatch */
+    unsigned char raw = CheckCollisionCircleLine (c, radius, v1, v2);
+    return raw != 0;
 }
 
 /**
@@ -524,7 +547,9 @@ grl_collision_lines (const GrlVector2 *start1,
     e2.x = end2->x;
     e2.y = end2->y;
 
-    result = CheckCollisionLines (s1, e1, s2, e2, &cp);
+    /* Fix bool/gboolean ABI mismatch */
+    unsigned char raw = CheckCollisionLines (s1, e1, s2, e2, &cp);
+    result = raw != 0;
 
     if (result && collision_point != NULL)
     {
@@ -668,7 +693,9 @@ grl_collision_spheres (const GrlVector3 *center1,
     c2.y = center2->y;
     c2.z = center2->z;
 
-    return CheckCollisionSpheres (c1, radius1, c2, radius2);
+    /* Fix bool/gboolean ABI mismatch */
+    unsigned char raw = CheckCollisionSpheres (c1, radius1, c2, radius2);
+    return raw != 0;
 }
 
 /**
@@ -703,7 +730,9 @@ grl_collision_boxes (const GrlBoundingBox *box1,
     b2.max.y = box2->max.y;
     b2.max.z = box2->max.z;
 
-    return CheckCollisionBoxes (b1, b2);
+    /* Fix bool/gboolean ABI mismatch */
+    unsigned char raw = CheckCollisionBoxes (b1, b2);
+    return raw != 0;
 }
 
 /**
@@ -738,7 +767,9 @@ grl_collision_box_sphere (const GrlBoundingBox *box,
     c.y = center->y;
     c.z = center->z;
 
-    return CheckCollisionBoxSphere (b, c, radius);
+    /* Fix bool/gboolean ABI mismatch */
+    unsigned char raw = CheckCollisionBoxSphere (b, c, radius);
+    return raw != 0;
 }
 
 /*

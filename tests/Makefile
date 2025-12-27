@@ -15,11 +15,22 @@ LIBOUTDIR := $(PROJROOT)/build/lib
 TESTOUTDIR := $(PROJROOT)/build/tests
 RAYLIB_LIBDIR := $(PROJROOT)/deps/raylib/src
 
-# Test sources
+# Test sources - all test files
 TEST_SOURCES := \
 	test-vector2.c \
+	test-vector3.c \
+	test-vector4.c \
+	test-matrix.c \
+	test-bounding-box.c \
 	test-color.c \
-	test-rectangle.c
+	test-rectangle.c \
+	test-collision.c \
+	test-camera2d.c \
+	test-camera3d.c \
+	test-enums.c \
+	test-entity.c \
+	test-scene.c \
+	test-interfaces.c
 
 # Test executables (with output directory)
 TEST_PROGRAMS := $(addprefix $(TESTOUTDIR)/,$(patsubst %.c,%,$(TEST_SOURCES)))
@@ -58,14 +69,8 @@ run: all
 	@echo ""
 	@echo "All tests passed!"
 
-# Build test programs
-$(TESTOUTDIR)/test-vector2: test-vector2.c | $(LIBOUTDIR)/$(LIB_SHARED) $(TESTOUTDIR)
-	$(CC) $(TEST_CFLAGS) -o $@ $< $(TEST_LDFLAGS)
-
-$(TESTOUTDIR)/test-color: test-color.c | $(LIBOUTDIR)/$(LIB_SHARED) $(TESTOUTDIR)
-	$(CC) $(TEST_CFLAGS) -o $@ $< $(TEST_LDFLAGS)
-
-$(TESTOUTDIR)/test-rectangle: test-rectangle.c | $(LIBOUTDIR)/$(LIB_SHARED) $(TESTOUTDIR)
+# Pattern rule for building all tests
+$(TESTOUTDIR)/test-%: test-%.c | $(LIBOUTDIR)/$(LIB_SHARED) $(TESTOUTDIR)
 	$(CC) $(TEST_CFLAGS) -o $@ $< $(TEST_LDFLAGS)
 
 # Clean
