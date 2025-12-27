@@ -43,6 +43,7 @@ typedef struct
     gboolean     valid;
     GrlMaterial **materials;
     gint         material_count;
+    GrlMesh     *source_mesh;   /* Holds ref to mesh if created via new_from_mesh */
 } GrlModelPrivate;
 
 G_DEFINE_TYPE_WITH_PRIVATE (GrlModel, grl_model, G_TYPE_OBJECT)
@@ -65,6 +66,21 @@ grl_model_dispose (GObject *object)
     GrlModel *self = GRL_MODEL (object);
     GrlModelPrivate *priv = grl_model_get_instance_private (self);
     gint i;
+
+    /* If model was created from a GrlMesh, null out mesh pointers before
+     * releasing reference. This prevents UnloadModel() from double-freeing
+     * the mesh data that source_mesh owns. raylib's UnloadMesh() safely
+     * handles zeroed data: rlUnloadVertexArray(0) is a no-op, it checks
+     * vboId != NULL before iterating, and RL_FREE(NULL) is safe.
+     */
+    if (priv->source_mesh != NULL && priv->valid)
+    {
+        for (i = 0; i < priv->model.meshCount; i++)
+        {
+            memset (&priv->model.meshes[i], 0, sizeof (Mesh));
+        }
+        g_clear_object (&priv->source_mesh);
+    }
 
     /* Release material references */
     if (priv->materials != NULL)
@@ -198,6 +214,7 @@ grl_model_init (GrlModel *self)
     priv->valid = FALSE;
     priv->materials = NULL;
     priv->material_count = 0;
+    priv->source_mesh = NULL;
     memset (&priv->model, 0, sizeof (Model));
 }
 
@@ -247,7 +264,9 @@ grl_model_new_from_file (const gchar  *filename,
  * @mesh: A #GrlMesh to use
  *
  * Creates a model from a single mesh.
- * The mesh is not copied; the model references the same data.
+ * The model takes ownership of a reference to the mesh and keeps it alive
+ * for the lifetime of the model. The underlying mesh data is shared, not
+ * copied.
  *
  * Returns: (transfer full): A new #GrlModel
  */
@@ -266,6 +285,12 @@ grl_model_new_from_mesh (GrlMesh *mesh)
     rl_mesh = (Mesh *)grl_mesh_get_handle (mesh);
     priv->model = LoadModelFromMesh (*rl_mesh);
     priv->valid = (priv->model.meshCount > 0);
+
+    /* Keep reference to source mesh - raylib does a shallow copy of the Mesh
+     * struct, so the model's meshes array shares pointers with the original.
+     * We must keep the mesh alive to prevent use-after-free.
+     */
+    priv->source_mesh = g_object_ref (mesh);
 
     return self;
 }

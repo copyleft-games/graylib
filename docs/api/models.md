@@ -145,7 +145,21 @@ GrlModel * grl_model_new_from_mesh (GrlMesh *mesh);
 | Constructor | Description |
 |-------------|-------------|
 | `new_from_file(path, error)` | Load model from file (OBJ, IQM, GLTF, GLB) |
-| `new_from_mesh(mesh)` | Create model from a single mesh |
+| `new_from_mesh(mesh)` | Create model from a single mesh. The model keeps the mesh alive. |
+
+### Mesh Ownership in `grl_model_new_from_mesh()`
+
+When creating a model from a mesh, the model takes a reference to the mesh and keeps it alive for the lifetime of the model. This is necessary because raylib performs a shallow copy of mesh data - the model's internal mesh shares vertex and GPU buffer pointers with the original `GrlMesh`.
+
+You can safely unref the `GrlMesh` after creating the model:
+
+```c
+g_autoptr(GrlMesh) mesh = grl_mesh_new_cube (1.0f, 1.0f, 1.0f);
+g_autoptr(GrlModel) model = grl_model_new_from_mesh (mesh);
+/* mesh can go out of scope - model keeps it alive internally */
+```
+
+**Note:** Models loaded from files (`grl_model_new_from_file()`) do not have this behavior - they own their mesh data directly.
 
 ### Properties
 

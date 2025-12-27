@@ -55,6 +55,8 @@ GrlModel *          grl_model_new_from_file         (const gchar        *filenam
  * @mesh: A #GrlMesh to use
  *
  * Creates a model from a single mesh.
+ * The model takes ownership of a reference to the mesh and keeps it alive
+ * for the lifetime of the model.
  *
  * Returns: (transfer full): A new #GrlModel
  */
