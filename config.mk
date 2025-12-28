@@ -166,14 +166,59 @@ else
 endif
 
 # =============================================================================
+# Cross-Compilation Support
+# =============================================================================
+# Convenience variables for cross-compilation targets
+# Usage: make WINDOWS=1
+#        make CROSS=x86_64-w64-mingw32  (equivalent, for advanced users)
+#
+# Future targets can be added here (MACOS=1, FREEBSD=1, etc.)
+
+WINDOWS ?= 0
+CROSS ?=
+
+# Set CROSS based on convenience variables
+ifeq ($(WINDOWS),1)
+    CROSS := x86_64-w64-mingw32
+endif
+
+# Apply cross-compilation settings when CROSS is set
+ifneq ($(CROSS),)
+    CC := $(CROSS)-gcc
+    AR := $(CROSS)-ar
+    RANLIB := $(CROSS)-ranlib
+    PKG_CONFIG := $(CROSS)-pkg-config
+    TARGET_PLATFORM := windows
+    # Disable GIR for cross-compilation (not supported)
+    BUILD_GIR := 0
+else
+    TARGET_PLATFORM := $(PLATFORM)
+endif
+
+# =============================================================================
 # Library Names
 # =============================================================================
 
 LIB_NAME := graylib
-LIB_STATIC := lib$(LIB_NAME).a
-LIB_SHARED := lib$(LIB_NAME).so
-LIB_SHARED_VERSION := $(LIB_SHARED).$(SO_VERSION).$(SO_MINOR).$(SO_RELEASE)
-LIB_SHARED_SONAME := $(LIB_SHARED).$(SO_VERSION)
+
+# Platform-specific library naming
+ifeq ($(TARGET_PLATFORM),windows)
+    # Windows: graylib.dll, libgraylib.dll.a (import lib), libgraylib.a (static)
+    LIB_STATIC := lib$(LIB_NAME).a
+    LIB_SHARED := $(LIB_NAME).dll
+    LIB_IMPORT := lib$(LIB_NAME).dll.a
+    LIB_SHARED_VERSION := $(LIB_SHARED)
+    LIB_SHARED_SONAME := $(LIB_SHARED)
+    EXE_EXT := .exe
+else
+    # Unix: libgraylib.so, libgraylib.a
+    LIB_STATIC := lib$(LIB_NAME).a
+    LIB_SHARED := lib$(LIB_NAME).so
+    LIB_SHARED_VERSION := $(LIB_SHARED).$(SO_VERSION).$(SO_MINOR).$(SO_RELEASE)
+    LIB_SHARED_SONAME := $(LIB_SHARED).$(SO_VERSION)
+    LIB_IMPORT :=
+    EXE_EXT :=
+endif
 
 # GIR output names
 GIR_NAME := Graylib-$(API_VERSION).gir

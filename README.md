@@ -21,6 +21,18 @@ sudo dnf install gcc make glib2-devel gobject-introspection-devel \
     libXi-devel libXcursor-devel libXinerama-devel
 ```
 
+### Cross-Compilation (Windows)
+
+```bash
+# Install MinGW toolchain
+sudo dnf install mingw64-gcc mingw64-glib2 mingw64-pkg-config
+
+# Build for Windows
+make WINDOWS=1
+```
+
+See [Building Guide](docs/guides/building.md#windows-cross-compilation) for details.
+
 ## Getting Started
 
 ```bash

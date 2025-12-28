@@ -41,8 +41,8 @@ EXAMPLE_SOURCES := \
 	roguelike3d.c \
 	voxelcraft3d.c
 
-# Example executables (with output directory)
-EXAMPLE_PROGRAMS := $(addprefix $(EXAMPLEOUTDIR)/,$(patsubst %.c,%,$(EXAMPLE_SOURCES)))
+# Example executables (with output directory and platform-specific extension)
+EXAMPLE_PROGRAMS := $(addprefix $(EXAMPLEOUTDIR)/,$(patsubst %.c,%$(EXE_EXT),$(EXAMPLE_SOURCES)))
 
 # Compiler flags for examples
 EXAMPLE_CFLAGS := \
@@ -58,7 +58,7 @@ EXAMPLE_LDFLAGS := \
 	-lgraylib \
 	$(GLIB_LIBS) \
 	$(RAYLIB_LIBDIR)/libraylib.a \
-	-lGL -lm -lpthread -ldl -lrt -lX11
+	$(PLATFORM_LIBS)
 
 # Default target
 all: $(EXAMPLEOUTDIR) $(EXAMPLE_PROGRAMS)
@@ -68,69 +68,74 @@ $(EXAMPLEOUTDIR):
 	$(MKDIR_P) $@
 
 # Build example programs
-$(EXAMPLEOUTDIR)/basic-window: basic-window.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
+$(EXAMPLEOUTDIR)/basic-window$(EXE_EXT): basic-window.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-$(EXAMPLEOUTDIR)/shapes-demo: shapes-demo.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
+$(EXAMPLEOUTDIR)/shapes-demo$(EXE_EXT): shapes-demo.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-$(EXAMPLEOUTDIR)/textures-text: textures-text.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
+$(EXAMPLEOUTDIR)/textures-text$(EXE_EXT): textures-text.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-$(EXAMPLEOUTDIR)/input-demo: input-demo.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
+$(EXAMPLEOUTDIR)/input-demo$(EXE_EXT): input-demo.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-$(EXAMPLEOUTDIR)/audio-demo: audio-demo.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
+$(EXAMPLEOUTDIR)/audio-demo$(EXE_EXT): audio-demo.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-$(EXAMPLEOUTDIR)/entity-demo: entity-demo.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
+$(EXAMPLEOUTDIR)/entity-demo$(EXE_EXT): entity-demo.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-$(EXAMPLEOUTDIR)/scene-demo: scene-demo.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
+$(EXAMPLEOUTDIR)/scene-demo$(EXE_EXT): scene-demo.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-$(EXAMPLEOUTDIR)/camera-demo: camera-demo.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
+$(EXAMPLEOUTDIR)/camera-demo$(EXE_EXT): camera-demo.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-$(EXAMPLEOUTDIR)/model-demo: model-demo.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
+$(EXAMPLEOUTDIR)/model-demo$(EXE_EXT): model-demo.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-$(EXAMPLEOUTDIR)/collision-demo: collision-demo.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
+$(EXAMPLEOUTDIR)/collision-demo$(EXE_EXT): collision-demo.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-$(EXAMPLEOUTDIR)/pong: pong.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
+$(EXAMPLEOUTDIR)/pong$(EXE_EXT): pong.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-$(EXAMPLEOUTDIR)/pong3d: pong3d.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
+$(EXAMPLEOUTDIR)/pong3d$(EXE_EXT): pong3d.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-$(EXAMPLEOUTDIR)/snake3d: snake3d.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
+$(EXAMPLEOUTDIR)/snake3d$(EXE_EXT): snake3d.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-$(EXAMPLEOUTDIR)/tetris3d: tetris3d.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
+$(EXAMPLEOUTDIR)/tetris3d$(EXE_EXT): tetris3d.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-$(EXAMPLEOUTDIR)/flappybird3d: flappybird3d.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
+$(EXAMPLEOUTDIR)/flappybird3d$(EXE_EXT): flappybird3d.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-$(EXAMPLEOUTDIR)/doodlejump3d: doodlejump3d.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
+$(EXAMPLEOUTDIR)/doodlejump3d$(EXE_EXT): doodlejump3d.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-$(EXAMPLEOUTDIR)/asteroids3d: asteroids3d.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
+$(EXAMPLEOUTDIR)/asteroids3d$(EXE_EXT): asteroids3d.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-$(EXAMPLEOUTDIR)/firstperson-demo: firstperson-demo.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
+$(EXAMPLEOUTDIR)/firstperson-demo$(EXE_EXT): firstperson-demo.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-$(EXAMPLEOUTDIR)/roguelike3d: roguelike3d.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
+$(EXAMPLEOUTDIR)/roguelike3d$(EXE_EXT): roguelike3d.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
-$(EXAMPLEOUTDIR)/voxelcraft3d: voxelcraft3d.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
+$(EXAMPLEOUTDIR)/voxelcraft3d$(EXE_EXT): voxelcraft3d.c | $(LIBOUTDIR)/$(LIB_SHARED) $(EXAMPLEOUTDIR)
 	$(CC) $(EXAMPLE_CFLAGS) -o $@ $< $(EXAMPLE_LDFLAGS)
 
 # Run an example (usage: make run-basic-window)
+ifeq ($(TARGET_PLATFORM),windows)
+run-%: $(EXAMPLEOUTDIR)/%$(EXE_EXT)
+	wine $<
+else
 run-%: $(EXAMPLEOUTDIR)/%
 	LD_LIBRARY_PATH=$(LIBOUTDIR):$$LD_LIBRARY_PATH $<
+endif
 
 # Clean
 clean:

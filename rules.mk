@@ -30,11 +30,31 @@ else
     RAYLIB_CFLAGS := -I$(RAYLIB_SRC)
     RAYLIB_LIBS := $(RAYLIB_SRC)/libraylib.a
     RAYLIB_VERSION := 5.5
-    # Additional system libraries required by raylib on Linux
-    ifeq ($(PLATFORM),linux)
-        RAYLIB_LIBS += -lGL -lm -lpthread -ldl -lrt
-        RAYLIB_LIBS += -lX11
-    endif
+endif
+
+# =============================================================================
+# Platform-Specific System Libraries
+# =============================================================================
+# These are the system libraries required by raylib on each platform.
+# Exported as PLATFORM_LIBS for use by tests/examples Makefiles.
+
+ifeq ($(TARGET_PLATFORM),windows)
+    # Windows libraries (MinGW)
+    PLATFORM_LIBS := -lopengl32 -lgdi32 -lwinmm -lshell32
+else ifeq ($(TARGET_PLATFORM),linux)
+    # Linux libraries
+    PLATFORM_LIBS := -lGL -lm -lpthread -ldl -lrt -lX11
+else ifeq ($(TARGET_PLATFORM),macos)
+    # macOS libraries (untested)
+    PLATFORM_LIBS := -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo
+else
+    # Fallback
+    PLATFORM_LIBS := -lGL -lm
+endif
+
+# Add platform libs to raylib when using embedded build
+ifeq ($(RAYLIB_SHARED),0)
+    RAYLIB_LIBS += $(PLATFORM_LIBS)
 endif
 
 # Math library
@@ -95,7 +115,12 @@ BASE_LDFLAGS := $(OPT_LDFLAGS)
 # Library linking
 LIB_LDFLAGS := $(BASE_LDFLAGS)
 LIB_LDFLAGS += -shared
-LIB_LDFLAGS += -Wl,-soname,$(LIB_SHARED_SONAME)
+ifneq ($(TARGET_PLATFORM),windows)
+    # Unix: use soname for versioning
+    LIB_LDFLAGS += -Wl,-soname,$(LIB_SHARED_SONAME)
+endif
+# Note: Windows import library (--out-implib) is added in Makefile rule
+# because LIBOUTDIR is not yet defined at this point
 
 # All libraries to link
 ALL_LIBS := $(GLIB_LIBS) $(RAYLIB_LIBS) $(MATH_LIBS)
@@ -180,7 +205,8 @@ endef
 .PHONY: test tests check
 .PHONY: examples
 .PHONY: docs
-.PHONY: raylib raylib-clean
+.PHONY: raylib raylib-check raylib-clean
+.PHONY: platform-check
 .PHONY: help info debug-build
 
 # =============================================================================

@@ -85,6 +85,8 @@ Build options are configured in `config.mk`. You can override them on the comman
 | `BUILD_DOCS` | 0 | Generate API documentation |
 | `RAYLIB_SHARED` | 0 | Link against system raylib |
 | `DEBUG` | 0 | Enable debug build |
+| `WINDOWS` | 0 | Cross-compile for 64-bit Windows |
+| `CROSS` | (empty) | Cross-compilation toolchain prefix |
 
 ## Build Targets
 
@@ -216,23 +218,94 @@ When using system raylib:
 - The bundled raylib is not built
 - Make sure raylib 5.5+ is installed
 
-## Cross-Platform Notes
+## Cross-Platform Support
 
 ### Linux (Primary Platform)
 
-Full support. All features work.
+Full native support. All features work.
+
+### Windows (Cross-Compilation)
+
+Build Windows binaries from a Linux host using MinGW-w64.
+
+#### Installing Cross-Compilation Dependencies
+
+**Fedora:**
+
+```bash
+sudo dnf install mingw64-gcc mingw64-glib2 mingw64-pkg-config
+```
+
+**Ubuntu/Debian:**
+
+```bash
+sudo apt install gcc-mingw-w64-x86-64 mingw-w64-tools
+# Note: GLib cross-compilation packages may need manual setup
+```
+
+#### Building for Windows
+
+```bash
+# Build everything for 64-bit Windows
+make WINDOWS=1
+
+# Build just the library
+make WINDOWS=1 lib
+
+# Build examples
+make WINDOWS=1 examples
+
+# Build tests
+make WINDOWS=1 test
+
+# Alternative: use CROSS directly (for advanced users)
+make CROSS=x86_64-w64-mingw32
+```
+
+#### Output Files
+
+```
+build/lib/
+├── graylib.dll        # Shared library (DLL)
+├── libgraylib.dll.a   # Import library for linking
+└── libgraylib.a       # Static library
+
+build/examples/
+├── basic-window.exe
+├── shapes-demo.exe
+└── ...
+
+build/tests/
+├── test-vector2.exe
+└── ...
+```
+
+#### Running Windows Binaries on Linux
+
+Use Wine to test Windows executables:
+
+```bash
+# Run an example
+wine build/examples/basic-window.exe
+
+# Run a test
+wine build/tests/test-vector2.exe
+
+# Run tests via make (uses Wine automatically)
+make WINDOWS=1 test
+```
+
+#### Limitations
+
+- GObject Introspection (.gir/.typelib) is disabled when cross-compiling
+- Running Windows executables requires Wine or a Windows machine
+- Python bindings are not available for cross-compiled builds
 
 ### macOS
 
 Not yet tested. Should work with:
 - Xcode command line tools
 - Homebrew packages for dependencies
-
-### Windows
-
-Not officially supported. May work with:
-- MSYS2/MinGW
-- Requires manual configuration
 
 ## Troubleshooting
 

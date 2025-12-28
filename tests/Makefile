@@ -32,8 +32,8 @@ TEST_SOURCES := \
 	test-scene.c \
 	test-interfaces.c
 
-# Test executables (with output directory)
-TEST_PROGRAMS := $(addprefix $(TESTOUTDIR)/,$(patsubst %.c,%,$(TEST_SOURCES)))
+# Test executables (with output directory and platform-specific extension)
+TEST_PROGRAMS := $(addprefix $(TESTOUTDIR)/,$(patsubst %.c,%$(EXE_EXT),$(TEST_SOURCES)))
 
 # Compiler flags for tests
 TEST_CFLAGS := \
@@ -49,7 +49,7 @@ TEST_LDFLAGS := \
 	-lgraylib \
 	$(GLIB_LIBS) \
 	$(RAYLIB_LIBDIR)/libraylib.a \
-	-lGL -lm -lpthread -ldl -lrt -lX11
+	$(PLATFORM_LIBS)
 
 # Default target
 all: $(TESTOUTDIR) $(TEST_PROGRAMS)
@@ -61,16 +61,24 @@ $(TESTOUTDIR):
 # Run all tests
 run: all
 	@echo "Running tests..."
+ifeq ($(TARGET_PLATFORM),windows)
+	@for test in $(TEST_PROGRAMS); do \
+		echo ""; \
+		echo "=== Running $$(basename $$test) ==="; \
+		wine $$test || exit 1; \
+	done
+else
 	@for test in $(TEST_PROGRAMS); do \
 		echo ""; \
 		echo "=== Running $$(basename $$test) ==="; \
 		LD_LIBRARY_PATH=$(LIBOUTDIR):$$LD_LIBRARY_PATH $$test || exit 1; \
 	done
+endif
 	@echo ""
 	@echo "All tests passed!"
 
 # Pattern rule for building all tests
-$(TESTOUTDIR)/test-%: test-%.c | $(LIBOUTDIR)/$(LIB_SHARED) $(TESTOUTDIR)
+$(TESTOUTDIR)/test-%$(EXE_EXT): test-%.c | $(LIBOUTDIR)/$(LIB_SHARED) $(TESTOUTDIR)
 	$(CC) $(TEST_CFLAGS) -o $@ $< $(TEST_LDFLAGS)
 
 # Clean

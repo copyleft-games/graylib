@@ -129,11 +129,28 @@ GENERATED_HEADERS := src/grl-version.h src/config.h
 generate: $(GENERATED_HEADERS)
 
 # =============================================================================
+# Build Platform Tracking
+# =============================================================================
+
+# Platform marker file to detect when graylib needs rebuild for different platform
+GRAYLIB_PLATFORM_MARKER := $(BUILDDIR)/.graylib-platform
+
+# Check if build directory needs to be cleaned for a different platform
+platform-check:
+	@if [ -f "$(GRAYLIB_PLATFORM_MARKER)" ] && [ "$$(cat $(GRAYLIB_PLATFORM_MARKER))" != "$(TARGET_PLATFORM)" ]; then \
+		echo "Graylib platform mismatch (need $(TARGET_PLATFORM)), cleaning build..."; \
+		$(RMDIR) $(OBJDIR); \
+		$(RMDIR) $(LIBOUTDIR); \
+	fi
+	@$(MKDIR_P) $(BUILDDIR)
+	@echo "$(TARGET_PLATFORM)" > $(GRAYLIB_PLATFORM_MARKER)
+
+# =============================================================================
 # Default Target
 # =============================================================================
 
 # Use recursive make to ensure generate completes before lib starts
-all: raylib-check generate
+all: raylib-check platform-check generate
 	@$(MAKE) --no-print-directory _lib
 ifeq ($(BUILD_GIR),1)
 	@$(MAKE) --no-print-directory gir
@@ -147,12 +164,19 @@ _lib: lib-static lib-shared
 # Raylib Dependency
 # =============================================================================
 
+# Platform marker file to detect when raylib needs rebuild for different platform
+RAYLIB_PLATFORM_MARKER := $(RAYLIB_SRC)/.graylib-platform
+
 # Check if raylib needs to be built
 raylib-check:
 ifeq ($(RAYLIB_SHARED),0)
 	@if [ ! -f "$(RAYLIB_SRC)/libraylib.a" ]; then \
 		echo "Building raylib from deps/raylib..."; \
-		$(MAKE) raylib; \
+		$(MAKE) WINDOWS=$(WINDOWS) CROSS=$(CROSS) raylib; \
+	elif [ ! -f "$(RAYLIB_PLATFORM_MARKER)" ] || [ "$$(cat $(RAYLIB_PLATFORM_MARKER))" != "$(TARGET_PLATFORM)" ]; then \
+		echo "Raylib platform mismatch (need $(TARGET_PLATFORM)), rebuilding..."; \
+		$(MAKE) raylib-clean; \
+		$(MAKE) WINDOWS=$(WINDOWS) CROSS=$(CROSS) raylib; \
 	fi
 endif
 
@@ -160,7 +184,13 @@ endif
 raylib:
 ifeq ($(RAYLIB_SHARED),0)
 	$(call print_status,"Building raylib...")
+ifeq ($(TARGET_PLATFORM),windows)
+	cd $(RAYLIB_SRC) && $(MAKE) CC=$(CC) AR=$(AR) \
+		PLATFORM=PLATFORM_DESKTOP PLATFORM_OS=WINDOWS RAYLIB_LIBTYPE=STATIC
+else
 	cd $(RAYLIB_SRC) && $(MAKE) PLATFORM=PLATFORM_DESKTOP RAYLIB_LIBTYPE=STATIC
+endif
+	@echo "$(TARGET_PLATFORM)" > $(RAYLIB_PLATFORM_MARKER)
 else
 	$(call print_warning,"RAYLIB_SHARED=1 - using system raylib, skipping build")
 endif
@@ -169,6 +199,7 @@ endif
 raylib-clean:
 ifeq ($(RAYLIB_SHARED),0)
 	cd $(RAYLIB_SRC) && $(MAKE) clean
+	@$(RM) $(RAYLIB_PLATFORM_MARKER)
 endif
 
 # =============================================================================
@@ -176,7 +207,7 @@ endif
 # =============================================================================
 
 # Note: 'lib' target uses recursive make to ensure generate runs first
-lib: generate
+lib: raylib-check platform-check generate
 	@$(MAKE) --no-print-directory _lib
 
 lib-static: $(LIBOUTDIR)/$(LIB_STATIC)
@@ -192,9 +223,14 @@ $(LIBOUTDIR)/$(LIB_STATIC): $(OBJECTS) | $(LIBOUTDIR)
 # Shared library
 $(LIBOUTDIR)/$(LIB_SHARED): $(OBJECTS) | $(LIBOUTDIR)
 	$(call print_status,"Creating shared library: $(LIB_SHARED)")
+ifeq ($(TARGET_PLATFORM),windows)
+	$(CC) $(LIB_LDFLAGS) -Wl,--out-implib,$(LIBOUTDIR)/$(LIB_IMPORT) \
+		-o $(LIBOUTDIR)/$(LIB_SHARED) $(OBJECTS) $(ALL_LIBS)
+else
 	$(CC) $(LIB_LDFLAGS) -o $(LIBOUTDIR)/$(LIB_SHARED_VERSION) $(OBJECTS) $(ALL_LIBS)
 	cd $(LIBOUTDIR) && ln -sf $(LIB_SHARED_VERSION) $(LIB_SHARED_SONAME)
 	cd $(LIBOUTDIR) && ln -sf $(LIB_SHARED_SONAME) $(LIB_SHARED)
+endif
 
 # =============================================================================
 # Generated Files
