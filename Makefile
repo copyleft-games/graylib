@@ -34,9 +34,11 @@ PUBLIC_HEADERS := \
 	src/math/grl-vector3.h \
 	src/math/grl-vector4.h \
 	src/math/grl-matrix.h \
+	src/math/grl-quaternion.h \
 	src/math/grl-bounding-box.h \
 	src/math/grl-color.h \
 	src/math/grl-rectangle.h \
+	src/math/grl-math-utils.h \
 	src/core/grl-application.h \
 	src/core/grl-window.h \
 	src/core/grl-input.h \
@@ -51,10 +53,13 @@ PUBLIC_HEADERS := \
 	src/graphics/grl-material.h \
 	src/graphics/grl-model.h \
 	src/graphics/grl-model-animation.h \
+	src/graphics/grl-png.h \
 	src/drawing/grl-draw.h \
 	src/audio/grl-audio-device.h \
+	src/audio/grl-wave.h \
 	src/audio/grl-sound.h \
 	src/audio/grl-music.h \
+	src/audio/grl-audio-stream.h \
 	src/scene/grl-drawable.h \
 	src/scene/grl-updatable.h \
 	src/scene/grl-collidable.h \
@@ -64,6 +69,29 @@ PUBLIC_HEADERS := \
 	src/scene/grl-scene.h \
 	src/scene/grl-scene-manager.h \
 	src/collision/grl-collision.h \
+	src/ui/grl-ui-enums.h \
+	src/ui/grl-ui-control.h \
+	src/ui/grl-ui-label.h \
+	src/ui/grl-ui-button.h \
+	src/ui/grl-ui-checkbox.h \
+	src/ui/grl-ui-slider.h \
+	src/ui/grl-ui-textbox.h \
+	src/ui/grl-ui-toggle.h \
+	src/ui/grl-ui-progressbar.h \
+	src/ui/grl-ui-spinner.h \
+	src/ui/grl-ui-valuebox.h \
+	src/ui/grl-ui-combobox.h \
+	src/ui/grl-ui-dropdownbox.h \
+	src/ui/grl-ui-togglegroup.h \
+	src/ui/grl-ui-listview.h \
+	src/ui/grl-ui-colorpicker.h \
+	src/ui/grl-ui-panel.h \
+	src/ui/grl-ui-groupbox.h \
+	src/ui/grl-ui-windowbox.h \
+	src/ui/grl-ui-style.h \
+	src/resources/grl-resource-enums.h \
+	src/resources/grl-resource-chunk-info.h \
+	src/resources/grl-resource-pack.h \
 	src/rlgl/grl-rlgl.h
 
 # Source files
@@ -73,9 +101,11 @@ SOURCES := \
 	src/math/grl-vector3.c \
 	src/math/grl-vector4.c \
 	src/math/grl-matrix.c \
+	src/math/grl-quaternion.c \
 	src/math/grl-bounding-box.c \
 	src/math/grl-color.c \
 	src/math/grl-rectangle.c \
+	src/math/grl-math-utils.c \
 	src/core/grl-application.c \
 	src/core/grl-window.c \
 	src/core/grl-input.c \
@@ -90,13 +120,16 @@ SOURCES := \
 	src/graphics/grl-material.c \
 	src/graphics/grl-model.c \
 	src/graphics/grl-model-animation.c \
+	src/graphics/grl-png.c \
 	src/drawing/grl-draw-shapes.c \
 	src/drawing/grl-draw-textures.c \
 	src/drawing/grl-draw-text.c \
 	src/drawing/grl-draw-3d.c \
 	src/audio/grl-audio-device.c \
+	src/audio/grl-wave.c \
 	src/audio/grl-sound.c \
 	src/audio/grl-music.c \
+	src/audio/grl-audio-stream.c \
 	src/scene/grl-drawable.c \
 	src/scene/grl-updatable.c \
 	src/scene/grl-collidable.c \
@@ -106,6 +139,29 @@ SOURCES := \
 	src/scene/grl-scene.c \
 	src/scene/grl-scene-manager.c \
 	src/collision/grl-collision.c \
+	src/ui/grl-ui-enums.c \
+	src/ui/grl-ui-control.c \
+	src/ui/grl-ui-label.c \
+	src/ui/grl-ui-button.c \
+	src/ui/grl-ui-checkbox.c \
+	src/ui/grl-ui-slider.c \
+	src/ui/grl-ui-textbox.c \
+	src/ui/grl-ui-toggle.c \
+	src/ui/grl-ui-progressbar.c \
+	src/ui/grl-ui-spinner.c \
+	src/ui/grl-ui-valuebox.c \
+	src/ui/grl-ui-combobox.c \
+	src/ui/grl-ui-dropdownbox.c \
+	src/ui/grl-ui-togglegroup.c \
+	src/ui/grl-ui-listview.c \
+	src/ui/grl-ui-colorpicker.c \
+	src/ui/grl-ui-panel.c \
+	src/ui/grl-ui-groupbox.c \
+	src/ui/grl-ui-windowbox.c \
+	src/ui/grl-ui-style.c \
+	src/resources/grl-resource-enums.c \
+	src/resources/grl-resource-chunk-info.c \
+	src/resources/grl-resource-pack.c \
 	src/rlgl/grl-rlgl-core.c \
 	src/rlgl/grl-rlgl-matrix.c \
 	src/rlgl/grl-rlgl-vertex.c \
@@ -337,6 +393,7 @@ install: lib $(BUILDDIR)/$(PC_FILE)
 	$(MKDIR_P) $(DESTDIR)$(INCLUDEDIR)/graylib/audio
 	$(MKDIR_P) $(DESTDIR)$(INCLUDEDIR)/graylib/scene
 	$(MKDIR_P) $(DESTDIR)$(INCLUDEDIR)/graylib/collision
+	$(MKDIR_P) $(DESTDIR)$(INCLUDEDIR)/graylib/ui
 	$(MKDIR_P) $(DESTDIR)$(INCLUDEDIR)/graylib/rlgl
 	$(MKDIR_P) $(DESTDIR)$(PKGCONFIGDIR)
 ifeq ($(BUILD_GIR),1)
@@ -364,6 +421,8 @@ endif
 	$(INSTALL_DATA) src/math/grl-bounding-box.h $(DESTDIR)$(INCLUDEDIR)/graylib/math/
 	$(INSTALL_DATA) src/math/grl-color.h $(DESTDIR)$(INCLUDEDIR)/graylib/math/
 	$(INSTALL_DATA) src/math/grl-rectangle.h $(DESTDIR)$(INCLUDEDIR)/graylib/math/
+	$(INSTALL_DATA) src/math/grl-quaternion.h $(DESTDIR)$(INCLUDEDIR)/graylib/math/
+	$(INSTALL_DATA) src/math/grl-math-utils.h $(DESTDIR)$(INCLUDEDIR)/graylib/math/
 	$(INSTALL_DATA) src/core/grl-application.h $(DESTDIR)$(INCLUDEDIR)/graylib/core/
 	$(INSTALL_DATA) src/core/grl-window.h $(DESTDIR)$(INCLUDEDIR)/graylib/core/
 	$(INSTALL_DATA) src/core/grl-input.h $(DESTDIR)$(INCLUDEDIR)/graylib/core/
@@ -378,10 +437,13 @@ endif
 	$(INSTALL_DATA) src/graphics/grl-material.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
 	$(INSTALL_DATA) src/graphics/grl-model.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
 	$(INSTALL_DATA) src/graphics/grl-model-animation.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
+	$(INSTALL_DATA) src/graphics/grl-png.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
 	$(INSTALL_DATA) src/drawing/grl-draw.h $(DESTDIR)$(INCLUDEDIR)/graylib/drawing/
 	$(INSTALL_DATA) src/audio/grl-audio-device.h $(DESTDIR)$(INCLUDEDIR)/graylib/audio/
+	$(INSTALL_DATA) src/audio/grl-wave.h $(DESTDIR)$(INCLUDEDIR)/graylib/audio/
 	$(INSTALL_DATA) src/audio/grl-sound.h $(DESTDIR)$(INCLUDEDIR)/graylib/audio/
 	$(INSTALL_DATA) src/audio/grl-music.h $(DESTDIR)$(INCLUDEDIR)/graylib/audio/
+	$(INSTALL_DATA) src/audio/grl-audio-stream.h $(DESTDIR)$(INCLUDEDIR)/graylib/audio/
 	$(INSTALL_DATA) src/scene/grl-drawable.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
 	$(INSTALL_DATA) src/scene/grl-updatable.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
 	$(INSTALL_DATA) src/scene/grl-collidable.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
@@ -391,6 +453,25 @@ endif
 	$(INSTALL_DATA) src/scene/grl-scene.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
 	$(INSTALL_DATA) src/scene/grl-scene-manager.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
 	$(INSTALL_DATA) src/collision/grl-collision.h $(DESTDIR)$(INCLUDEDIR)/graylib/collision/
+	$(INSTALL_DATA) src/ui/grl-ui-enums.h $(DESTDIR)$(INCLUDEDIR)/graylib/ui/
+	$(INSTALL_DATA) src/ui/grl-ui-control.h $(DESTDIR)$(INCLUDEDIR)/graylib/ui/
+	$(INSTALL_DATA) src/ui/grl-ui-label.h $(DESTDIR)$(INCLUDEDIR)/graylib/ui/
+	$(INSTALL_DATA) src/ui/grl-ui-button.h $(DESTDIR)$(INCLUDEDIR)/graylib/ui/
+	$(INSTALL_DATA) src/ui/grl-ui-checkbox.h $(DESTDIR)$(INCLUDEDIR)/graylib/ui/
+	$(INSTALL_DATA) src/ui/grl-ui-slider.h $(DESTDIR)$(INCLUDEDIR)/graylib/ui/
+	$(INSTALL_DATA) src/ui/grl-ui-textbox.h $(DESTDIR)$(INCLUDEDIR)/graylib/ui/
+	$(INSTALL_DATA) src/ui/grl-ui-toggle.h $(DESTDIR)$(INCLUDEDIR)/graylib/ui/
+	$(INSTALL_DATA) src/ui/grl-ui-progressbar.h $(DESTDIR)$(INCLUDEDIR)/graylib/ui/
+	$(INSTALL_DATA) src/ui/grl-ui-spinner.h $(DESTDIR)$(INCLUDEDIR)/graylib/ui/
+	$(INSTALL_DATA) src/ui/grl-ui-valuebox.h $(DESTDIR)$(INCLUDEDIR)/graylib/ui/
+	$(INSTALL_DATA) src/ui/grl-ui-combobox.h $(DESTDIR)$(INCLUDEDIR)/graylib/ui/
+	$(INSTALL_DATA) src/ui/grl-ui-dropdownbox.h $(DESTDIR)$(INCLUDEDIR)/graylib/ui/
+	$(INSTALL_DATA) src/ui/grl-ui-togglegroup.h $(DESTDIR)$(INCLUDEDIR)/graylib/ui/
+	$(INSTALL_DATA) src/ui/grl-ui-listview.h $(DESTDIR)$(INCLUDEDIR)/graylib/ui/
+	$(INSTALL_DATA) src/ui/grl-ui-colorpicker.h $(DESTDIR)$(INCLUDEDIR)/graylib/ui/
+	$(INSTALL_DATA) src/ui/grl-ui-panel.h $(DESTDIR)$(INCLUDEDIR)/graylib/ui/
+	$(INSTALL_DATA) src/ui/grl-ui-groupbox.h $(DESTDIR)$(INCLUDEDIR)/graylib/ui/
+	$(INSTALL_DATA) src/ui/grl-ui-windowbox.h $(DESTDIR)$(INCLUDEDIR)/graylib/ui/
 	$(INSTALL_DATA) src/rlgl/grl-rlgl.h $(DESTDIR)$(INCLUDEDIR)/graylib/rlgl/
 	# Install pkg-config
 	$(INSTALL_DATA) $(BUILDDIR)/$(PC_FILE) $(DESTDIR)$(PKGCONFIGDIR)/
@@ -483,7 +564,15 @@ $(OBJDIR)/src/math/grl-matrix.o: src/math/grl-matrix.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
+$(OBJDIR)/src/math/grl-quaternion.o: src/math/grl-quaternion.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(LIB_CFLAGS) -c -o $@ $<
+
 $(OBJDIR)/src/math/grl-bounding-box.o: src/math/grl-bounding-box.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(LIB_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/math/grl-math-utils.o: src/math/grl-math-utils.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
@@ -567,11 +656,19 @@ $(OBJDIR)/src/audio/grl-audio-device.o: src/audio/grl-audio-device.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
+$(OBJDIR)/src/audio/grl-wave.o: src/audio/grl-wave.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(LIB_CFLAGS) -c -o $@ $<
+
 $(OBJDIR)/src/audio/grl-sound.o: src/audio/grl-sound.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
 $(OBJDIR)/src/audio/grl-music.o: src/audio/grl-music.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(LIB_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/audio/grl-audio-stream.o: src/audio/grl-audio-stream.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
@@ -612,6 +709,115 @@ $(OBJDIR)/src/scene/grl-scene-manager.o: src/scene/grl-scene-manager.c
 $(OBJDIR)/src/collision/grl-collision.o: src/collision/grl-collision.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
+
+# UI module
+$(OBJDIR)/src/ui/grl-ui-enums.o: src/ui/grl-ui-enums.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(LIB_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/ui/grl-ui-control.o: src/ui/grl-ui-control.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(LIB_CFLAGS) -c -o $@ $<
+
+# rpng needs C99 and its include path
+# grl-png.c contains RPNG_IMPLEMENTATION (not DEFLATE, raylib already has sdefl/sinfl)
+RPNG_SRC := $(CURDIR)/deps/rpng/src
+RPNG_CFLAGS := $(subst -std=gnu89,-std=gnu99,$(LIB_CFLAGS)) -isystem $(RPNG_SRC)
+
+$(OBJDIR)/src/graphics/grl-png.o: src/graphics/grl-png.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(RPNG_CFLAGS) -c -o $@ $<
+
+# grl-image.c also uses rpng for indexed PNG functions
+$(OBJDIR)/src/graphics/grl-image.o: src/graphics/grl-image.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(RPNG_CFLAGS) -c -o $@ $<
+
+# rres needs C99 and its include path
+# grl-resource-pack.c contains RRES_IMPLEMENTATION
+RRES_SRC := $(CURDIR)/deps/rres/src
+RRES_CFLAGS := $(subst -std=gnu89,-std=gnu99,$(LIB_CFLAGS)) -isystem $(RRES_SRC)
+
+$(OBJDIR)/src/resources/grl-resource-pack.o: src/resources/grl-resource-pack.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(RRES_CFLAGS) -c -o $@ $<
+
+# UI controls need raygui include path and C99 (raygui uses C99 features)
+# grl-ui-label.c contains RAYGUI_IMPLEMENTATION
+RAYGUI_SRC := $(CURDIR)/deps/raygui/src
+UI_CFLAGS := $(subst -std=gnu89,-std=gnu99,$(LIB_CFLAGS)) -isystem $(RAYGUI_SRC)
+
+$(OBJDIR)/src/ui/grl-ui-label.o: src/ui/grl-ui-label.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(UI_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/ui/grl-ui-button.o: src/ui/grl-ui-button.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(UI_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/ui/grl-ui-checkbox.o: src/ui/grl-ui-checkbox.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(UI_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/ui/grl-ui-slider.o: src/ui/grl-ui-slider.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(UI_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/ui/grl-ui-textbox.o: src/ui/grl-ui-textbox.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(UI_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/ui/grl-ui-toggle.o: src/ui/grl-ui-toggle.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(UI_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/ui/grl-ui-progressbar.o: src/ui/grl-ui-progressbar.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(UI_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/ui/grl-ui-spinner.o: src/ui/grl-ui-spinner.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(UI_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/ui/grl-ui-valuebox.o: src/ui/grl-ui-valuebox.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(UI_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/ui/grl-ui-combobox.o: src/ui/grl-ui-combobox.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(UI_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/ui/grl-ui-dropdownbox.o: src/ui/grl-ui-dropdownbox.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(UI_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/ui/grl-ui-togglegroup.o: src/ui/grl-ui-togglegroup.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(UI_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/ui/grl-ui-listview.o: src/ui/grl-ui-listview.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(UI_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/ui/grl-ui-colorpicker.o: src/ui/grl-ui-colorpicker.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(UI_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/ui/grl-ui-panel.o: src/ui/grl-ui-panel.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(UI_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/ui/grl-ui-groupbox.o: src/ui/grl-ui-groupbox.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(UI_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/ui/grl-ui-windowbox.o: src/ui/grl-ui-windowbox.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(UI_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/ui/grl-ui-style.o: src/ui/grl-ui-style.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(UI_CFLAGS) -c -o $@ $<
 
 # Enums
 $(OBJDIR)/src/grl-enums.o: src/grl-enums.c

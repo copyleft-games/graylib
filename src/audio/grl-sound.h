@@ -18,6 +18,9 @@
 
 G_BEGIN_DECLS
 
+/* Forward declaration for GrlWave */
+typedef struct _GrlWave GrlWave;
+
 #define GRL_TYPE_SOUND (grl_sound_get_type ())
 
 GRL_AVAILABLE_IN_ALL
@@ -61,6 +64,78 @@ GrlSound *          grl_sound_new_from_wave         (const guint8       *data,
                                                      guint               sample_rate,
                                                      guint               sample_size,
                                                      guint               channels);
+
+/**
+ * grl_sound_new_from_memory:
+ * @file_type: File type extension (e.g., ".wav", ".ogg")
+ * @data: (array length=data_size): Audio file data in memory
+ * @data_size: Size of @data in bytes
+ * @error: (nullable): Return location for error, or %NULL
+ *
+ * Loads a sound from a memory buffer containing an audio file.
+ *
+ * The @file_type parameter specifies the audio format. It should be
+ * a file extension including the dot (e.g., ".wav", ".ogg", ".mp3").
+ *
+ * Returns: (transfer full) (nullable): A new #GrlSound, or %NULL on error
+ */
+GRL_AVAILABLE_IN_ALL
+GrlSound *          grl_sound_new_from_memory       (const gchar        *file_type,
+                                                     const guint8       *data,
+                                                     gsize               data_size,
+                                                     GError            **error);
+
+/**
+ * grl_sound_new_from_grl_wave:
+ * @wave: A #GrlWave containing the audio data
+ *
+ * Creates a sound from a #GrlWave object. This allows you to load
+ * and manipulate audio data with #GrlWave (cropping, resampling, etc.)
+ * before converting it to a playable sound.
+ *
+ * Returns: (transfer full) (nullable): A new #GrlSound, or %NULL on error
+ */
+GRL_AVAILABLE_IN_ALL
+GrlSound *          grl_sound_new_from_grl_wave     (GrlWave            *wave);
+
+/* Forward declaration */
+typedef struct _GrlResourcePack GrlResourcePack;
+
+/**
+ * grl_sound_new_from_resource:
+ * @pack: A #GrlResourcePack
+ * @resource_id: The resource ID to load
+ * @file_type: (nullable): File type hint (e.g., ".wav", ".ogg"), or %NULL to auto-detect
+ * @error: (nullable): Return location for error, or %NULL
+ *
+ * Loads a sound from a resource pack.
+ *
+ * If @file_type is %NULL, the function will attempt to auto-detect the
+ * format from the resource data. Providing a hint improves reliability.
+ *
+ * Returns: (transfer full) (nullable): A new #GrlSound, or %NULL on error
+ */
+GRL_AVAILABLE_IN_ALL
+GrlSound *          grl_sound_new_from_resource     (GrlResourcePack    *pack,
+                                                     guint32             resource_id,
+                                                     const gchar        *file_type,
+                                                     GError            **error);
+
+/**
+ * grl_sound_new_alias:
+ * @source: A #GrlSound to create an alias from
+ *
+ * Creates a sound alias that shares the same sample data as the source.
+ * This is a lightweight way to have multiple sounds that use the same
+ * audio data but can have independent volume, pitch, and pan settings.
+ *
+ * Aliases do not own the sample data - the source sound must remain
+ * valid for as long as any aliases exist.
+ *
+ * Returns: (transfer full) (nullable): A new #GrlSound alias
+ */
+GRL_AVAILABLE_IN_ALL
+GrlSound *          grl_sound_new_alias             (GrlSound           *source);
 
 /*
  * Playback control
@@ -113,6 +188,34 @@ void                grl_sound_resume                (GrlSound           *self);
  */
 GRL_AVAILABLE_IN_ALL
 gboolean            grl_sound_is_playing            (GrlSound           *self);
+
+/**
+ * grl_sound_is_alias:
+ * @self: A #GrlSound
+ *
+ * Checks if this sound is an alias (created with grl_sound_new_alias()).
+ *
+ * Returns: %TRUE if this is an alias sound
+ */
+GRL_AVAILABLE_IN_ALL
+gboolean            grl_sound_is_alias              (GrlSound           *self);
+
+/**
+ * grl_sound_update:
+ * @self: A #GrlSound
+ * @data: (array length=sample_count): New sample data
+ * @sample_count: Number of samples to update
+ *
+ * Updates the sound buffer with new sample data. This can be used
+ * for real-time audio generation or streaming.
+ *
+ * The sample data format must match the format the sound was
+ * originally created with.
+ */
+GRL_AVAILABLE_IN_ALL
+void                grl_sound_update                (GrlSound           *self,
+                                                     gconstpointer       data,
+                                                     gint                sample_count);
 
 /*
  * Volume and pitch

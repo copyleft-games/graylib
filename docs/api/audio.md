@@ -323,6 +323,199 @@ main (int argc, char *argv[])
 }
 ```
 
+## GrlWave
+
+Raw audio wave data for loading, manipulating, and converting to sounds.
+
+### Loading Wave Data
+
+```c
+g_autoptr(GError) error = NULL;
+
+/* Load from file */
+g_autoptr(GrlWave) wave = grl_wave_new_from_file ("sound.wav", &error);
+
+if (wave == NULL)
+{
+    g_printerr ("Failed to load wave: %s\n", error->message);
+    return;
+}
+
+/* Load from memory buffer */
+g_autoptr(GrlWave) wave_mem = grl_wave_new_from_memory (
+    ".wav",
+    data_buffer,
+    data_size,
+    &error
+);
+
+/* Create from raw samples */
+g_autoptr(GrlWave) wave_raw = grl_wave_new_from_samples (
+    44100,    /* Sample rate (Hz) */
+    16,       /* Bits per sample */
+    2,        /* Channels (stereo) */
+    samples,  /* Raw sample data */
+    size      /* Data size in bytes */
+);
+```
+
+### Wave Properties
+
+```c
+guint frames = grl_wave_get_frame_count (wave);
+guint rate = grl_wave_get_sample_rate (wave);
+guint bits = grl_wave_get_sample_size (wave);
+guint channels = grl_wave_get_channels (wave);
+gfloat duration = grl_wave_get_duration (wave);
+
+g_print ("Wave: %u frames, %u Hz, %u-bit, %u channels, %.2f seconds\n",
+         frames, rate, bits, channels, duration);
+```
+
+### Wave Manipulation
+
+```c
+/* Crop to specific frame range */
+g_autoptr(GrlWave) cropped = grl_wave_crop (wave, 1000, 5000);
+
+/* Convert format */
+g_autoptr(GrlWave) converted = grl_wave_format (wave,
+    22050,   /* New sample rate */
+    16,      /* New bit depth */
+    1        /* New channel count (mono) */
+);
+```
+
+### Converting to Sound
+
+```c
+/* Create playable sound from wave */
+g_autoptr(GrlSound) sound = grl_sound_new_from_grl_wave (wave);
+
+/* Or load from memory buffer directly */
+g_autoptr(GrlSound) sound_mem = grl_sound_new_from_memory (
+    ".wav",
+    data_buffer,
+    data_size,
+    &error
+);
+```
+
+### Exporting Wave Data
+
+```c
+/* Export to WAV file */
+grl_wave_export (wave, "output.wav", &error);
+
+/* Export as C code (for embedding) */
+grl_wave_export_as_code (wave, "sound_data.h", &error);
+
+/* Get raw samples as floats (-1.0 to 1.0) */
+gsize sample_count;
+gfloat *samples = grl_wave_load_samples (wave, &sample_count);
+/* Use samples... */
+g_free (samples);
+```
+
+## GrlAudioStream
+
+Low-level audio stream for real-time audio generation.
+
+### Creating a Stream
+
+```c
+g_autoptr(GrlAudioStream) stream = grl_audio_stream_new (
+    44100,   /* Sample rate */
+    16,      /* Sample size (bits) */
+    2        /* Channels */
+);
+```
+
+### Stream Playback
+
+```c
+/* Start/stop playback */
+grl_audio_stream_play (stream);
+grl_audio_stream_pause (stream);
+grl_audio_stream_resume (stream);
+grl_audio_stream_stop (stream);
+
+/* Check status */
+if (grl_audio_stream_is_playing (stream))
+{
+    g_print ("Stream is playing\n");
+}
+```
+
+### Audio Properties
+
+```c
+/* Volume, pitch, pan */
+grl_audio_stream_set_volume (stream, 0.8f);
+grl_audio_stream_set_pitch (stream, 1.0f);
+grl_audio_stream_set_pan (stream, 0.0f);
+
+/* Get current values */
+gfloat vol = grl_audio_stream_get_volume (stream);
+gfloat pitch = grl_audio_stream_get_pitch (stream);
+gfloat pan = grl_audio_stream_get_pan (stream);
+```
+
+### Feeding Audio Data
+
+```c
+/* Check if stream needs more data */
+if (grl_audio_stream_is_processed (stream))
+{
+    /* Generate or provide audio samples */
+    gfloat buffer[1024];
+    generate_audio (buffer, 1024);
+
+    /* Update stream with new data */
+    grl_audio_stream_update (stream, buffer, 1024);
+}
+```
+
+### Stream Properties
+
+```c
+guint rate = grl_audio_stream_get_sample_rate (stream);
+guint size = grl_audio_stream_get_sample_size (stream);
+guint channels = grl_audio_stream_get_channels (stream);
+```
+
+### Callback-Based Streaming
+
+```c
+/* Set a callback for continuous audio generation */
+void audio_callback (gpointer buffer, guint frames, gpointer user_data)
+{
+    gfloat *samples = (gfloat *)buffer;
+    /* Fill buffer with samples... */
+}
+
+grl_audio_stream_set_callback (stream, audio_callback, user_data);
+```
+
+## Additional Audio Device Features
+
+### Buffer Size Configuration
+
+```c
+GrlAudioDevice *audio = grl_audio_device_get_default ();
+
+/* Set default buffer size for new streams (affects latency) */
+grl_audio_device_set_default_buffer_size (audio, 2048);
+```
+
+### Actual System Volume
+
+```c
+/* Get the actual volume from the audio system */
+/* (may differ from set volume if changed externally) */
+gfloat actual_volume = grl_audio_device_get_master_volume_actual (audio);
+```
+
 ## Sound vs Music: When to Use Each
 
 | Feature | GrlSound | GrlMusic |

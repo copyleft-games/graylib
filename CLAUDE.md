@@ -144,7 +144,12 @@ Stack-allocatable, copyable value types:
 | `GrlColor` | RGBA color (r, g, b, a as guint8) |
 | `GrlRectangle` | Rectangle (x, y, width, height) |
 | `GrlMatrix` | 4x4 transformation matrix |
+| `GrlQuaternion` | Quaternion for 3D rotations (x, y, z, w) |
 | `GrlBoundingBox` | 3D bounding box (min, max) |
+| `GrlWave` | Raw audio wave data |
+| `GrlPngChunk` | PNG chunk metadata |
+| `GrlPngPalette` | PNG color palette |
+| `GrlResourceChunkInfo` | Resource pack chunk info |
 
 ### GObject Types (Reference Types)
 Heap-allocated, reference-counted objects:
@@ -153,9 +158,13 @@ Heap-allocated, reference-counted objects:
 
 **Graphics:** GrlImage, GrlTexture, GrlFont, GrlCamera2D, GrlCamera3D, GrlShader, GrlRenderTexture, GrlMesh, GrlMaterial, GrlModel, GrlModelAnimation
 
-**Audio:** GrlAudioDevice, GrlSound, GrlMusic
+**Audio:** GrlAudioDevice, GrlSound, GrlMusic, GrlAudioStream
 
 **Scene:** GrlEntity, GrlSprite, GrlAnimatedTexture, GrlScene, GrlSceneManager
+
+**UI:** GrlUiControl (base), GrlUiButton, GrlUiLabel, GrlUiCheckBox, GrlUiSlider, GrlUiTextBox, GrlUiToggle, GrlUiProgressBar, GrlUiSpinner, GrlUiValueBox, GrlUiComboBox, GrlUiDropdownBox, GrlUiToggleGroup, GrlUiListView, GrlUiColorPicker, GrlUiPanel, GrlUiGroupBox, GrlUiWindowBox
+
+**Resources:** GrlResourcePack
 
 ### Interfaces
 - `GrlDrawable` - Objects that can be drawn (`draw()`)
@@ -171,14 +180,17 @@ graylib/
 │   ├── grl-version.h.in   # Version macros (generated)
 │   ├── grl-types.h        # Forward declarations
 │   ├── grl-enums.h/c      # Enumerations
-│   ├── math/              # GBoxed math types
+│   ├── math/              # GBoxed math types (Vector, Matrix, Quaternion, Color)
 │   ├── core/              # Application, Window, Input
-│   ├── graphics/          # Image, Texture, Font, Camera, Shader, Model
+│   ├── graphics/          # Image, Texture, Font, Camera, Shader, Model, PNG
 │   ├── drawing/           # Drawing functions (shapes, textures, text, 3D)
-│   ├── audio/             # AudioDevice, Sound, Music
+│   ├── audio/             # AudioDevice, Wave, Sound, Music, AudioStream
 │   ├── scene/             # Entity, Sprite, Scene, SceneManager, interfaces
-│   └── collision/         # Collision detection functions
-├── deps/                   # Dependencies (raylib submodule)
+│   ├── collision/         # Collision detection functions
+│   ├── ui/                # UI controls (Button, Slider, TextBox, ListView, etc.)
+│   ├── resources/         # Resource pack support (rres format)
+│   └── rlgl/              # Low-level OpenGL abstraction
+├── deps/                   # Dependencies (raylib, raygui, rpng, rres submodules)
 ├── tests/                  # Unit tests (GTest)
 ├── examples/               # Example source files (C and Python)
 ├── docs/                   # Documentation

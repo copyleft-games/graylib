@@ -9,6 +9,9 @@
 - **Signal-based event handling** for input and window events
 - **Property system** for data binding
 - **Derivable types** for creating custom game entities
+- **UI module** with 22+ stateful controls (buttons, sliders, textboxes, listviews, etc.)
+- **PNG chunk manipulation** via rpng integration
+- **Resource pack support** for rres file format (compressed/encrypted game assets)
 - Both static (`libgraylib.a`) and shared (`libgraylib.so`) library builds
 - Debug build support for gdb
 - Comprehensive documentation and unit tests
@@ -186,14 +189,17 @@ GI_TYPELIB_PATH=../build/gir LD_LIBRARY_PATH=../build/lib python3 basic-window.p
 ```
 graylib/
 ├── src/                    # Library source code
-│   ├── math/              # Math types (GBoxed): Vector2, Color, Rectangle
-│   ├── core/              # Core types: Application, Window
-│   ├── input/             # Input handling: Keyboard, Mouse, Gamepad
-│   ├── graphics/          # Graphics types: Image, Texture, Font, Camera, Shader
+│   ├── math/              # Math types (GBoxed): Vector2, Color, Rectangle, Quaternion
+│   ├── core/              # Core types: Application, Window, Input
+│   ├── graphics/          # Graphics types: Image, Texture, Font, Camera, Shader, PNG
 │   ├── drawing/           # Drawing functions
-│   ├── audio/             # Audio types: AudioDevice, Sound, Music
-│   └── scene/             # Entity system: Entity, Sprite, Scene, SceneManager
-├── deps/                   # Dependencies (raylib submodule)
+│   ├── audio/             # Audio types: AudioDevice, Wave, Sound, Music, AudioStream
+│   ├── scene/             # Entity system: Entity, Sprite, Scene, SceneManager
+│   ├── collision/         # 2D/3D collision detection
+│   ├── ui/                # UI controls: Button, Slider, TextBox, ListView, etc.
+│   ├── resources/         # Resource pack support (rres format)
+│   └── rlgl/              # Low-level OpenGL abstraction
+├── deps/                   # Dependencies (raylib, raygui, rpng, rres submodules)
 ├── tests/                  # Unit tests
 ├── examples/               # Example source files (C and Python)
 ├── docs/                   # Documentation
@@ -209,16 +215,19 @@ graylib/
 - [Getting Started](docs/getting-started.md)
 - [Building Guide](docs/guides/building.md)
 - [API Reference](docs/api/)
-  - [Math Types](docs/api/math-types.md) - Vector2, Vector3, Vector4, Color, Rectangle, Matrix, BoundingBox
+  - [Math Types](docs/api/math-types.md) - Vector2, Vector3, Vector4, Color, Rectangle, Matrix, BoundingBox, Quaternion
   - [Core Types](docs/api/core.md) - Application, Window
   - [Input System](docs/api/input.md) - Keyboard, Mouse, Gamepad
   - [Graphics Types](docs/api/graphics.md) - Image, Texture, Font, Shader, RenderTexture
   - [Drawing Functions](docs/api/drawing.md) - Shapes, textures, text
-  - [Audio System](docs/api/audio.md) - Sound effects and music
+  - [Audio System](docs/api/audio.md) - Wave, Sound, Music, AudioStream
   - [Scene System](docs/api/scene.md) - Entity, Sprite, Scene, SceneManager
   - [Cameras](docs/api/cameras.md) - Camera2D, Camera3D
   - [Models](docs/api/models.md) - Mesh, Material, Model, ModelAnimation
   - [Collision](docs/api/collision.md) - 2D and 3D collision detection
+  - [UI Controls](docs/api/ui.md) - Button, Slider, TextBox, ListView, ColorPicker, etc.
+  - [PNG Chunks](docs/api/png.md) - PNG metadata manipulation
+  - [Resources](docs/api/resources.md) - Resource pack loading (rres format)
   - [Enumerations](docs/api/enums.md) - Key codes, blend modes, and constants
 
 ## Examples

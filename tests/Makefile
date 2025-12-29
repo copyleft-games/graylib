@@ -21,6 +21,7 @@ TEST_SOURCES := \
 	test-vector3.c \
 	test-vector4.c \
 	test-matrix.c \
+	test-quaternion.c \
 	test-bounding-box.c \
 	test-color.c \
 	test-rectangle.c \
@@ -30,7 +31,14 @@ TEST_SOURCES := \
 	test-enums.c \
 	test-entity.c \
 	test-scene.c \
-	test-interfaces.c
+	test-interfaces.c \
+	test-math-utils.c \
+	test-wave.c \
+	test-audio-stream.c \
+	test-ui-control.c \
+	test-ui-button.c \
+	test-png.c \
+	test-resource-pack.c
 
 # Test executables (with output directory and platform-specific extension)
 TEST_PROGRAMS := $(addprefix $(TESTOUTDIR)/,$(patsubst %.c,%$(EXE_EXT),$(TEST_SOURCES)))

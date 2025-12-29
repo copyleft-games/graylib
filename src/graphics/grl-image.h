@@ -16,6 +16,7 @@
 #include <glib-object.h>
 #include "../grl-version.h"
 #include "../grl-enums.h"
+#include "../grl-types.h"
 #include "../math/grl-vector2.h"
 #include "../math/grl-color.h"
 #include "../math/grl-rectangle.h"
@@ -41,6 +42,26 @@ GrlImage *          grl_image_new_from_memory   (const gchar        *file_type,
 
 GRL_AVAILABLE_IN_ALL
 GrlImage *          grl_image_new_from_screen   (void);
+
+/**
+ * grl_image_new_from_resource:
+ * @pack: A #GrlResourcePack
+ * @resource_id: The resource ID to load
+ * @file_type: (nullable): File type hint (e.g., ".png"), or %NULL to auto-detect
+ * @error: (nullable): Return location for error, or %NULL
+ *
+ * Loads an image from a resource pack.
+ *
+ * If @file_type is %NULL, the function will attempt to auto-detect the
+ * format from the resource data. Providing a hint improves reliability.
+ *
+ * Returns: (transfer full) (nullable): A new #GrlImage, or %NULL on error
+ */
+GRL_AVAILABLE_IN_ALL
+GrlImage *          grl_image_new_from_resource (GrlResourcePack    *pack,
+                                                 guint32             resource_id,
+                                                 const gchar        *file_type,
+                                                 GError            **error);
 
 /*
  * Constructors - Generation
@@ -132,6 +153,56 @@ GRL_AVAILABLE_IN_ALL
 guint8 *            grl_image_export_to_memory  (GrlImage           *self,
                                                  const gchar        *file_type,
                                                  gsize              *out_size);
+
+/*
+ * Indexed PNG (via rpng)
+ */
+
+/**
+ * grl_image_new_from_png_indexed:
+ * @filename: (type filename): Path to indexed PNG file
+ * @palette_out: (out) (optional) (transfer full): Return location for palette, or %NULL
+ * @error: (nullable): Return location for error, or %NULL
+ *
+ * Loads an indexed (palette-based) PNG image.
+ *
+ * Indexed PNG images use a color palette where each pixel is an 8-bit
+ * index into the palette. This function loads such images and optionally
+ * returns the palette used.
+ *
+ * If the PNG file is not indexed (e.g., RGB or RGBA), this function
+ * returns %NULL and sets an error.
+ *
+ * Returns: (transfer full) (nullable): A new #GrlImage, or %NULL on error
+ */
+GRL_AVAILABLE_IN_ALL
+GrlImage *          grl_image_new_from_png_indexed (const gchar      *filename,
+                                                    GrlPngPalette   **palette_out,
+                                                    GError          **error);
+
+/**
+ * grl_image_save_as_png_indexed:
+ * @self: A #GrlImage
+ * @filename: (type filename): Output filename
+ * @palette: The color palette to use
+ * @error: (nullable): Return location for error, or %NULL
+ *
+ * Saves an image as an indexed PNG using the provided palette.
+ *
+ * The image will be quantized to match the palette colors. The palette
+ * should contain all colors needed to represent the image.
+ *
+ * Note: This function requires the image to already be 8-bit indexed data.
+ * For RGBA images, you should first reduce colors to create the palette
+ * and indexed data.
+ *
+ * Returns: %TRUE on success
+ */
+GRL_AVAILABLE_IN_ALL
+gboolean            grl_image_save_as_png_indexed (GrlImage         *self,
+                                                   const gchar      *filename,
+                                                   GrlPngPalette    *palette,
+                                                   GError          **error);
 
 /*
  * Transformations (modify in place)

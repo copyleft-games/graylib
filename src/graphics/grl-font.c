@@ -9,6 +9,7 @@
 
 #include "config.h"
 #include "grl-font.h"
+#include "../resources/grl-resource-pack.h"
 #include <raylib.h>
 
 /**
@@ -325,6 +326,62 @@ grl_font_new_from_memory (const gchar  *file_type,
                                codepoint_count);
 
     return grl_font_new_from_handle (font, FALSE);
+}
+
+/**
+ * grl_font_new_from_resource:
+ * @pack: A #GrlResourcePack
+ * @resource_id: The resource ID to load
+ * @font_size: Desired font size in pixels
+ * @file_type: (nullable): File type hint (e.g., ".ttf"), or %NULL to default to TTF
+ * @error: (nullable): Return location for error, or %NULL
+ *
+ * Loads a font from a resource pack.
+ *
+ * If @file_type is %NULL, the function assumes TTF format.
+ *
+ * Returns: (transfer full) (nullable): A new #GrlFont, or %NULL on error
+ */
+GrlFont *
+grl_font_new_from_resource (GrlResourcePack *pack,
+                            guint32          resource_id,
+                            gint             font_size,
+                            const gchar     *file_type,
+                            GError         **error)
+{
+    GrlFont *font;
+    guint8 *data;
+    gsize size;
+    const gchar *type_hint;
+
+    g_return_val_if_fail (GRL_IS_RESOURCE_PACK (pack), NULL);
+    g_return_val_if_fail (font_size > 0, NULL);
+    g_return_val_if_fail (error == NULL || *error == NULL, NULL);
+
+    /* Load raw data from resource pack */
+    data = grl_resource_pack_load_raw (pack, resource_id, &size, error);
+    if (data == NULL)
+        return NULL;
+
+    /* Use provided file type or default to TTF */
+    type_hint = (file_type != NULL) ? file_type : ".ttf";
+
+    /* Load font from memory with default codepoints (NULL = ASCII 32-126) */
+    font = grl_font_new_from_memory (type_hint, data, size, font_size, NULL, 0);
+    g_free (data);
+
+    if (font == NULL || !grl_font_is_valid (font))
+    {
+        g_clear_object (&font);
+        g_set_error (error,
+                     GRL_RESOURCE_PACK_ERROR,
+                     GRL_RESOURCE_PACK_ERROR_CORRUPTED_DATA,
+                     "Failed to load font from resource %u",
+                     resource_id);
+        return NULL;
+    }
+
+    return font;
 }
 
 /*

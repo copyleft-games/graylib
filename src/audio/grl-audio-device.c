@@ -298,7 +298,7 @@ grl_audio_device_set_master_volume (GrlAudioDevice *self,
  * grl_audio_device_get_master_volume:
  * @self: A #GrlAudioDevice
  *
- * Gets the current master volume.
+ * Gets the current master volume setting.
  *
  * Returns: The master volume (0.0 to 1.0)
  */
@@ -312,4 +312,44 @@ grl_audio_device_get_master_volume (GrlAudioDevice *self)
     priv = grl_audio_device_get_instance_private (self);
 
     return priv->master_volume;
+}
+
+/**
+ * grl_audio_device_get_master_volume_actual:
+ * @self: A #GrlAudioDevice
+ *
+ * Gets the actual master volume from the audio system.
+ *
+ * Returns: The actual master volume (0.0 to 1.0)
+ */
+gfloat
+grl_audio_device_get_master_volume_actual (GrlAudioDevice *self)
+{
+    GrlAudioDevicePrivate *priv;
+
+    g_return_val_if_fail (GRL_IS_AUDIO_DEVICE (self), 1.0f);
+
+    priv = grl_audio_device_get_instance_private (self);
+
+    if (!priv->is_initialized)
+        return priv->master_volume;
+
+    return GetMasterVolume ();
+}
+
+/**
+ * grl_audio_device_set_default_buffer_size:
+ * @self: A #GrlAudioDevice
+ * @size: The default buffer size in samples
+ *
+ * Sets the default buffer size for new audio streams.
+ */
+void
+grl_audio_device_set_default_buffer_size (GrlAudioDevice *self,
+                                          gint            size)
+{
+    g_return_if_fail (GRL_IS_AUDIO_DEVICE (self));
+    g_return_if_fail (size > 0);
+
+    SetAudioStreamBufferSizeDefault (size);
 }

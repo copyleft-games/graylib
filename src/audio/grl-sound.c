@@ -9,6 +9,9 @@
 
 #include "config.h"
 #include "grl-sound.h"
+#include "grl-wave.h"
+#include "grl-wave-private.h"
+#include "../resources/grl-resource-pack.h"
 #include <gio/gio.h>
 #include <raylib.h>
 #include <string.h>
@@ -48,6 +51,7 @@ struct _GrlSound
 
     Sound           sound;
     gboolean        is_loaded;
+    gboolean        is_alias;
     gfloat          volume;
     gfloat          pitch;
     gfloat          pan;
@@ -76,7 +80,11 @@ grl_sound_finalize (GObject *object)
 
     if (self->is_loaded)
     {
-        UnloadSound (self->sound);
+        /* Use appropriate unload function based on whether this is an alias */
+        if (self->is_alias)
+            UnloadSoundAlias (self->sound);
+        else
+            UnloadSound (self->sound);
         self->is_loaded = FALSE;
     }
 
@@ -232,6 +240,7 @@ static void
 grl_sound_init (GrlSound *self)
 {
     self->is_loaded = FALSE;
+    self->is_alias = FALSE;
     self->volume = 1.0f;
     self->pitch = 1.0f;
     self->pan = 0.0f;
@@ -342,6 +351,185 @@ grl_sound_new_from_wave (const guint8 *data,
 }
 
 /**
+ * grl_sound_new_from_memory:
+ * @file_type: File type extension (e.g., ".wav", ".ogg")
+ * @data: (array length=data_size): Audio file data in memory
+ * @data_size: Size of @data in bytes
+ * @error: (nullable): Return location for error, or %NULL
+ *
+ * Loads a sound from a memory buffer containing an audio file.
+ *
+ * The @file_type parameter specifies the audio format. It should be
+ * a file extension including the dot (e.g., ".wav", ".ogg", ".mp3").
+ *
+ * Returns: (transfer full) (nullable): A new #GrlSound, or %NULL on error
+ */
+GrlSound *
+grl_sound_new_from_memory (const gchar  *file_type,
+                           const guint8 *data,
+                           gsize         data_size,
+                           GError      **error)
+{
+    GrlSound *self;
+    g_autoptr(GrlWave) wave = NULL;
+
+    g_return_val_if_fail (file_type != NULL, NULL);
+    g_return_val_if_fail (data != NULL, NULL);
+    g_return_val_if_fail (data_size > 0, NULL);
+    g_return_val_if_fail (error == NULL || *error == NULL, NULL);
+
+    /* Load wave from memory buffer */
+    wave = grl_wave_new_from_memory (file_type, data, data_size, error);
+    if (wave == NULL)
+        return NULL;
+
+    /* Create sound from wave */
+    self = grl_sound_new_from_grl_wave (wave);
+    if (self == NULL)
+    {
+        g_set_error (error,
+                     G_IO_ERROR,
+                     G_IO_ERROR_FAILED,
+                     "Failed to create sound from wave data");
+        return NULL;
+    }
+
+    return self;
+}
+
+/**
+ * grl_sound_new_from_resource:
+ * @pack: A #GrlResourcePack
+ * @resource_id: The resource ID to load
+ * @file_type: (nullable): File type hint (e.g., ".wav", ".ogg"), or %NULL to auto-detect
+ * @error: (nullable): Return location for error, or %NULL
+ *
+ * Loads a sound from a resource pack.
+ *
+ * If @file_type is %NULL, the function will attempt to auto-detect the
+ * format from the resource data. Providing a hint improves reliability.
+ *
+ * Returns: (transfer full) (nullable): A new #GrlSound, or %NULL on error
+ */
+GrlSound *
+grl_sound_new_from_resource (GrlResourcePack *pack,
+                             guint32          resource_id,
+                             const gchar     *file_type,
+                             GError         **error)
+{
+    GrlSound *sound;
+    guint8 *data;
+    gsize size;
+    const gchar *type_hint;
+
+    g_return_val_if_fail (GRL_IS_RESOURCE_PACK (pack), NULL);
+    g_return_val_if_fail (error == NULL || *error == NULL, NULL);
+
+    /* Load raw data from resource pack */
+    data = grl_resource_pack_load_raw (pack, resource_id, &size, error);
+    if (data == NULL)
+        return NULL;
+
+    /* Use provided file type or try to detect from magic bytes */
+    if (file_type != NULL)
+    {
+        type_hint = file_type;
+    }
+    else
+    {
+        /* Try to detect format from magic bytes */
+        if (size >= 4 && memcmp (data, "RIFF", 4) == 0)
+            type_hint = ".wav";
+        else if (size >= 4 && memcmp (data, "OggS", 4) == 0)
+            type_hint = ".ogg";
+        else if (size >= 4 && memcmp (data, "fLaC", 4) == 0)
+            type_hint = ".flac";
+        else if (size >= 3 && data[0] == 0xFF && (data[1] & 0xE0) == 0xE0)
+            type_hint = ".mp3"; /* MP3 frame sync */
+        else if (size >= 4 && memcmp (data, "ID3", 3) == 0)
+            type_hint = ".mp3"; /* MP3 with ID3 tag */
+        else
+            type_hint = ".wav"; /* Default fallback */
+    }
+
+    /* Load sound from memory */
+    sound = grl_sound_new_from_memory (type_hint, data, size, error);
+    g_free (data);
+
+    return sound;
+}
+
+/**
+ * grl_sound_new_from_grl_wave:
+ * @wave: A #GrlWave containing the audio data
+ *
+ * Creates a sound from a #GrlWave object. This allows you to load
+ * and manipulate audio data with #GrlWave (cropping, resampling, etc.)
+ * before converting it to a playable sound.
+ *
+ * Returns: (transfer full) (nullable): A new #GrlSound, or %NULL on error
+ */
+GrlSound *
+grl_sound_new_from_grl_wave (GrlWave *wave)
+{
+    GrlSound *self;
+    Wave raylib_wave;
+    Sound sound;
+
+    g_return_val_if_fail (wave != NULL, NULL);
+
+    /* Get the internal raylib Wave struct */
+    raylib_wave = _grl_wave_get_raylib_wave (wave);
+
+    /* Load sound from wave (raylib makes its own copy of the data) */
+    sound = LoadSoundFromWave (raylib_wave);
+
+    if (sound.frameCount == 0)
+        return NULL;
+
+    self = g_object_new (GRL_TYPE_SOUND, NULL);
+    self->sound = sound;
+    self->is_loaded = TRUE;
+
+    return self;
+}
+
+/**
+ * grl_sound_new_alias:
+ * @source: A #GrlSound to create an alias from
+ *
+ * Creates a sound alias that shares the same sample data as the source.
+ * This is a lightweight way to have multiple sounds that use the same
+ * audio data but can have independent volume, pitch, and pan settings.
+ *
+ * Aliases do not own the sample data - the source sound must remain
+ * valid for as long as any aliases exist.
+ *
+ * Returns: (transfer full) (nullable): A new #GrlSound alias
+ */
+GrlSound *
+grl_sound_new_alias (GrlSound *source)
+{
+    GrlSound *self;
+    Sound alias;
+
+    g_return_val_if_fail (GRL_IS_SOUND (source), NULL);
+    g_return_val_if_fail (source->is_loaded, NULL);
+
+    alias = LoadSoundAlias (source->sound);
+
+    if (alias.frameCount == 0)
+        return NULL;
+
+    self = g_object_new (GRL_TYPE_SOUND, NULL);
+    self->sound = alias;
+    self->is_loaded = TRUE;
+    self->is_alias = TRUE;
+
+    return self;
+}
+
+/**
  * grl_sound_play:
  * @self: A #GrlSound
  *
@@ -421,12 +609,59 @@ grl_sound_resume (GrlSound *self)
 gboolean
 grl_sound_is_playing (GrlSound *self)
 {
+    unsigned char raw;
+
     g_return_val_if_fail (GRL_IS_SOUND (self), FALSE);
 
     if (!self->is_loaded)
         return FALSE;
 
-    return IsSoundPlaying (self->sound);
+    /* Fix bool/gboolean ABI mismatch - use unsigned char intermediate */
+    raw = IsSoundPlaying (self->sound);
+    return raw != 0;
+}
+
+/**
+ * grl_sound_is_alias:
+ * @self: A #GrlSound
+ *
+ * Checks if this sound is an alias (created with grl_sound_new_alias()).
+ *
+ * Returns: %TRUE if this is an alias sound
+ */
+gboolean
+grl_sound_is_alias (GrlSound *self)
+{
+    g_return_val_if_fail (GRL_IS_SOUND (self), FALSE);
+
+    return self->is_alias;
+}
+
+/**
+ * grl_sound_update:
+ * @self: A #GrlSound
+ * @data: (array length=sample_count): New sample data
+ * @sample_count: Number of samples to update
+ *
+ * Updates the sound buffer with new sample data. This can be used
+ * for real-time audio generation or streaming.
+ *
+ * The sample data format must match the format the sound was
+ * originally created with.
+ */
+void
+grl_sound_update (GrlSound      *self,
+                  gconstpointer  data,
+                  gint           sample_count)
+{
+    g_return_if_fail (GRL_IS_SOUND (self));
+    g_return_if_fail (data != NULL);
+    g_return_if_fail (sample_count > 0);
+
+    if (!self->is_loaded)
+        return;
+
+    UpdateSound (self->sound, data, sample_count);
 }
 
 /**
@@ -602,11 +837,15 @@ grl_sound_stop_multi (GrlSound *self)
 gint
 grl_sound_get_sounds_playing (GrlSound *self)
 {
+    unsigned char raw;
+
     g_return_val_if_fail (GRL_IS_SOUND (self), 0);
 
     if (!self->is_loaded)
         return 0;
 
     /* raylib doesn't track multi-sound instances, return 1 if playing */
-    return IsSoundPlaying (self->sound) ? 1 : 0;
+    /* Fix bool/gboolean ABI mismatch - use unsigned char intermediate */
+    raw = IsSoundPlaying (self->sound);
+    return raw != 0 ? 1 : 0;
 }

@@ -1,3 +1,15 @@
 [submodule "deps/raylib"]
 	path = deps/raylib
 	url = https://github.com/raysan5/raylib
+[submodule "deps/raudio"]
+	path = deps/raudio
+	url = https://github.com/raysan5/raudio/
+[submodule "deps/raygui"]
+	path = deps/raygui
+	url = https://github.com/raysan5/raygui
+[submodule "deps/rpng"]
+	path = deps/rpng
+	url = https://github.com/raysan5/rpng
+[submodule "deps/rres"]
+	path = deps/rres
+	url = https://github.com/raysan5/rres

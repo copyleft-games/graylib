@@ -54,9 +54,13 @@
 #include "math/grl-vector3.h"
 #include "math/grl-vector4.h"
 #include "math/grl-matrix.h"
+#include "math/grl-quaternion.h"
 #include "math/grl-bounding-box.h"
 #include "math/grl-color.h"
 #include "math/grl-rectangle.h"
+
+/* Math utilities */
+#include "math/grl-math-utils.h"
 
 /* Core module */
 #include "core/grl-application.h"
@@ -75,14 +79,17 @@
 #include "graphics/grl-material.h"
 #include "graphics/grl-model.h"
 #include "graphics/grl-model-animation.h"
+#include "graphics/grl-png.h"
 
 /* Drawing module */
 #include "drawing/grl-draw.h"
 
 /* Audio module */
 #include "audio/grl-audio-device.h"
+#include "audio/grl-wave.h"
 #include "audio/grl-sound.h"
 #include "audio/grl-music.h"
+#include "audio/grl-audio-stream.h"
 
 /* Scene module */
 #include "scene/grl-drawable.h"
@@ -96,6 +103,33 @@
 
 /* Collision module */
 #include "collision/grl-collision.h"
+
+/* UI module */
+#include "ui/grl-ui-enums.h"
+#include "ui/grl-ui-control.h"
+#include "ui/grl-ui-style.h"
+#include "ui/grl-ui-label.h"
+#include "ui/grl-ui-button.h"
+#include "ui/grl-ui-checkbox.h"
+#include "ui/grl-ui-slider.h"
+#include "ui/grl-ui-textbox.h"
+#include "ui/grl-ui-toggle.h"
+#include "ui/grl-ui-progressbar.h"
+#include "ui/grl-ui-spinner.h"
+#include "ui/grl-ui-valuebox.h"
+#include "ui/grl-ui-combobox.h"
+#include "ui/grl-ui-dropdownbox.h"
+#include "ui/grl-ui-togglegroup.h"
+#include "ui/grl-ui-listview.h"
+#include "ui/grl-ui-colorpicker.h"
+#include "ui/grl-ui-panel.h"
+#include "ui/grl-ui-groupbox.h"
+#include "ui/grl-ui-windowbox.h"
+
+/* Resources module */
+#include "resources/grl-resource-enums.h"
+#include "resources/grl-resource-chunk-info.h"
+#include "resources/grl-resource-pack.h"
 
 /* RLGL module (low-level OpenGL abstraction) */
 #include "rlgl/grl-rlgl.h"

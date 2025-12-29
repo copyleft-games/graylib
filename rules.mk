@@ -27,7 +27,8 @@ ifeq ($(RAYLIB_SHARED),1)
     endif
 else
     # Use embedded raylib from deps/
-    RAYLIB_CFLAGS := -I$(RAYLIB_SRC)
+    # Use -isystem to suppress warnings from raylib headers (raymath.h has C99 code)
+    RAYLIB_CFLAGS := -isystem $(RAYLIB_SRC)
     RAYLIB_LIBS := $(RAYLIB_SRC)/libraylib.a
     RAYLIB_VERSION := 5.5
 endif

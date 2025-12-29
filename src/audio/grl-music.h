@@ -44,6 +44,29 @@ GRL_AVAILABLE_IN_ALL
 GrlMusic *          grl_music_new_from_file         (const gchar        *filename,
                                                      GError            **error);
 
+/**
+ * grl_music_new_from_memory:
+ * @file_type: Music file type extension (e.g., ".ogg", ".mp3", ".wav")
+ * @data: (array length=data_size): Music file data in memory
+ * @data_size: Size of @data in bytes
+ * @error: (nullable): Return location for error, or %NULL
+ *
+ * Loads music from memory data. The data is copied internally
+ * and will be streamed during playback.
+ *
+ * This is useful for loading music from embedded resources,
+ * archives, or network downloads without writing to disk.
+ *
+ * Supported formats: WAV, OGG, MP3, FLAC (depending on raylib build)
+ *
+ * Returns: (transfer full) (nullable): A new #GrlMusic, or %NULL on error
+ */
+GRL_AVAILABLE_IN_ALL
+GrlMusic *          grl_music_new_from_memory       (const gchar        *file_type,
+                                                     const guint8       *data,
+                                                     gsize               data_size,
+                                                     GError            **error);
+
 /*
  * Playback control
  */

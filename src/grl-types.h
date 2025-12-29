@@ -83,6 +83,15 @@ typedef struct _GrlRectangle GrlRectangle;
 typedef struct _GrlMatrix GrlMatrix;
 
 /**
+ * GrlQuaternion:
+ *
+ * A quaternion for representing 3D rotations and orientations.
+ *
+ * This is a GBoxed type.
+ */
+typedef struct _GrlQuaternion GrlQuaternion;
+
+/**
  * GrlBoundingBox:
  *
  * A 3D axis-aligned bounding box defined by min and max corners.
@@ -90,6 +99,24 @@ typedef struct _GrlMatrix GrlMatrix;
  * This is a GBoxed type.
  */
 typedef struct _GrlBoundingBox GrlBoundingBox;
+
+/**
+ * GrlPngChunk:
+ *
+ * A PNG chunk containing metadata or image data.
+ *
+ * This is a GBoxed type.
+ */
+typedef struct _GrlPngChunk GrlPngChunk;
+
+/**
+ * GrlPngPalette:
+ *
+ * A color palette for indexed PNG images.
+ *
+ * This is a GBoxed type.
+ */
+typedef struct _GrlPngPalette GrlPngPalette;
 
 /*
  * =============================================================================
@@ -233,6 +260,15 @@ typedef struct _GrlCamera3DClass GrlCamera3DClass;
  */
 
 /**
+ * GrlWave:
+ *
+ * Raw audio wave data for manipulation and processing.
+ *
+ * This is a GBoxed type.
+ */
+typedef struct _GrlWave GrlWave;
+
+/**
  * GrlAudioDevice:
  *
  * The audio device singleton.
@@ -259,6 +295,15 @@ typedef struct _GrlSound GrlSound;
  * This is a final GObject type.
  */
 typedef struct _GrlMusic GrlMusic;
+
+/**
+ * GrlAudioStream:
+ *
+ * Real-time audio stream for procedural audio generation.
+ *
+ * This is a final GObject type.
+ */
+typedef struct _GrlAudioStream GrlAudioStream;
 
 /*
  * Models Module
@@ -347,6 +392,195 @@ typedef struct _GrlSceneClass GrlSceneClass;
  */
 typedef struct _GrlSceneManager GrlSceneManager;
 typedef struct _GrlSceneManagerClass GrlSceneManagerClass;
+
+/*
+ * UI Module
+ */
+
+/**
+ * GrlUiControl:
+ *
+ * Base class for all UI controls.
+ *
+ * This is a derivable GObject type.
+ */
+typedef struct _GrlUiControl GrlUiControl;
+typedef struct _GrlUiControlClass GrlUiControlClass;
+
+/**
+ * GrlUiLabel:
+ *
+ * A label control for displaying text.
+ *
+ * This is a final GObject type.
+ */
+typedef struct _GrlUiLabel GrlUiLabel;
+
+/**
+ * GrlUiButton:
+ *
+ * A button control that emits a clicked signal.
+ *
+ * This is a final GObject type.
+ */
+typedef struct _GrlUiButton GrlUiButton;
+
+/**
+ * GrlUiCheckBox:
+ *
+ * A checkbox control for boolean options.
+ *
+ * This is a final GObject type.
+ */
+typedef struct _GrlUiCheckBox GrlUiCheckBox;
+
+/**
+ * GrlUiSlider:
+ *
+ * A slider control for selecting values in a range.
+ *
+ * This is a final GObject type.
+ */
+typedef struct _GrlUiSlider GrlUiSlider;
+
+/**
+ * GrlUiTextBox:
+ *
+ * A textbox control for text input.
+ *
+ * This is a final GObject type.
+ */
+typedef struct _GrlUiTextBox GrlUiTextBox;
+
+/**
+ * GrlUiToggle:
+ *
+ * A toggle button control for on/off states.
+ *
+ * This is a final GObject type.
+ */
+typedef struct _GrlUiToggle GrlUiToggle;
+
+/**
+ * GrlUiProgressBar:
+ *
+ * A progress bar control for displaying progress.
+ *
+ * This is a final GObject type.
+ */
+typedef struct _GrlUiProgressBar GrlUiProgressBar;
+
+/**
+ * GrlUiSpinner:
+ *
+ * A spinner control for integer input with +/- buttons.
+ *
+ * This is a final GObject type.
+ */
+typedef struct _GrlUiSpinner GrlUiSpinner;
+
+/**
+ * GrlUiValueBox:
+ *
+ * A value box control for integer input.
+ *
+ * This is a final GObject type.
+ */
+typedef struct _GrlUiValueBox GrlUiValueBox;
+
+/**
+ * GrlUiComboBox:
+ *
+ * A combo box control for selecting from options.
+ *
+ * This is a final GObject type.
+ */
+typedef struct _GrlUiComboBox GrlUiComboBox;
+
+/**
+ * GrlUiDropdownBox:
+ *
+ * A dropdown box control for selecting from a dropdown list.
+ *
+ * This is a final GObject type.
+ */
+typedef struct _GrlUiDropdownBox GrlUiDropdownBox;
+
+/**
+ * GrlUiToggleGroup:
+ *
+ * A toggle group control for selecting one option from a group.
+ *
+ * This is a final GObject type.
+ */
+typedef struct _GrlUiToggleGroup GrlUiToggleGroup;
+
+/**
+ * GrlUiListView:
+ *
+ * A list view control for displaying and selecting from a scrollable list.
+ *
+ * This is a final GObject type.
+ */
+typedef struct _GrlUiListView GrlUiListView;
+
+/**
+ * GrlUiColorPicker:
+ *
+ * A color picker control for selecting colors with interactive UI.
+ *
+ * This is a final GObject type.
+ */
+typedef struct _GrlUiColorPicker GrlUiColorPicker;
+
+/**
+ * GrlUiPanel:
+ *
+ * A panel control for grouping controls with optional header.
+ *
+ * This is a final GObject type.
+ */
+typedef struct _GrlUiPanel GrlUiPanel;
+
+/**
+ * GrlUiGroupBox:
+ *
+ * A group box control for visually grouping related controls.
+ *
+ * This is a final GObject type.
+ */
+typedef struct _GrlUiGroupBox GrlUiGroupBox;
+
+/**
+ * GrlUiWindowBox:
+ *
+ * A closeable window container with title bar.
+ *
+ * This is a final GObject type.
+ */
+typedef struct _GrlUiWindowBox GrlUiWindowBox;
+
+/*
+ * Resources Module
+ */
+
+/**
+ * GrlResourceChunkInfo:
+ *
+ * Information about a resource chunk in an rres file.
+ *
+ * This is a GBoxed type.
+ */
+typedef struct _GrlResourceChunkInfo GrlResourceChunkInfo;
+
+/**
+ * GrlResourcePack:
+ *
+ * A resource pack for loading rres files.
+ *
+ * This is a final GObject type.
+ */
+typedef struct _GrlResourcePack GrlResourcePack;
 
 /*
  * =============================================================================

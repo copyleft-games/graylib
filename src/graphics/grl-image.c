@@ -9,8 +9,12 @@
 
 #include "config.h"
 #include "grl-image.h"
+#include "grl-png.h"
 #include "grl-graphics-private.h"
+#include "../resources/grl-resource-pack.h"
 #include <raylib.h>
+#include <rpng.h>
+#include <string.h>
 
 /**
  * SECTION:grl-image
@@ -304,6 +308,77 @@ grl_image_new_from_screen (void)
 
     handle = LoadImageFromScreen ();
     return grl_image_new_from_handle (handle);
+}
+
+/**
+ * grl_image_new_from_resource:
+ * @pack: A #GrlResourcePack
+ * @resource_id: The resource ID to load
+ * @file_type: (nullable): File type hint (e.g., ".png"), or %NULL to auto-detect
+ * @error: (nullable): Return location for error, or %NULL
+ *
+ * Loads an image from a resource pack.
+ *
+ * If @file_type is %NULL, the function will attempt to auto-detect the
+ * format from the resource data. Providing a hint improves reliability.
+ *
+ * Returns: (transfer full) (nullable): A new #GrlImage, or %NULL on error
+ */
+GrlImage *
+grl_image_new_from_resource (GrlResourcePack *pack,
+                             guint32          resource_id,
+                             const gchar     *file_type,
+                             GError         **error)
+{
+    GrlImage *image;
+    guint8 *data;
+    gsize size;
+    const gchar *type_hint;
+
+    g_return_val_if_fail (GRL_IS_RESOURCE_PACK (pack), NULL);
+    g_return_val_if_fail (error == NULL || *error == NULL, NULL);
+
+    /* Load raw data from resource pack */
+    data = grl_resource_pack_load_raw (pack, resource_id, &size, error);
+    if (data == NULL)
+        return NULL;
+
+    /* Use provided file type or try to detect from magic bytes */
+    if (file_type != NULL)
+    {
+        type_hint = file_type;
+    }
+    else
+    {
+        /* Try to detect format from magic bytes */
+        if (size >= 8 && data[0] == 0x89 && data[1] == 'P' && data[2] == 'N' && data[3] == 'G')
+            type_hint = ".png";
+        else if (size >= 3 && data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF)
+            type_hint = ".jpg";
+        else if (size >= 4 && data[0] == 'B' && data[1] == 'M')
+            type_hint = ".bmp";
+        else if (size >= 6 && (memcmp (data, "GIF87a", 6) == 0 || memcmp (data, "GIF89a", 6) == 0))
+            type_hint = ".gif";
+        else
+            type_hint = ".png"; /* Default fallback */
+    }
+
+    /* Load image from memory */
+    image = grl_image_new_from_memory (type_hint, data, size);
+    g_free (data);
+
+    if (image == NULL || !grl_image_is_valid (image))
+    {
+        g_clear_object (&image);
+        g_set_error (error,
+                     GRL_RESOURCE_PACK_ERROR,
+                     GRL_RESOURCE_PACK_ERROR_CORRUPTED_DATA,
+                     "Failed to load image from resource %u",
+                     resource_id);
+        return NULL;
+    }
+
+    return image;
 }
 
 /*
@@ -1312,6 +1387,266 @@ grl_image_get_pixel (GrlImage *self,
 
     color = GetImageColor (self->handle, x, y);
     return grl_color_new (color.r, color.g, color.b, color.a);
+}
+
+/*
+ * Indexed PNG functions
+ */
+
+/**
+ * grl_image_new_from_png_indexed:
+ * @filename: (type filename): Path to indexed PNG file
+ * @palette_out: (out) (optional) (transfer full): Return location for palette
+ * @error: (nullable): Return location for error
+ *
+ * Loads an indexed PNG image.
+ *
+ * Returns: (transfer full) (nullable): A new #GrlImage, or %NULL on error
+ */
+GrlImage *
+grl_image_new_from_png_indexed (const gchar    *filename,
+                                GrlPngPalette **palette_out,
+                                GError        **error)
+{
+    GrlImage      *self;
+    Image          handle;
+    char          *indexed_data;
+    char          *rgba_data;
+    rpng_palette   rpng_pal;
+    int            width;
+    int            height;
+    int            i;
+
+    g_return_val_if_fail (filename != NULL, NULL);
+    g_return_val_if_fail (error == NULL || *error == NULL, NULL);
+
+    if (!g_file_test (filename, G_FILE_TEST_EXISTS))
+    {
+        g_set_error (error,
+                     G_FILE_ERROR,
+                     G_FILE_ERROR_NOENT,
+                     "PNG file not found: %s",
+                     filename);
+        return NULL;
+    }
+
+    /* Initialize palette structure */
+    rpng_pal.color_count = 0;
+    rpng_pal.colors = NULL;
+
+    /* Load indexed data and palette */
+    indexed_data = rpng_load_image_indexed (filename, &width, &height, &rpng_pal);
+
+    if (indexed_data == NULL)
+    {
+        g_set_error (error,
+                     G_FILE_ERROR,
+                     G_FILE_ERROR_FAILED,
+                     "Failed to load indexed PNG (not indexed or invalid): %s",
+                     filename);
+        return NULL;
+    }
+
+    /* Convert indexed data to RGBA for raylib Image */
+    rgba_data = rpng_unindex_image_data (indexed_data, width, height, rpng_pal);
+
+    if (rgba_data == NULL)
+    {
+        RPNG_FREE (indexed_data);
+        if (rpng_pal.colors != NULL)
+            RPNG_FREE (rpng_pal.colors);
+
+        g_set_error (error,
+                     G_FILE_ERROR,
+                     G_FILE_ERROR_FAILED,
+                     "Failed to convert indexed data to RGBA");
+        return NULL;
+    }
+
+    /* Create raylib Image from RGBA data */
+    handle.data = rgba_data;
+    handle.width = width;
+    handle.height = height;
+    handle.mipmaps = 1;
+    handle.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
+
+    /* Create output palette if requested */
+    if (palette_out != NULL)
+    {
+        GrlPngPalette *palette;
+
+        palette = grl_png_palette_new_empty (rpng_pal.color_count);
+
+        for (i = 0; i < rpng_pal.color_count; i++)
+        {
+            GrlColor *color;
+
+            color = grl_color_new (rpng_pal.colors[i].r,
+                                   rpng_pal.colors[i].g,
+                                   rpng_pal.colors[i].b,
+                                   rpng_pal.colors[i].a);
+            grl_png_palette_set_color (palette, i, color);
+            grl_color_free (color);
+        }
+
+        *palette_out = palette;
+    }
+
+    /* Clean up rpng resources */
+    RPNG_FREE (indexed_data);
+    if (rpng_pal.colors != NULL)
+        RPNG_FREE (rpng_pal.colors);
+
+    /* Create GrlImage wrapper */
+    self = g_object_new (GRL_TYPE_IMAGE, NULL);
+    self->handle = handle;
+    self->valid = TRUE;
+
+    return self;
+}
+
+/**
+ * grl_image_save_as_png_indexed:
+ * @self: A #GrlImage
+ * @filename: (type filename): Output filename
+ * @palette: The color palette to use
+ * @error: (nullable): Return location for error
+ *
+ * Saves an image as an indexed PNG.
+ *
+ * Returns: %TRUE on success
+ */
+gboolean
+grl_image_save_as_png_indexed (GrlImage       *self,
+                               const gchar    *filename,
+                               GrlPngPalette  *palette,
+                               GError        **error)
+{
+    rpng_palette   rpng_pal;
+    char          *indexed_data;
+    gint           width;
+    gint           height;
+    gint           pixel_count;
+    guint8        *rgba_data;
+    int            result;
+    int            i;
+
+    g_return_val_if_fail (GRL_IS_IMAGE (self), FALSE);
+    g_return_val_if_fail (filename != NULL, FALSE);
+    g_return_val_if_fail (palette != NULL, FALSE);
+    g_return_val_if_fail (error == NULL || *error == NULL, FALSE);
+
+    if (!self->valid || self->handle.data == NULL)
+    {
+        g_set_error (error,
+                     G_FILE_ERROR,
+                     G_FILE_ERROR_FAILED,
+                     "Invalid image");
+        return FALSE;
+    }
+
+    width = self->handle.width;
+    height = self->handle.height;
+    pixel_count = width * height;
+
+    /* Build rpng palette from GrlPngPalette */
+    rpng_pal.color_count = palette->color_count;
+    rpng_pal.colors = g_new (rpng_color, palette->color_count);
+
+    for (i = 0; i < palette->color_count; i++)
+    {
+        if (palette->colors != NULL && i < palette->color_count)
+        {
+            rpng_pal.colors[i].r = palette->colors[i].r;
+            rpng_pal.colors[i].g = palette->colors[i].g;
+            rpng_pal.colors[i].b = palette->colors[i].b;
+            rpng_pal.colors[i].a = palette->colors[i].a;
+        }
+    }
+
+    /* Export image to RGBA if not already */
+    rgba_data = (guint8 *)ExportImageToMemory (self->handle, ".raw", NULL);
+    if (rgba_data == NULL)
+    {
+        /* Fallback: Use image data directly if RGBA */
+        if (self->handle.format == PIXELFORMAT_UNCOMPRESSED_R8G8B8A8)
+            rgba_data = (guint8 *)self->handle.data;
+        else
+        {
+            g_free (rpng_pal.colors);
+            g_set_error (error,
+                         G_FILE_ERROR,
+                         G_FILE_ERROR_FAILED,
+                         "Cannot convert image to RGBA for indexed export");
+            return FALSE;
+        }
+    }
+
+    /* Create indexed data by finding closest palette color for each pixel */
+    indexed_data = g_new (char, pixel_count);
+
+    for (i = 0; i < pixel_count; i++)
+    {
+        guint8 r;
+        guint8 g;
+        guint8 b;
+        guint8 a;
+        int    best_idx;
+        int    best_dist;
+        int    j;
+
+        r = rgba_data[i * 4 + 0];
+        g = rgba_data[i * 4 + 1];
+        b = rgba_data[i * 4 + 2];
+        a = rgba_data[i * 4 + 3];
+
+        /* Find closest palette color (simple Euclidean distance) */
+        best_idx = 0;
+        best_dist = G_MAXINT;
+
+        for (j = 0; j < rpng_pal.color_count; j++)
+        {
+            int dr;
+            int dg;
+            int db;
+            int da;
+            int dist;
+
+            dr = (int)r - (int)rpng_pal.colors[j].r;
+            dg = (int)g - (int)rpng_pal.colors[j].g;
+            db = (int)b - (int)rpng_pal.colors[j].b;
+            da = (int)a - (int)rpng_pal.colors[j].a;
+
+            dist = dr * dr + dg * dg + db * db + da * da;
+
+            if (dist < best_dist)
+            {
+                best_dist = dist;
+                best_idx = j;
+            }
+        }
+
+        indexed_data[i] = (char)best_idx;
+    }
+
+    /* Save as indexed PNG */
+    result = rpng_save_image_indexed (filename, indexed_data,
+                                      width, height, rpng_pal);
+
+    g_free (indexed_data);
+    g_free (rpng_pal.colors);
+
+    if (result == 0)
+    {
+        g_set_error (error,
+                     G_FILE_ERROR,
+                     G_FILE_ERROR_FAILED,
+                     "Failed to save indexed PNG: %s",
+                     filename);
+        return FALSE;
+    }
+
+    return TRUE;
 }
 
 /*

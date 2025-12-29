@@ -111,6 +111,30 @@ GrlFont *           grl_font_new_from_memory    (const gchar        *file_type,
                                                  gint               *codepoints,
                                                  gint                codepoint_count);
 
+/* Forward declaration */
+typedef struct _GrlResourcePack GrlResourcePack;
+
+/**
+ * grl_font_new_from_resource:
+ * @pack: A #GrlResourcePack
+ * @resource_id: The resource ID to load
+ * @font_size: Desired font size in pixels
+ * @file_type: (nullable): File type hint (e.g., ".ttf"), or %NULL to default to TTF
+ * @error: (nullable): Return location for error, or %NULL
+ *
+ * Loads a font from a resource pack.
+ *
+ * If @file_type is %NULL, the function assumes TTF format.
+ *
+ * Returns: (transfer full) (nullable): A new #GrlFont, or %NULL on error
+ */
+GRL_AVAILABLE_IN_ALL
+GrlFont *           grl_font_new_from_resource  (GrlResourcePack    *pack,
+                                                 guint32             resource_id,
+                                                 gint                font_size,
+                                                 const gchar        *file_type,
+                                                 GError            **error);
+
 /*
  * Properties
  */

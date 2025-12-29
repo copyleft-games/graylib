@@ -60,6 +60,10 @@ struct _GrlMusic
     gfloat          pan;
     gboolean        looping;
     gchar          *filename;
+
+    /* For memory-loaded music: raylib streams from this buffer */
+    guint8         *memory_data;
+    gsize           memory_size;
 };
 
 G_DEFINE_FINAL_TYPE (GrlMusic, grl_music, G_TYPE_OBJECT)
@@ -93,6 +97,7 @@ grl_music_finalize (GObject *object)
     }
 
     g_clear_pointer (&self->filename, g_free);
+    g_clear_pointer (&self->memory_data, g_free);
 
     G_OBJECT_CLASS (grl_music_parent_class)->finalize (object);
 }
@@ -304,6 +309,8 @@ grl_music_init (GrlMusic *self)
     self->pan = 0.0f;
     self->looping = FALSE;
     self->filename = NULL;
+    self->memory_data = NULL;
+    self->memory_size = 0;
 }
 
 /**
@@ -357,6 +364,76 @@ grl_music_new_from_file (const gchar  *filename,
     self->music = music;
     self->is_loaded = TRUE;
     self->filename = g_strdup (filename);
+
+    return self;
+}
+
+/**
+ * grl_music_new_from_memory:
+ * @file_type: Music file type extension (e.g., ".ogg", ".mp3", ".wav")
+ * @data: (array length=data_size): Music file data in memory
+ * @data_size: Size of @data in bytes
+ * @error: (nullable): Return location for error, or %NULL
+ *
+ * Loads music from memory data. The data is copied internally
+ * and will be streamed during playback.
+ *
+ * This is useful for loading music from embedded resources,
+ * archives, or network downloads without writing to disk.
+ *
+ * Supported formats: WAV, OGG, MP3, FLAC (depending on raylib build)
+ *
+ * Returns: (transfer full) (nullable): A new #GrlMusic, or %NULL on error
+ */
+GrlMusic *
+grl_music_new_from_memory (const gchar  *file_type,
+                           const guint8 *data,
+                           gsize         data_size,
+                           GError      **error)
+{
+    GrlMusic *self;
+    Music music;
+    guint8 *data_copy;
+
+    g_return_val_if_fail (file_type != NULL, NULL);
+    g_return_val_if_fail (data != NULL, NULL);
+    g_return_val_if_fail (data_size > 0, NULL);
+    g_return_val_if_fail (error == NULL || *error == NULL, NULL);
+
+    /* Copy the data - raylib streams from this buffer, so it must persist */
+    data_copy = g_memdup2 (data, data_size);
+    if (data_copy == NULL)
+    {
+        g_set_error (error,
+                     G_IO_ERROR,
+                     G_IO_ERROR_NO_SPACE,
+                     "Failed to allocate memory for music data");
+        return NULL;
+    }
+
+    /* Load music stream from memory */
+    music = LoadMusicStreamFromMemory (file_type,
+                                       (const unsigned char *)data_copy,
+                                       (int)data_size);
+
+    /* Check if music loaded successfully */
+    if (music.frameCount == 0)
+    {
+        g_free (data_copy);
+        g_set_error (error,
+                     G_IO_ERROR,
+                     G_IO_ERROR_FAILED,
+                     "Failed to load music from memory (type: %s, size: %" G_GSIZE_FORMAT ")",
+                     file_type, data_size);
+        return NULL;
+    }
+
+    self = g_object_new (GRL_TYPE_MUSIC, NULL);
+    self->music = music;
+    self->is_loaded = TRUE;
+    self->filename = g_strdup_printf ("(memory:%s)", file_type);
+    self->memory_data = data_copy;
+    self->memory_size = data_size;
 
     return self;
 }
@@ -459,12 +536,16 @@ grl_music_update (GrlMusic *self)
 gboolean
 grl_music_is_playing (GrlMusic *self)
 {
+    unsigned char raw;
+
     g_return_val_if_fail (GRL_IS_MUSIC (self), FALSE);
 
     if (!self->is_loaded)
         return FALSE;
 
-    return IsMusicStreamPlaying (self->music);
+    /* Fix bool/gboolean ABI mismatch - use unsigned char intermediate */
+    raw = IsMusicStreamPlaying (self->music);
+    return raw != 0;
 }
 
 /**

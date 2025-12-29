@@ -1,0 +1,424 @@
+# Resource Packs
+
+This document covers the rres-based resource pack system for bundling game assets.
+
+## Overview
+
+Resource packs (rres files) allow you to bundle multiple assets into a single file for:
+
+- Easier distribution
+- Faster loading
+- Optional compression
+- Optional encryption
+
+## GrlResourcePack
+
+The main interface for loading and accessing resource pack contents.
+
+### Opening a Resource Pack
+
+```c
+GError *error = NULL;
+g_autoptr(GrlResourcePack) pack = grl_resource_pack_new ("assets.rres", &error);
+
+if (pack == NULL)
+{
+    g_printerr ("Failed to open resource pack: %s\n", error->message);
+    g_clear_error (&error);
+    return 1;
+}
+```
+
+### File Information
+
+```c
+/* Get the filename */
+const gchar *filename = grl_resource_pack_get_filename (pack);
+g_print ("Opened: %s\n", filename);
+
+/* Get rres format version */
+guint16 version = grl_resource_pack_get_version (pack);
+g_print ("Version: %d.%d\n", version / 100, version % 100);
+
+/* Get number of resource chunks */
+guint chunk_count = grl_resource_pack_get_chunk_count (pack);
+g_print ("Contains %u chunks\n", chunk_count);
+```
+
+### Central Directory
+
+Resource packs can include a central directory for filename-based lookups:
+
+```c
+/* Check if central directory is available */
+if (grl_resource_pack_has_central_directory (pack))
+{
+    guint entries = grl_resource_pack_get_entry_count (pack);
+    g_print ("Directory has %u entries\n", entries);
+
+    /* List all entries */
+    for (guint i = 0; i < entries; i++)
+    {
+        g_autofree gchar *name = grl_resource_pack_get_entry_filename (pack, i);
+        guint32 id = grl_resource_pack_get_entry_id (pack, i);
+        g_print ("  %s -> ID %u\n", name, id);
+    }
+}
+```
+
+### Resource IDs
+
+```c
+/* Get resource ID by filename */
+guint32 id = grl_resource_pack_get_resource_id (pack, "sprites/player.png");
+if (id != 0)
+{
+    g_print ("Found resource with ID %u\n", id);
+}
+```
+
+## Loading Resources
+
+### Raw Data
+
+```c
+GError *error = NULL;
+gsize size;
+guint8 *data = grl_resource_pack_load_raw (pack, resource_id, &size, &error);
+
+if (data != NULL)
+{
+    g_print ("Loaded %zu bytes\n", size);
+    /* Use data... */
+    g_free (data);
+}
+```
+
+### Load by Filename
+
+```c
+GError *error = NULL;
+gsize size;
+guint8 *data = grl_resource_pack_load_raw_by_name (pack, "music/theme.ogg", &size, &error);
+```
+
+### Load as GrlImage
+
+```c
+GError *error = NULL;
+g_autoptr(GrlImage) image = grl_image_new_from_resource (
+    pack,
+    resource_id,
+    ".png",      /* File type hint (or NULL to auto-detect) */
+    &error
+);
+
+if (image == NULL)
+{
+    g_printerr ("Failed to load image: %s\n", error->message);
+    g_clear_error (&error);
+}
+```
+
+### Load as GrlSound
+
+```c
+GError *error = NULL;
+g_autoptr(GrlSound) sound = grl_sound_new_from_resource (
+    pack,
+    resource_id,
+    ".wav",      /* File type hint (or NULL to auto-detect) */
+    &error
+);
+```
+
+### Load as GrlFont
+
+```c
+GError *error = NULL;
+g_autoptr(GrlFont) font = grl_font_new_from_resource (
+    pack,
+    resource_id,
+    24,          /* Font size in pixels */
+    ".ttf",      /* File type hint (or NULL for TTF) */
+    &error
+);
+```
+
+## GrlResourceChunkInfo
+
+Get detailed information about a resource chunk:
+
+```c
+GError *error = NULL;
+g_autoptr(GrlResourceChunkInfo) info = grl_resource_pack_get_chunk_info (
+    pack, resource_id, &error
+);
+
+if (info != NULL)
+{
+    g_autofree gchar *type = grl_resource_chunk_info_get_type_string (info);
+    g_print ("Chunk type: %s\n", type);
+    g_print ("ID: %u\n", info->id);
+    g_print ("Original size: %u bytes\n", info->base_size);
+    g_print ("Packed size: %u bytes\n", info->packed_size);
+
+    /* Check compression/encryption */
+    if (grl_resource_chunk_info_is_compressed (info))
+    {
+        GrlResourceCompressionType comp = grl_resource_chunk_info_get_compression (info);
+        g_print ("Compressed with: %d\n", comp);
+    }
+
+    if (grl_resource_chunk_info_is_encrypted (info))
+    {
+        GrlResourceCipherType cipher = grl_resource_chunk_info_get_cipher (info);
+        g_print ("Encrypted with: %d\n", cipher);
+    }
+}
+```
+
+### Get All Chunk Info
+
+```c
+GError *error = NULL;
+guint count;
+GrlResourceChunkInfo **infos = grl_resource_pack_get_all_chunk_info (pack, &count, &error);
+
+if (infos != NULL)
+{
+    for (guint i = 0; i < count; i++)
+    {
+        g_print ("Chunk %u: ID=%u, size=%u\n",
+                 i, infos[i]->id, infos[i]->base_size);
+        grl_resource_chunk_info_free (infos[i]);
+    }
+    g_free (infos);
+}
+```
+
+## Encrypted Resources
+
+For encrypted resource packs:
+
+```c
+/* Set decryption password before loading */
+grl_resource_pack_set_cipher_password (pack, "secret123");
+
+/* Now load encrypted resources normally */
+guint8 *data = grl_resource_pack_load_raw (pack, encrypted_id, &size, &error);
+```
+
+## Data Integrity
+
+Verify resource data:
+
+```c
+/* Compute CRC32 of loaded data */
+guint32 crc = grl_resource_pack_compute_crc32 (data, size);
+
+/* Compare with chunk CRC */
+if (crc == info->crc32)
+{
+    g_print ("Data integrity verified\n");
+}
+```
+
+## Resource Data Types
+
+```c
+typedef enum
+{
+    GRL_RESOURCE_DATA_NULL = 0,
+    GRL_RESOURCE_DATA_RAW,
+    GRL_RESOURCE_DATA_TEXT,
+    GRL_RESOURCE_DATA_IMAGE,
+    GRL_RESOURCE_DATA_WAVE,
+    GRL_RESOURCE_DATA_VERTEX,
+    GRL_RESOURCE_DATA_FONT_GLYPHS,
+    GRL_RESOURCE_DATA_LINK,
+    GRL_RESOURCE_DATA_DIRECTORY
+} GrlResourceDataType;
+```
+
+## Compression Types
+
+```c
+typedef enum
+{
+    GRL_RESOURCE_COMP_NONE = 0,
+    GRL_RESOURCE_COMP_DEFLATE,
+    GRL_RESOURCE_COMP_LZ4,
+    GRL_RESOURCE_COMP_LZMA2,
+    GRL_RESOURCE_COMP_QOI
+} GrlResourceCompressionType;
+```
+
+## Cipher Types
+
+```c
+typedef enum
+{
+    GRL_RESOURCE_CIPHER_NONE = 0,
+    GRL_RESOURCE_CIPHER_XOR,
+    GRL_RESOURCE_CIPHER_DES,
+    GRL_RESOURCE_CIPHER_TDES,
+    GRL_RESOURCE_CIPHER_IDEA,
+    GRL_RESOURCE_CIPHER_AES,
+    GRL_RESOURCE_CIPHER_BLOWFISH,
+    GRL_RESOURCE_CIPHER_XTEA
+} GrlResourceCipherType;
+```
+
+## Error Handling
+
+```c
+typedef enum
+{
+    GRL_RESOURCE_PACK_ERROR_FILE_NOT_FOUND,
+    GRL_RESOURCE_PACK_ERROR_INVALID_FORMAT,
+    GRL_RESOURCE_PACK_ERROR_NO_CENTRAL_DIR,
+    GRL_RESOURCE_PACK_ERROR_RESOURCE_NOT_FOUND,
+    GRL_RESOURCE_PACK_ERROR_CORRUPTED_DATA
+} GrlResourcePackError;
+
+/* Error domain */
+#define GRL_RESOURCE_PACK_ERROR grl_resource_pack_error_quark()
+```
+
+## Complete Example
+
+```c
+#include <graylib.h>
+
+int
+main (int argc, char *argv[])
+{
+    g_autoptr(GrlWindow) window = NULL;
+    g_autoptr(GrlResourcePack) pack = NULL;
+    g_autoptr(GrlImage) player_image = NULL;
+    g_autoptr(GrlTexture) player_texture = NULL;
+    g_autoptr(GrlSound) jump_sound = NULL;
+    g_autoptr(GrlFont) ui_font = NULL;
+    g_autoptr(GrlColor) bg = NULL;
+    GError *error = NULL;
+
+    window = grl_window_new (800, 600, "Resource Pack Demo");
+    grl_window_set_target_fps (window, 60);
+
+    /* Open resource pack */
+    pack = grl_resource_pack_new ("game.rres", &error);
+    if (pack == NULL)
+    {
+        g_printerr ("Failed to open pack: %s\n", error->message);
+        return 1;
+    }
+
+    g_print ("Opened resource pack: %s\n", grl_resource_pack_get_filename (pack));
+    g_print ("Chunks: %u\n", grl_resource_pack_get_chunk_count (pack));
+
+    /* Load resources by filename (requires central directory) */
+    if (grl_resource_pack_has_central_directory (pack))
+    {
+        guint32 player_id = grl_resource_pack_get_resource_id (pack, "sprites/player.png");
+        guint32 jump_id = grl_resource_pack_get_resource_id (pack, "sounds/jump.wav");
+        guint32 font_id = grl_resource_pack_get_resource_id (pack, "fonts/ui.ttf");
+
+        if (player_id != 0)
+        {
+            player_image = grl_image_new_from_resource (pack, player_id, NULL, &error);
+            if (player_image != NULL)
+            {
+                player_texture = grl_texture_new_from_image (player_image);
+            }
+        }
+
+        if (jump_id != 0)
+        {
+            jump_sound = grl_sound_new_from_resource (pack, jump_id, NULL, &error);
+        }
+
+        if (font_id != 0)
+        {
+            ui_font = grl_font_new_from_resource (pack, font_id, 24, NULL, &error);
+        }
+    }
+
+    bg = grl_color_new (40, 40, 60, 255);
+
+    while (!grl_window_should_close (window))
+    {
+        if (grl_input_is_key_pressed (GRL_KEY_SPACE) && jump_sound != NULL)
+        {
+            grl_sound_play (jump_sound);
+        }
+
+        grl_window_begin_drawing (window);
+        grl_window_clear_background (window, bg);
+
+        if (player_texture != NULL)
+        {
+            g_autoptr(GrlVector2) pos = grl_vector2_new (100, 100);
+            g_autoptr(GrlColor) white = grl_color_new_white ();
+            grl_draw_texture (player_texture, pos, white);
+        }
+
+        if (ui_font != NULL)
+        {
+            g_autoptr(GrlVector2) text_pos = grl_vector2_new (10, 10);
+            g_autoptr(GrlColor) white = grl_color_new_white ();
+            grl_draw_text_ex (ui_font, "Press SPACE to jump!", text_pos, 24, 1, white);
+        }
+
+        grl_draw_fps (700, 10);
+        grl_window_end_drawing (window);
+    }
+
+    return 0;
+}
+```
+
+## Function Reference
+
+### GrlResourcePack
+
+| Function | Description |
+|----------|-------------|
+| `grl_resource_pack_new()` | Open a resource pack |
+| `grl_resource_pack_get_filename()` | Get pack filename |
+| `grl_resource_pack_get_version()` | Get rres format version |
+| `grl_resource_pack_get_chunk_count()` | Get number of chunks |
+| `grl_resource_pack_has_central_directory()` | Check for directory |
+| `grl_resource_pack_get_entry_count()` | Get directory entry count |
+| `grl_resource_pack_get_resource_id()` | Look up ID by filename |
+| `grl_resource_pack_get_entry_filename()` | Get filename at index |
+| `grl_resource_pack_get_entry_id()` | Get ID at index |
+| `grl_resource_pack_get_chunk_info()` | Get chunk metadata |
+| `grl_resource_pack_get_all_chunk_info()` | Get all chunk metadata |
+| `grl_resource_pack_load_raw()` | Load raw data by ID |
+| `grl_resource_pack_load_raw_by_name()` | Load raw data by filename |
+| `grl_resource_pack_set_cipher_password()` | Set decryption password |
+| `grl_resource_pack_compute_crc32()` | Compute data checksum |
+
+### GrlResourceChunkInfo
+
+| Function | Description |
+|----------|-------------|
+| `grl_resource_chunk_info_new()` | Create empty info |
+| `grl_resource_chunk_info_copy()` | Copy info |
+| `grl_resource_chunk_info_free()` | Free info |
+| `grl_resource_chunk_info_get_type_string()` | Get type as string |
+| `grl_resource_chunk_info_get_data_type()` | Get data type enum |
+| `grl_resource_chunk_info_get_compression()` | Get compression type |
+| `grl_resource_chunk_info_get_cipher()` | Get cipher type |
+| `grl_resource_chunk_info_has_next()` | Check for linked chunk |
+| `grl_resource_chunk_info_is_compressed()` | Check if compressed |
+| `grl_resource_chunk_info_is_encrypted()` | Check if encrypted |
+
+### Resource Integration
+
+| Function | Description |
+|----------|-------------|
+| `grl_image_new_from_resource()` | Load image from pack |
+| `grl_sound_new_from_resource()` | Load sound from pack |
+| `grl_font_new_from_resource()` | Load font from pack |

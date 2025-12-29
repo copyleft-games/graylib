@@ -110,11 +110,46 @@ void                grl_audio_device_set_master_volume  (GrlAudioDevice     *sel
  * grl_audio_device_get_master_volume:
  * @self: A #GrlAudioDevice
  *
- * Gets the current master volume.
+ * Gets the current master volume setting.
+ *
+ * This returns the value that was set via grl_audio_device_set_master_volume().
+ * For the actual system volume, use grl_audio_device_get_master_volume_actual().
  *
  * Returns: The master volume (0.0 to 1.0)
  */
 GRL_AVAILABLE_IN_ALL
 gfloat              grl_audio_device_get_master_volume  (GrlAudioDevice     *self);
+
+/**
+ * grl_audio_device_get_master_volume_actual:
+ * @self: A #GrlAudioDevice
+ *
+ * Gets the actual master volume from the audio system.
+ *
+ * This queries the audio system directly for the current volume level,
+ * which may differ from the value set via grl_audio_device_set_master_volume()
+ * if the system volume was changed externally.
+ *
+ * Returns: The actual master volume (0.0 to 1.0)
+ */
+GRL_AVAILABLE_IN_ALL
+gfloat              grl_audio_device_get_master_volume_actual (GrlAudioDevice *self);
+
+/**
+ * grl_audio_device_set_default_buffer_size:
+ * @self: A #GrlAudioDevice
+ * @size: The default buffer size in samples
+ *
+ * Sets the default buffer size for new audio streams.
+ *
+ * This affects the latency and performance of audio streams created
+ * after this call. Smaller buffers reduce latency but may cause
+ * audio glitches on slower systems. The default is typically 4096.
+ *
+ * Note: This must be called before creating audio streams to take effect.
+ */
+GRL_AVAILABLE_IN_ALL
+void                grl_audio_device_set_default_buffer_size (GrlAudioDevice *self,
+                                                              gint            size);
 
 G_END_DECLS
