@@ -30,3 +30,6 @@ Thumbs.db
 
 # pkg-config generated
 *.pc
+
+# clangd lsp cache dir
+.cache/
