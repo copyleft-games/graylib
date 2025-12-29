@@ -115,7 +115,10 @@ BASE_LDFLAGS := $(OPT_LDFLAGS)
 # Library linking
 LIB_LDFLAGS := $(BASE_LDFLAGS)
 LIB_LDFLAGS += -shared
-ifneq ($(TARGET_PLATFORM),windows)
+ifeq ($(TARGET_PLATFORM),windows)
+    # Windows: export all symbols (including embedded raylib/rlgl)
+    LIB_LDFLAGS += -Wl,--export-all-symbols
+else
     # Unix: use soname for versioning
     LIB_LDFLAGS += -Wl,-soname,$(LIB_SHARED_SONAME)
 endif
