@@ -504,6 +504,7 @@ clean:
 	$(RMDIR) $(BUILDDIR)
 	$(RM) src/grl-version.h
 	$(RM) src/config.h
+	$(RM) deps/raylib/src/.graylib-platform
 
 distclean: clean raylib-clean
 	$(call print_status,"Cleaning all generated files...")
