@@ -94,6 +94,33 @@ GRL_AVAILABLE_IN_ALL
 gint                grl_application_get_target_fps  (GrlApplication     *self);
 
 /*
+ * Event handling
+ */
+
+/**
+ * grl_application_enable_event_waiting:
+ * @self: A #GrlApplication
+ *
+ * Enables waiting for events on EndDrawing(). When enabled, the application
+ * will block until an input event is received, reducing CPU usage for
+ * applications that don't need continuous rendering (e.g., GUI tools).
+ *
+ * Call grl_application_disable_event_waiting() to return to normal polling.
+ */
+GRL_AVAILABLE_IN_ALL
+void                grl_application_enable_event_waiting  (GrlApplication  *self);
+
+/**
+ * grl_application_disable_event_waiting:
+ * @self: A #GrlApplication
+ *
+ * Disables waiting for events, returning to automatic event polling.
+ * This is the default behavior.
+ */
+GRL_AVAILABLE_IN_ALL
+void                grl_application_disable_event_waiting (GrlApplication  *self);
+
+/*
  * Lifecycle
  */
 

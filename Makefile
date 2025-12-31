@@ -92,7 +92,8 @@ PUBLIC_HEADERS := \
 	src/resources/grl-resource-enums.h \
 	src/resources/grl-resource-chunk-info.h \
 	src/resources/grl-resource-pack.h \
-	src/rlgl/grl-rlgl.h
+	src/rlgl/grl-rlgl.h \
+	src/grl-utils.h
 
 # Source files
 SOURCES := \
@@ -169,7 +170,8 @@ SOURCES := \
 	src/rlgl/grl-rlgl-texture.c \
 	src/rlgl/grl-rlgl-buffer.c \
 	src/rlgl/grl-rlgl-framebuffer.c \
-	src/rlgl/grl-rlgl-shader.c
+	src/rlgl/grl-rlgl-shader.c \
+	src/grl-utils.c
 
 # Object files
 OBJECTS := $(patsubst %.c,$(OBJDIR)/%.o,$(SOURCES))
@@ -414,6 +416,7 @@ endif
 	$(INSTALL_DATA) src/grl-version.h $(DESTDIR)$(INCLUDEDIR)/graylib/
 	$(INSTALL_DATA) src/grl-types.h $(DESTDIR)$(INCLUDEDIR)/graylib/
 	$(INSTALL_DATA) src/grl-enums.h $(DESTDIR)$(INCLUDEDIR)/graylib/
+	$(INSTALL_DATA) src/grl-utils.h $(DESTDIR)$(INCLUDEDIR)/graylib/
 	$(INSTALL_DATA) src/math/grl-vector2.h $(DESTDIR)$(INCLUDEDIR)/graylib/math/
 	$(INSTALL_DATA) src/math/grl-vector3.h $(DESTDIR)$(INCLUDEDIR)/graylib/math/
 	$(INSTALL_DATA) src/math/grl-vector4.h $(DESTDIR)$(INCLUDEDIR)/graylib/math/
@@ -855,5 +858,10 @@ $(OBJDIR)/src/rlgl/grl-rlgl-framebuffer.o: src/rlgl/grl-rlgl-framebuffer.c
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
 $(OBJDIR)/src/rlgl/grl-rlgl-shader.o: src/rlgl/grl-rlgl-shader.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(LIB_CFLAGS) -c -o $@ $<
+
+# Utils module
+$(OBJDIR)/src/grl-utils.o: src/grl-utils.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<

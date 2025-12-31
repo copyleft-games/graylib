@@ -1243,6 +1243,59 @@ grl_window_focus (GrlWindow *self)
     SetWindowFocused ();
 }
 
+/**
+ * grl_window_set_icon:
+ * @self: A #GrlWindow
+ * @icon: A #GrlImage to use as the window icon (RGBA 32-bit)
+ *
+ * Sets the window icon. The image should be RGBA 32-bit format.
+ * Common sizes are 16x16, 32x32, or 48x48 pixels.
+ */
+void
+grl_window_set_icon (GrlWindow *self,
+                     GrlImage  *icon)
+{
+    Image *handle;
+
+    g_return_if_fail (GRL_IS_WINDOW (self));
+    g_return_if_fail (GRL_IS_IMAGE (icon));
+
+    handle = (Image *)grl_image_get_handle (icon);
+    SetWindowIcon (*handle);
+}
+
+/**
+ * grl_window_set_icons:
+ * @self: A #GrlWindow
+ * @icons: (array length=count): Array of #GrlImage icons (RGBA 32-bit)
+ * @count: Number of icons in the array
+ *
+ * Sets multiple window icons at different resolutions. The OS will
+ * choose the appropriate size. Images should be RGBA 32-bit format.
+ */
+void
+grl_window_set_icons (GrlWindow  *self,
+                      GrlImage  **icons,
+                      gint        count)
+{
+    Image *handles;
+    gint   i;
+
+    g_return_if_fail (GRL_IS_WINDOW (self));
+    g_return_if_fail (icons != NULL);
+    g_return_if_fail (count > 0);
+
+    handles = g_new (Image, count);
+    for (i = 0; i < count; i++)
+    {
+        Image *h = (Image *)grl_image_get_handle (icons[i]);
+        handles[i] = *h;
+    }
+
+    SetWindowIcons (handles, count);
+    g_free (handles);
+}
+
 /*
  * Public API - Rendering dimensions
  */

@@ -106,6 +106,26 @@ GrlKey          grl_input_get_key_pressed       (void);
 GRL_AVAILABLE_IN_ALL
 gint            grl_input_get_char_pressed      (void);
 
+/**
+ * grl_input_set_exit_key:
+ * @key: The #GrlKey to use for exiting, or %GRL_KEY_NULL to disable
+ *
+ * Sets a custom key to trigger window close. The default exit key is
+ * %GRL_KEY_ESCAPE. Pass %GRL_KEY_NULL (0) to disable the exit key entirely,
+ * which is useful for games that want to use ESC for their pause menu.
+ *
+ * Example:
+ * |[<!-- language="C" -->
+ * // Disable the default ESC exit behavior
+ * grl_input_set_exit_key (GRL_KEY_NULL);
+ *
+ * // Or use a different key to exit
+ * grl_input_set_exit_key (GRL_KEY_F10);
+ * ]|
+ */
+GRL_AVAILABLE_IN_ALL
+void            grl_input_set_exit_key          (GrlKey              key);
+
 /*
  * =============================================================================
  * Mouse Input

@@ -577,6 +577,35 @@ grl_application_get_target_fps (GrlApplication *self)
 }
 
 /**
+ * grl_application_enable_event_waiting:
+ * @self: A #GrlApplication
+ *
+ * Enables waiting for events on EndDrawing(). When enabled, the application
+ * will block until an input event is received, reducing CPU usage for
+ * applications that don't need continuous rendering (e.g., GUI tools).
+ */
+void
+grl_application_enable_event_waiting (GrlApplication *self)
+{
+    g_return_if_fail (GRL_IS_APPLICATION (self));
+    EnableEventWaiting ();
+}
+
+/**
+ * grl_application_disable_event_waiting:
+ * @self: A #GrlApplication
+ *
+ * Disables waiting for events, returning to automatic event polling.
+ * This is the default behavior.
+ */
+void
+grl_application_disable_event_waiting (GrlApplication *self)
+{
+    g_return_if_fail (GRL_IS_APPLICATION (self));
+    DisableEventWaiting ();
+}
+
+/**
  * grl_application_run:
  * @self: A #GrlApplication.
  *

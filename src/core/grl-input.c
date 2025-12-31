@@ -174,6 +174,19 @@ grl_input_get_char_pressed (void)
     return GetCharPressed ();
 }
 
+/**
+ * grl_input_set_exit_key:
+ * @key: The #GrlKey to use for exiting, or %GRL_KEY_NULL to disable
+ *
+ * Sets a custom key to trigger window close. The default exit key is
+ * %GRL_KEY_ESCAPE. Pass %GRL_KEY_NULL (0) to disable the exit key entirely.
+ */
+void
+grl_input_set_exit_key (GrlKey key)
+{
+    SetExitKey ((int)key);
+}
+
 /*
  * =============================================================================
  * Mouse Input

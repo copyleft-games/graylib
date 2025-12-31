@@ -112,6 +112,25 @@ Common key constants (see `GrlKey` enum for full list):
 | `GRL_KEY_LEFT_SHIFT` | Left Shift |
 | `GRL_KEY_LEFT_CONTROL` | Left Control |
 | `GRL_KEY_LEFT_ALT` | Left Alt |
+| `GRL_KEY_NULL` | No key (value 0) |
+
+### Exit Key Configuration
+
+By default, pressing ESC will close the window. You can customize or disable this behavior:
+
+```c
+/* Disable the default ESC exit behavior */
+grl_input_set_exit_key (GRL_KEY_NULL);
+
+/* Now ESC can be used for your pause menu */
+if (grl_input_is_key_pressed (GRL_KEY_ESCAPE))
+{
+    toggle_pause_menu ();
+}
+
+/* Or use a different key to exit */
+grl_input_set_exit_key (GRL_KEY_F10);
+```
 
 ## Mouse Input
 

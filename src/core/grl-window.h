@@ -18,6 +18,7 @@
 #include "grl-enums.h"
 #include "../math/grl-vector2.h"
 #include "../math/grl-color.h"
+#include "../graphics/grl-image.h"
 
 G_BEGIN_DECLS
 
@@ -217,6 +218,32 @@ void                grl_window_set_monitor      (GrlWindow          *self,
 
 GRL_AVAILABLE_IN_ALL
 void                grl_window_focus            (GrlWindow          *self);
+
+/**
+ * grl_window_set_icon:
+ * @self: A #GrlWindow
+ * @icon: A #GrlImage to use as the window icon (RGBA 32-bit)
+ *
+ * Sets the window icon. The image should be RGBA 32-bit format.
+ * Common sizes are 16x16, 32x32, or 48x48 pixels.
+ */
+GRL_AVAILABLE_IN_ALL
+void                grl_window_set_icon         (GrlWindow          *self,
+                                                 GrlImage           *icon);
+
+/**
+ * grl_window_set_icons:
+ * @self: A #GrlWindow
+ * @icons: (array length=count): Array of #GrlImage icons (RGBA 32-bit)
+ * @count: Number of icons in the array
+ *
+ * Sets multiple window icons at different resolutions. The OS will
+ * choose the appropriate size. Images should be RGBA 32-bit format.
+ */
+GRL_AVAILABLE_IN_ALL
+void                grl_window_set_icons        (GrlWindow          *self,
+                                                 GrlImage          **icons,
+                                                 gint                count);
 
 /*
  * Rendering dimensions

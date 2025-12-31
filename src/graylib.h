@@ -134,6 +134,9 @@
 /* RLGL module (low-level OpenGL abstraction) */
 #include "rlgl/grl-rlgl.h"
 
+/* Utility functions */
+#include "grl-utils.h"
+
 /*
  * Future includes:
  *
