@@ -533,6 +533,25 @@ grl_font_get_glyph_atlas_rec (GrlFont *self,
     return grl_rectangle_new (rec.x, rec.y, rec.width, rec.height);
 }
 
+/**
+ * grl_font_set_filter:
+ * @self: A #GrlFont
+ * @filter: The #GrlTextureFilter mode to apply
+ *
+ * Sets the texture filter for the font atlas.
+ * Use %GRL_TEXTURE_FILTER_BILINEAR for smooth anti-aliased text,
+ * or %GRL_TEXTURE_FILTER_POINT for crisp pixel-perfect text.
+ */
+void
+grl_font_set_filter (GrlFont          *self,
+                     GrlTextureFilter  filter)
+{
+    g_return_if_fail (GRL_IS_FONT (self));
+    g_return_if_fail (self->valid);
+
+    SetTextureFilter (self->handle.texture, (int)filter);
+}
+
 /*
  * =============================================================================
  * Internal

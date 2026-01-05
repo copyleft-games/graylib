@@ -248,6 +248,16 @@ gint index = grl_font_get_glyph_index (font, 'A');
 g_autoptr(GrlRectangle) rec = grl_font_get_glyph_atlas_rec (font, 'A');
 ```
 
+### Texture Filtering
+
+```c
+/* Enable smooth anti-aliased text */
+grl_font_set_filter (font, GRL_TEXTURE_FILTER_BILINEAR);
+
+/* Use pixel-perfect crisp text (default) */
+grl_font_set_filter (font, GRL_TEXTURE_FILTER_POINT);
+```
+
 ## Drawing Textures
 
 All drawing must occur between `grl_window_begin_drawing()` and `grl_window_end_drawing()`.

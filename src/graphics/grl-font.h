@@ -236,6 +236,23 @@ GrlRectangle *      grl_font_get_glyph_atlas_rec (GrlFont           *self,
                                                   gint               codepoint);
 
 /*
+ * Texture filtering
+ */
+
+/**
+ * grl_font_set_filter:
+ * @self: A #GrlFont
+ * @filter: The #GrlTextureFilter mode to apply
+ *
+ * Sets the texture filter for the font atlas.
+ * Use %GRL_TEXTURE_FILTER_BILINEAR for smooth anti-aliased text,
+ * or %GRL_TEXTURE_FILTER_POINT for crisp pixel-perfect text.
+ */
+GRL_AVAILABLE_IN_ALL
+void                grl_font_set_filter          (GrlFont            *self,
+                                                  GrlTextureFilter    filter);
+
+/*
  * Internal - get raylib Font handle
  */
 

@@ -29,6 +29,7 @@ TEST_SOURCES := \
 	test-camera2d.c \
 	test-camera3d.c \
 	test-enums.c \
+	test-font.c \
 	test-entity.c \
 	test-scene.c \
 	test-interfaces.c \
