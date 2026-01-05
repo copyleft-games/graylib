@@ -77,7 +77,6 @@ grl_ui_dropdownbox_draw_impl (GrlUiControl *control)
     GrlUiDropdownBox *self;
     GrlRectangle     *bounds;
     Rectangle         raygui_bounds;
-    gboolean          was_edit_mode;
     gboolean          enabled;
     gboolean          visible;
     gint              old_active;
@@ -108,7 +107,6 @@ grl_ui_dropdownbox_draw_impl (GrlUiControl *control)
     if (!enabled)
         GuiSetState (STATE_DISABLED);
 
-    was_edit_mode = self->edit_mode;
     old_active = self->active;
     active = self->active;
 
