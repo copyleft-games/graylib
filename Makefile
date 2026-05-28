@@ -222,8 +222,11 @@ _lib: lib-static lib-shared
 # Raylib Dependency
 # =============================================================================
 
-# Platform marker file to detect when raylib needs rebuild for different platform
-RAYLIB_PLATFORM_MARKER := $(RAYLIB_SRC)/.graylib-platform
+# Platform marker file to detect when raylib needs rebuild for different
+# platform. Lives in graylib's own (gitignored) build dir, NOT inside the
+# raylib submodule -- writing it under $(RAYLIB_SRC) left raylib perpetually
+# dirty with an untracked file, which propagated up the submodule chain.
+RAYLIB_PLATFORM_MARKER := $(BUILDDIR)/.raylib-platform
 
 # Check if raylib needs to be built
 raylib-check:
@@ -248,6 +251,7 @@ ifeq ($(TARGET_PLATFORM),windows)
 else
 	cd $(RAYLIB_SRC) && $(MAKE) PLATFORM=PLATFORM_DESKTOP RAYLIB_LIBTYPE=STATIC
 endif
+	@$(MKDIR_P) $(BUILDDIR)
 	@echo "$(TARGET_PLATFORM)" > $(RAYLIB_PLATFORM_MARKER)
 else
 	$(call print_warning,"RAYLIB_SHARED=1 - using system raylib, skipping build")
