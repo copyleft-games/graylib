@@ -52,14 +52,18 @@ grl_image_resize_canvas (img, 300, 300, 50, 50, bg_color);
 /* Crop to region */
 grl_image_crop (img, rect);
 
-/* Flip */
+/* Flip (mirror) */
 grl_image_flip_vertical (img);
 grl_image_flip_horizontal (img);
 
-/* Rotate (90 degree increments) */
-grl_image_rotate (img, 90);   /* or 180, 270 */
+/* Rotate by any angle, clockwise, -359..359 (90/180/270 are exact/lossless) */
+grl_image_rotate (img, 45);
 grl_image_rotate_cw (img);    /* 90 degrees clockwise */
 grl_image_rotate_ccw (img);   /* 90 degrees counter-clockwise */
+
+/* Scale to a NEW image, leaving the original untouched */
+g_autoptr(GrlImage) big = grl_image_resized (img, 256, 256);          /* bicubic */
+g_autoptr(GrlImage) px  = grl_image_scaled_nearest (img, 64, 64);     /* pixel-perfect */
 ```
 
 ### Color Operations
@@ -106,18 +110,111 @@ grl_image_alpha_mask (img, mask_img);
 /* Clear with background color */
 grl_image_clear_background (img, color);
 
-/* Draw primitives */
+/* Basic primitives (raylib-backed, overwrite the destination) */
 grl_image_draw_pixel (img, x, y, color);
 grl_image_draw_line (img, x1, y1, x2, y2, color);
 grl_image_draw_circle (img, cx, cy, radius, color);
 grl_image_draw_rectangle (img, rect, color);
+grl_image_draw_rectangle_lines (img, rect, thickness, color);
 
-/* Composite another image */
-grl_image_draw_image (img, src, src_rect, dst_rect, tint);
+/* Composite another image. tint is nullable: pass NULL for "no tint" (white). */
+grl_image_draw_image (img, src, src_rect, dst_rect, NULL);
 
-/* Draw text (using default font) */
-grl_image_draw_text (img, "Hello", x, y, 20, color);
+/* Read a pixel back */
+g_autoptr(GrlColor) c = grl_image_get_pixel (img, x, y);
 ```
+
+### Additional Drawing Primitives
+
+These primitives honour the image's [drawing state](#drawing-state-blend-modes-clipping-anti-aliasing)
+(blend mode, clip rectangle and anti-aliasing). Point arguments are `GrlVector2`.
+
+```c
+g_autoptr(GrlVector2) a = grl_vector2_new (10.0f, 10.0f);
+g_autoptr(GrlVector2) b = grl_vector2_new (90.0f, 70.0f);
+
+/* Thick lines, with round caps */
+grl_image_draw_line_ex (img, a, b, 3, color);
+
+/* Circle and ellipse: filled and outlined (outlines take a thickness) */
+grl_image_draw_circle_lines (img, cx, cy, radius, thickness, color);
+grl_image_draw_ellipse (img, cx, cy, rx, ry, color);
+grl_image_draw_ellipse_lines (img, cx, cy, rx, ry, thickness, color);
+
+/* Triangles: filled and outlined */
+grl_image_draw_triangle (img, v1, v2, v3, color);
+grl_image_draw_triangle_lines (img, v1, v2, v3, thickness, color);
+
+/* Polygons (even-odd fill, supports concave) and polylines */
+grl_image_draw_polygon (img, points, n_points, color);
+grl_image_draw_polyline (img, points, n_points, /*closed*/ TRUE, thickness, color);
+
+/* Cubic Bezier curve as a thick stroke */
+grl_image_draw_bezier (img, p0, p1, p2, p3, thickness, color);
+
+/* Gradients drawn ONTO the existing image (cf. grl_image_new_gradient_*) */
+grl_image_draw_gradient_rect (img, rect, color_a, color_b, GRL_GRADIENT_AXIS_VERTICAL);
+grl_image_draw_gradient_radial (img, cx, cy, radius, inner, outer);   /* glows / halos */
+
+/* Flood fill a contiguous region matching the seed pixel within a tolerance */
+grl_image_flood_fill (img, x, y, color, /*tolerance*/ 0);
+```
+
+### Drawing State (Blend Modes, Clipping, Anti-aliasing)
+
+Per-image state controls how every `grl_image_draw_*` primitive combines with the
+canvas. The default blend mode, `GRL_IMAGE_BLEND_REPLACE`, is byte-for-byte
+identical to drawing with no state set (source overwrites destination).
+
+```c
+/* Blend modes. Modes other than REPLACE require an R8G8B8A8 image; on other
+ * formats drawing silently falls back to REPLACE. */
+grl_image_set_blend_mode (img, GRL_IMAGE_BLEND_OVER);      /* alpha compositing  */
+grl_image_set_blend_mode (img, GRL_IMAGE_BLEND_ADD);       /* additive (glow)    */
+grl_image_set_blend_mode (img, GRL_IMAGE_BLEND_MULTIPLY);
+grl_image_set_blend_mode (img, GRL_IMAGE_BLEND_SUBTRACT);
+grl_image_set_blend_mode (img, GRL_IMAGE_BLEND_REPLACE);   /* default            */
+
+/* Clip subsequent drawing to a rectangle (NULL clears) */
+grl_image_set_clip_rect (img, clip_rect);
+grl_image_set_clip_rect (img, NULL);
+
+/* Anti-alias the edges of curved/outline primitives (requires R8G8B8A8) */
+grl_image_set_antialias (img, TRUE);
+```
+
+A proper additive glow that saturates to white at the core (instead of the
+over-blend that an alpha stack produces):
+
+```c
+g_autoptr(GrlColor) hot  = grl_color_new (255, 240, 200, 255);
+g_autoptr(GrlColor) edge = grl_color_new (255, 120,  30, 255);
+
+grl_image_set_blend_mode (img, GRL_IMAGE_BLEND_ADD);
+grl_image_draw_gradient_radial (img, cx, cy, radius, hot, edge);
+grl_image_set_blend_mode (img, GRL_IMAGE_BLEND_REPLACE);
+```
+
+### Drawing Text on Images
+
+```c
+/* Uses raylib's default font when a window exists; falls back to graylib's
+ * embedded CPU bitmap font when headless (no InitWindow). Always safe. */
+grl_image_draw_text (img, "Hello", x, y, 20, color);
+
+/* Always the embedded CPU bitmap font: identical headless or windowed, never
+ * touches a GL context, and honours blend mode / clip / anti-aliasing. */
+grl_image_draw_text_bitmap (img, "Hello", x, y, 20, color);
+
+/* Measure text laid out by grl_image_draw_text_bitmap() (x = width, y = height) */
+g_autoptr(GrlVector2) size = grl_image_measure_text_bitmap ("Hello", 20);
+```
+
+> **Headless note:** `grl_image_draw_text()` previously crashed when called
+> without a window because raylib's default-font loader lays out its glyph atlas
+> against a GL texture that does not exist yet. graylib now detects the headless
+> case and renders with an embedded bitmap font, so image text drawing works in
+> asset bakers, tests and CLI tools.
 
 ### Exporting Images
 
@@ -130,6 +227,35 @@ gsize size;
 guint8 *data = grl_image_export_to_memory (img, ".png", &size);
 g_free (data);
 ```
+
+## GrlGifWriter
+
+A streaming, multi-frame animated GIF writer. Open the file, append frames (each
+with its own delay), then close. Frames are converted to RGBA and scaled to the
+canvas size if needed, then quantised to a 6×6×6 web-safe palette. Works fully
+headless.
+
+```c
+g_autoptr(GError) error = NULL;
+
+/* width, height, loop_count (0 = loop forever) */
+GrlGifWriter *gif = grl_gif_writer_new ("anim.gif", 320, 240, 0, &error);
+
+for (gint i = 0; i < frame_count; i++)
+{
+    g_autoptr(GrlImage) frame = render_frame (i);
+
+    /* delay is in centiseconds (1/100 s); 5 => 20 fps */
+    grl_gif_writer_add_frame (gif, frame, 5, &error);
+}
+
+grl_gif_writer_close (gif, &error);
+g_object_unref (gif);
+```
+
+> **Note:** the encoder is intentionally simple (uncompressed GIF LZW with a
+> fixed web-safe palette), trading file size for broad compatibility. The output
+> decodes in every conformant GIF reader.
 
 ## GrlTexture
 

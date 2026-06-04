@@ -69,6 +69,7 @@
 
 /* Graphics module */
 #include "graphics/grl-image.h"
+#include "graphics/grl-gif-writer.h"
 #include "graphics/grl-texture.h"
 #include "graphics/grl-font.h"
 #include "graphics/grl-camera2d.h"

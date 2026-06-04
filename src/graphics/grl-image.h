@@ -141,6 +141,16 @@ GRL_AVAILABLE_IN_ALL
 GrlImage *          grl_image_from_region       (GrlImage           *self,
                                                  const GrlRectangle *region);
 
+GRL_AVAILABLE_IN_ALL
+GrlImage *          grl_image_resized           (GrlImage           *self,
+                                                 gint                new_width,
+                                                 gint                new_height);
+
+GRL_AVAILABLE_IN_ALL
+GrlImage *          grl_image_scaled_nearest    (GrlImage           *self,
+                                                 gint                new_width,
+                                                 gint                new_height);
+
 /*
  * Export
  */
@@ -354,6 +364,144 @@ void                grl_image_draw_text         (GrlImage           *self,
                                                  gint                y,
                                                  gint                font_size,
                                                  const GrlColor     *color);
+
+GRL_AVAILABLE_IN_ALL
+void                grl_image_draw_text_bitmap  (GrlImage           *self,
+                                                 const gchar        *text,
+                                                 gint                x,
+                                                 gint                y,
+                                                 gint                font_size,
+                                                 const GrlColor     *color);
+
+GRL_AVAILABLE_IN_ALL
+GrlVector2 *        grl_image_measure_text_bitmap (const gchar      *text,
+                                                   gint              font_size);
+
+/*
+ * Drawing state (blend mode, clipping, anti-aliasing)
+ *
+ * These apply to every grl_image_draw_* primitive. The default blend mode is
+ * %GRL_IMAGE_BLEND_REPLACE, which is byte-identical to drawing with no state
+ * set. Non-REPLACE blending and anti-aliasing require an R8G8B8A8 image.
+ */
+
+GRL_AVAILABLE_IN_ALL
+void                grl_image_set_blend_mode    (GrlImage           *self,
+                                                 GrlImageBlendMode   mode);
+
+GRL_AVAILABLE_IN_ALL
+GrlImageBlendMode   grl_image_get_blend_mode    (GrlImage           *self);
+
+GRL_AVAILABLE_IN_ALL
+void                grl_image_set_clip_rect     (GrlImage           *self,
+                                                 const GrlRectangle *clip);
+
+GRL_AVAILABLE_IN_ALL
+gboolean            grl_image_get_clip_rect     (GrlImage           *self,
+                                                 GrlRectangle       *out_clip);
+
+GRL_AVAILABLE_IN_ALL
+void                grl_image_set_antialias     (GrlImage           *self,
+                                                 gboolean            enabled);
+
+GRL_AVAILABLE_IN_ALL
+gboolean            grl_image_get_antialias     (GrlImage           *self);
+
+/*
+ * Drawing on image - additional primitives
+ */
+
+GRL_AVAILABLE_IN_ALL
+void                grl_image_draw_line_ex      (GrlImage           *self,
+                                                 const GrlVector2   *start,
+                                                 const GrlVector2   *end,
+                                                 gint                thickness,
+                                                 const GrlColor     *color);
+
+GRL_AVAILABLE_IN_ALL
+void                grl_image_draw_circle_lines (GrlImage           *self,
+                                                 gint                center_x,
+                                                 gint                center_y,
+                                                 gint                radius,
+                                                 gint                thickness,
+                                                 const GrlColor     *color);
+
+GRL_AVAILABLE_IN_ALL
+void                grl_image_draw_ellipse      (GrlImage           *self,
+                                                 gint                center_x,
+                                                 gint                center_y,
+                                                 gint                radius_x,
+                                                 gint                radius_y,
+                                                 const GrlColor     *color);
+
+GRL_AVAILABLE_IN_ALL
+void                grl_image_draw_ellipse_lines (GrlImage          *self,
+                                                  gint               center_x,
+                                                  gint               center_y,
+                                                  gint               radius_x,
+                                                  gint               radius_y,
+                                                  gint               thickness,
+                                                  const GrlColor    *color);
+
+GRL_AVAILABLE_IN_ALL
+void                grl_image_draw_triangle     (GrlImage           *self,
+                                                 const GrlVector2   *v1,
+                                                 const GrlVector2   *v2,
+                                                 const GrlVector2   *v3,
+                                                 const GrlColor     *color);
+
+GRL_AVAILABLE_IN_ALL
+void                grl_image_draw_triangle_lines (GrlImage         *self,
+                                                   const GrlVector2 *v1,
+                                                   const GrlVector2 *v2,
+                                                   const GrlVector2 *v3,
+                                                   gint              thickness,
+                                                   const GrlColor   *color);
+
+GRL_AVAILABLE_IN_ALL
+void                grl_image_draw_polygon      (GrlImage           *self,
+                                                 const GrlVector2   *points,
+                                                 gint                point_count,
+                                                 const GrlColor     *color);
+
+GRL_AVAILABLE_IN_ALL
+void                grl_image_draw_polyline     (GrlImage           *self,
+                                                 const GrlVector2   *points,
+                                                 gint                point_count,
+                                                 gboolean            closed,
+                                                 gint                thickness,
+                                                 const GrlColor     *color);
+
+GRL_AVAILABLE_IN_ALL
+void                grl_image_draw_bezier       (GrlImage           *self,
+                                                 const GrlVector2   *p0,
+                                                 const GrlVector2   *p1,
+                                                 const GrlVector2   *p2,
+                                                 const GrlVector2   *p3,
+                                                 gint                thickness,
+                                                 const GrlColor     *color);
+
+GRL_AVAILABLE_IN_ALL
+void                grl_image_draw_gradient_rect (GrlImage          *self,
+                                                  const GrlRectangle *rect,
+                                                  const GrlColor    *color_a,
+                                                  const GrlColor    *color_b,
+                                                  GrlGradientAxis    axis);
+
+GRL_AVAILABLE_IN_ALL
+void                grl_image_draw_gradient_radial (GrlImage        *self,
+                                                    gint             center_x,
+                                                    gint             center_y,
+                                                    gint             radius,
+                                                    const GrlColor  *inner,
+                                                    const GrlColor  *outer);
+
+GRL_AVAILABLE_IN_ALL
+void                grl_image_flood_fill        (GrlImage           *self,
+                                                 gint                x,
+                                                 gint                y,
+                                                 const GrlColor     *color,
+                                                 gint                tolerance);
 
 /*
  * Pixel access

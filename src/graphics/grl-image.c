@@ -15,6 +15,9 @@
 #include <raylib.h>
 #include <rpng.h>
 #include <string.h>
+#include <stdlib.h>
+#include <math.h>
+#include "grl-image-font-data.h"
 
 /**
  * SECTION:grl-image
@@ -46,6 +49,15 @@ struct _GrlImage
 
     Image handle;
     gboolean valid;
+
+    /* Drawing state (see grl_image_set_blend_mode / _set_clip_rect / _set_antialias) */
+    GrlImageBlendMode blend_mode;   /* default GRL_IMAGE_BLEND_REPLACE */
+    gboolean          has_clip;
+    gint              clip_x;        /* integer, half-open [clip_x, clip_x + clip_w) */
+    gint              clip_y;
+    gint              clip_w;
+    gint              clip_h;
+    gboolean          antialias;     /* default FALSE */
 };
 
 G_DEFINE_TYPE (GrlImage, grl_image, G_TYPE_OBJECT)
@@ -72,6 +84,184 @@ static GParamSpec *properties[N_PROPS];
 
 #define GRL_TO_RAYLIB_RECTANGLE(r) \
     ((Rectangle){ .x = (r)->x, .y = (r)->y, .width = (r)->width, .height = (r)->height })
+
+/*
+ * =============================================================================
+ * Blend / clip / anti-alias aware software raster core
+ * =============================================================================
+ *
+ * raylib's ImageDraw* primitives overwrite pixels (REPLACE) and honour no blend
+ * mode or clip rectangle. To support GrlImageBlendMode, clipping and AA, the new
+ * primitives plot through this core instead.
+ *
+ * Real blending requires read-modify-write of the destination. We only do that
+ * for PIXELFORMAT_UNCOMPRESSED_R8G8B8A8 (inline 4-byte access, fast and lossless);
+ * on any other format a non-REPLACE mode silently degrades to REPLACE so we never
+ * round-trip through the lossy/quantising GetImageColor()/ImageDrawPixel() path.
+ */
+
+typedef struct
+{
+    Image            *img;
+    GrlImageBlendMode mode;        /* effective mode (REPLACE if blending unsupported) */
+    gboolean          rgba;        /* TRUE if R8G8B8A8 (inline fast path available)     */
+    gboolean          antialias;   /* AA enabled (requires rgba)                        */
+    gint              cx0, cy0;     /* clip box, half-open: [cx0, cx1) x [cy0, cy1)      */
+    gint              cx1, cy1;
+} GrlDrawCtx;
+
+static void
+grl_image_draw_ctx_init (GrlImage   *self,
+                         GrlDrawCtx *ctx)
+{
+    ctx->img = &self->handle;
+    ctx->rgba = (self->handle.format == PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+    ctx->mode = self->blend_mode;
+
+    /* Blending and AA need a real RGBA buffer to read back from. */
+    if (!ctx->rgba && ctx->mode != GRL_IMAGE_BLEND_REPLACE)
+        ctx->mode = GRL_IMAGE_BLEND_REPLACE;
+    ctx->antialias = (self->antialias && ctx->rgba);
+
+    ctx->cx0 = 0;
+    ctx->cy0 = 0;
+    ctx->cx1 = self->handle.width;
+    ctx->cy1 = self->handle.height;
+
+    if (self->has_clip)
+    {
+        gint x1 = self->clip_x + self->clip_w;
+        gint y1 = self->clip_y + self->clip_h;
+
+        if (self->clip_x > ctx->cx0) ctx->cx0 = self->clip_x;
+        if (self->clip_y > ctx->cy0) ctx->cy0 = self->clip_y;
+        if (x1 < ctx->cx1) ctx->cx1 = x1;
+        if (y1 < ctx->cy1) ctx->cy1 = y1;
+    }
+}
+
+/* Plot a single pixel with the given coverage (0-255) folded into source alpha. */
+static void
+grl_image_plot (const GrlDrawCtx *ctx,
+                gint              x,
+                gint              y,
+                Color             c,
+                guint             coverage)
+{
+    guint8 *p;
+    guint   sa, da, ia;
+
+    if (x < ctx->cx0 || x >= ctx->cx1 || y < ctx->cy0 || y >= ctx->cy1)
+        return;
+
+    if (coverage < 255)
+        c.a = (guint8)(((guint)c.a * coverage) / 255u);
+
+    /* Fast paths handle every pixel format via raylib's converter. */
+    if (ctx->mode == GRL_IMAGE_BLEND_REPLACE ||
+        (ctx->mode == GRL_IMAGE_BLEND_OVER && c.a == 255))
+    {
+        ImageDrawPixel (ctx->img, x, y, c);
+        return;
+    }
+
+    /* Transparent source is a no-op for additive/over/subtract. */
+    if (c.a == 0 && ctx->mode != GRL_IMAGE_BLEND_MULTIPLY)
+        return;
+
+    /* Blended path: R8G8B8A8 guaranteed here (mode forced to REPLACE otherwise). */
+    p = (guint8 *)ctx->img->data + ((gsize)y * ctx->img->width + x) * 4;
+    sa = c.a;
+
+    switch (ctx->mode)
+    {
+    case GRL_IMAGE_BLEND_OVER:
+        {
+            guint oa;
+
+            da = p[3];
+            ia = (255u - sa);
+            oa = sa + da * ia / 255u;
+
+            if (oa == 0)
+            {
+                p[0] = p[1] = p[2] = p[3] = 0;
+            }
+            else
+            {
+                p[0] = (guint8)(((guint)c.r * sa + (guint)p[0] * da * ia / 255u) / oa);
+                p[1] = (guint8)(((guint)c.g * sa + (guint)p[1] * da * ia / 255u) / oa);
+                p[2] = (guint8)(((guint)c.b * sa + (guint)p[2] * da * ia / 255u) / oa);
+                p[3] = (guint8)oa;
+            }
+        }
+        break;
+
+    case GRL_IMAGE_BLEND_ADD:
+        {
+            guint r = (guint)p[0] + (guint)c.r * sa / 255u;
+            guint g = (guint)p[1] + (guint)c.g * sa / 255u;
+            guint b = (guint)p[2] + (guint)c.b * sa / 255u;
+            guint a = (guint)p[3] + sa;
+
+            p[0] = (guint8)(r > 255u ? 255u : r);
+            p[1] = (guint8)(g > 255u ? 255u : g);
+            p[2] = (guint8)(b > 255u ? 255u : b);
+            p[3] = (guint8)(a > 255u ? 255u : a);
+        }
+        break;
+
+    case GRL_IMAGE_BLEND_MULTIPLY:
+        {
+            /* Multiply, weighted by source alpha so a==0 leaves the pixel unchanged. */
+            guint mr = (guint)p[0] * c.r / 255u;
+            guint mg = (guint)p[1] * c.g / 255u;
+            guint mb = (guint)p[2] * c.b / 255u;
+
+            ia = (255u - sa);
+            p[0] = (guint8)((mr * sa + (guint)p[0] * ia) / 255u);
+            p[1] = (guint8)((mg * sa + (guint)p[1] * ia) / 255u);
+            p[2] = (guint8)((mb * sa + (guint)p[2] * ia) / 255u);
+        }
+        break;
+
+    case GRL_IMAGE_BLEND_SUBTRACT:
+        {
+            gint r = (gint)p[0] - (gint)((guint)c.r * sa / 255u);
+            gint g = (gint)p[1] - (gint)((guint)c.g * sa / 255u);
+            gint b = (gint)p[2] - (gint)((guint)c.b * sa / 255u);
+
+            p[0] = (guint8)(r < 0 ? 0 : r);
+            p[1] = (guint8)(g < 0 ? 0 : g);
+            p[2] = (guint8)(b < 0 ? 0 : b);
+        }
+        break;
+
+    case GRL_IMAGE_BLEND_REPLACE:
+    default:
+        ImageDrawPixel (ctx->img, x, y, c);
+        break;
+    }
+}
+
+/* Fill a horizontal run [x0, x1) on row y at full coverage. */
+static void
+grl_image_span (const GrlDrawCtx *ctx,
+                gint              y,
+                gint              x0,
+                gint              x1,
+                Color             c)
+{
+    gint x;
+
+    if (y < ctx->cy0 || y >= ctx->cy1)
+        return;
+    if (x0 < ctx->cx0) x0 = ctx->cx0;
+    if (x1 > ctx->cx1) x1 = ctx->cx1;
+
+    for (x = x0; x < x1; x++)
+        grl_image_plot (ctx, x, y, c, 255);
+}
 
 /*
  * Private helper to create GrlImage from raylib Image
@@ -242,6 +432,14 @@ grl_image_init (GrlImage *self)
     self->handle.mipmaps = 1;
     self->handle.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
     self->valid = FALSE;
+
+    self->blend_mode = GRL_IMAGE_BLEND_REPLACE;
+    self->has_clip = FALSE;
+    self->clip_x = 0;
+    self->clip_y = 0;
+    self->clip_w = 0;
+    self->clip_h = 0;
+    self->antialias = FALSE;
 }
 
 /*
@@ -714,6 +912,61 @@ grl_image_from_region (GrlImage           *self,
     return grl_image_new_from_handle (handle);
 }
 
+/**
+ * grl_image_resized:
+ * @self: A #GrlImage.
+ * @new_width: New width.
+ * @new_height: New height.
+ *
+ * Returns a new image that is a bicubically scaled copy of this image. Unlike
+ * grl_image_resize(), the original image is left unchanged.
+ *
+ * Returns: (transfer full): A new, resized #GrlImage.
+ */
+GrlImage *
+grl_image_resized (GrlImage *self,
+                   gint      new_width,
+                   gint      new_height)
+{
+    Image handle;
+
+    g_return_val_if_fail (GRL_IS_IMAGE (self), NULL);
+    g_return_val_if_fail (new_width > 0, NULL);
+    g_return_val_if_fail (new_height > 0, NULL);
+
+    handle = ImageCopy (self->handle);
+    ImageResize (&handle, new_width, new_height);
+    return grl_image_new_from_handle (handle);
+}
+
+/**
+ * grl_image_scaled_nearest:
+ * @self: A #GrlImage.
+ * @new_width: New width.
+ * @new_height: New height.
+ *
+ * Returns a new image that is a nearest-neighbor scaled copy of this image
+ * (pixel-perfect, ideal for pixel art). Unlike grl_image_resize_nearest(), the
+ * original image is left unchanged.
+ *
+ * Returns: (transfer full): A new, resized #GrlImage.
+ */
+GrlImage *
+grl_image_scaled_nearest (GrlImage *self,
+                          gint      new_width,
+                          gint      new_height)
+{
+    Image handle;
+
+    g_return_val_if_fail (GRL_IS_IMAGE (self), NULL);
+    g_return_val_if_fail (new_width > 0, NULL);
+    g_return_val_if_fail (new_height > 0, NULL);
+
+    handle = ImageCopy (self->handle);
+    ImageResizeNN (&handle, new_width, new_height);
+    return grl_image_new_from_handle (handle);
+}
+
 /*
  * Public API - Export
  */
@@ -894,9 +1147,11 @@ grl_image_flip_horizontal (GrlImage *self)
 /**
  * grl_image_rotate:
  * @self: A #GrlImage.
- * @degrees: Rotation angle (90, 180, or 270).
+ * @degrees: Rotation angle in degrees, clockwise (-359 to 359).
  *
- * Rotates the image by the specified degrees.
+ * Rotates the image by an arbitrary angle. The 90, 180 and 270 degree cases use
+ * exact lossless rotations; other angles use raylib's general rotation (which
+ * keeps the image dimensions and may leave transparent/black corners).
  */
 void
 grl_image_rotate (GrlImage *self,
@@ -906,18 +1161,25 @@ grl_image_rotate (GrlImage *self,
 
     switch (degrees)
     {
+    case 0:
+    case 360:
+    case -360:
+        break;
     case 90:
+    case -270:
         ImageRotateCW (&self->handle);
         break;
     case 180:
+    case -180:
         ImageRotateCW (&self->handle);
         ImageRotateCW (&self->handle);
         break;
     case 270:
+    case -90:
         ImageRotateCCW (&self->handle);
         break;
     default:
-        g_warning ("grl_image_rotate: Only 90, 180, 270 degrees supported");
+        ImageRotate (&self->handle, degrees);
         break;
     }
 }
@@ -1296,11 +1558,15 @@ grl_image_draw_rectangle_lines (GrlImage           *self,
  * grl_image_draw_image:
  * @self: A #GrlImage.
  * @src: Source image.
- * @src_rect: Source region (or NULL for full image).
+ * @src_rect: (nullable): Source region, or %NULL for the full source image.
  * @dst_rect: Destination region.
- * @tint: Tint color.
+ * @tint: (nullable): Tint color multiplied into the source, or %NULL for white
+ *   (no tint).
  *
  * Draws another image onto this image.
+ *
+ * Passing %NULL for @tint is equivalent to passing opaque white: the source is
+ * drawn unmodified.
  */
 void
 grl_image_draw_image (GrlImage           *self,
@@ -1310,11 +1576,11 @@ grl_image_draw_image (GrlImage           *self,
                       const GrlColor     *tint)
 {
     Rectangle src_rec, dst_rec;
+    Color     raylib_tint;
 
     g_return_if_fail (GRL_IS_IMAGE (self));
     g_return_if_fail (GRL_IS_IMAGE (src));
     g_return_if_fail (dst_rect != NULL);
-    g_return_if_fail (tint != NULL);
 
     if (src_rect != NULL)
     {
@@ -1331,8 +1597,174 @@ grl_image_draw_image (GrlImage           *self,
 
     dst_rec = GRL_TO_RAYLIB_RECTANGLE (dst_rect);
 
-    ImageDraw (&self->handle, src->handle, src_rec, dst_rec,
-               GRL_TO_RAYLIB_COLOR (tint));
+    if (tint != NULL)
+        raylib_tint = GRL_TO_RAYLIB_COLOR (tint);
+    else
+        raylib_tint = (Color){ 255, 255, 255, 255 };
+
+    ImageDraw (&self->handle, src->handle, src_rec, dst_rec, raylib_tint);
+}
+
+/*
+ * Embedded bitmap font (headless-safe text)
+ *
+ * grl_image_draw_text() defers to raylib's default font when a GL context is
+ * available, but raylib's LoadFontDefault() crashes headless (it lays out the
+ * glyph atlas against a zero texture width). We reconstruct the same font on the
+ * CPU from grl-image-font-data.h and rasterise glyphs ourselves, so text drawing
+ * never needs a window. The atlas is built once, lazily, and lives for the
+ * lifetime of the process (intentional one-time static allocation).
+ */
+
+typedef struct
+{
+    gint x;
+    gint y;
+    gint w;
+    gint h;
+} GrlGlyphRec;
+
+static guint8      grl_font_atlas[GRL_DEFAULT_FONT_ATLAS_SIZE *
+                                  GRL_DEFAULT_FONT_ATLAS_SIZE];
+static GrlGlyphRec grl_font_recs[GRL_DEFAULT_FONT_GLYPH_COUNT];
+
+static void
+grl_image_font_build (void)
+{
+    const gint size = GRL_DEFAULT_FONT_ATLAS_SIZE;
+    const gint divisor = GRL_DEFAULT_FONT_CHAR_DIVISOR;
+    const gint char_h = GRL_DEFAULT_FONT_CHAR_HEIGHT;
+    gint i, j, counter;
+    gint current_line, current_pos_x, test_pos_x;
+
+    /* Unpack the 1-bit glyph atlas to per-pixel coverage (0 or 255). */
+    counter = 0;
+    for (i = 0; i < size * size; i += 32)
+    {
+        for (j = 31; j >= 0; j--)
+        {
+            if ((grl_default_font_data[counter] & (1u << j)) != 0)
+                grl_font_atlas[i + j] = 255;
+            else
+                grl_font_atlas[i + j] = 0;
+        }
+        counter++;
+    }
+
+    /* Lay out glyph rectangles against the known atlas width (128). raylib wraps
+     * on defaultFont.texture.width which is 0 headless -- the bug we avoid. */
+    current_line = 0;
+    current_pos_x = divisor;
+    test_pos_x = divisor;
+    for (i = 0; i < GRL_DEFAULT_FONT_GLYPH_COUNT; i++)
+    {
+        gint w = grl_default_font_widths[i];
+
+        grl_font_recs[i].x = current_pos_x;
+        grl_font_recs[i].y = divisor + current_line * (char_h + divisor);
+        grl_font_recs[i].w = w;
+        grl_font_recs[i].h = char_h;
+
+        test_pos_x += w + divisor;
+        if (test_pos_x >= size)
+        {
+            current_line++;
+            current_pos_x = 2 * divisor + w;
+            test_pos_x = current_pos_x;
+            grl_font_recs[i].x = divisor;
+            grl_font_recs[i].y = divisor + current_line * (char_h + divisor);
+        }
+        else
+        {
+            current_pos_x = test_pos_x;
+        }
+    }
+}
+
+static void
+grl_image_font_ensure (void)
+{
+    static gsize once = 0;
+
+    if (g_once_init_enter (&once))
+    {
+        grl_image_font_build ();
+        g_once_init_leave (&once, 1);
+    }
+}
+
+/* Map a byte to a glyph index, or -1 for "draw nothing" (control char). */
+static gint
+grl_image_font_index (guchar ch)
+{
+    if (ch < GRL_DEFAULT_FONT_FIRST_CHAR)
+        return -1;
+    return (gint)ch - GRL_DEFAULT_FONT_FIRST_CHAR;
+}
+
+/* Rasterise @text through the supplied draw context (CPU bitmap font). */
+static void
+grl_image_blit_text (const GrlDrawCtx *ctx,
+                     const gchar      *text,
+                     gint              x,
+                     gint              y,
+                     gfloat            scale,
+                     Color             color)
+{
+    const gint size = GRL_DEFAULT_FONT_ATLAS_SIZE;
+    const gint char_h = GRL_DEFAULT_FONT_CHAR_HEIGHT;
+    const guchar *p = (const guchar *)text;
+    gint pen_x = x;
+    gint pen_y = y;
+    gint line_advance = (gint)(((gfloat)(char_h + GRL_DEFAULT_FONT_CHAR_DIVISOR)) * scale + 0.5f);
+
+    if (line_advance < 1)
+        line_advance = 1;
+
+    for (; *p != '\0'; p++)
+    {
+        gint index;
+        const GrlGlyphRec *rec;
+        gint dst_w, dst_h, dx, dy;
+
+        if (*p == '\n')
+        {
+            pen_x = x;
+            pen_y += line_advance;
+            continue;
+        }
+
+        index = grl_image_font_index (*p);
+        if (index < 0 || index >= GRL_DEFAULT_FONT_GLYPH_COUNT)
+            continue;
+
+        rec = &grl_font_recs[index];
+        dst_w = (gint)((gfloat)rec->w * scale + 0.5f);
+        dst_h = (gint)((gfloat)char_h * scale + 0.5f);
+
+        for (dy = 0; dy < dst_h; dy++)
+        {
+            gint src_y = rec->y + (gint)((gfloat)dy / scale);
+
+            if (src_y < 0 || src_y >= size)
+                continue;
+
+            for (dx = 0; dx < dst_w; dx++)
+            {
+                gint src_x = rec->x + (gint)((gfloat)dx / scale);
+                guint cov;
+
+                if (src_x < 0 || src_x >= size)
+                    continue;
+
+                cov = grl_font_atlas[src_y * size + src_x];
+                if (cov != 0)
+                    grl_image_plot (ctx, pen_x + dx, pen_y + dy, color, cov);
+            }
+        }
+
+        pen_x += (gint)(((gfloat)(rec->w + GRL_DEFAULT_FONT_CHAR_DIVISOR)) * scale + 0.5f);
+    }
 }
 
 /**
@@ -1345,6 +1777,15 @@ grl_image_draw_image (GrlImage           *self,
  * @color: Text color.
  *
  * Draws text on the image using the default font.
+ *
+ * When a window/GL context is active this uses raylib's default font. When no
+ * window has been created (a headless tool, an asset baker, a unit test) it
+ * automatically falls back to graylib's embedded CPU bitmap font, which is what
+ * grl_image_draw_text_bitmap() uses directly. This avoids the headless crash in
+ * raylib's lazy default-font loader.
+ *
+ * The headless path honours the image's blend mode, clip rectangle and
+ * anti-alias state; the windowed raylib path does not.
  */
 void
 grl_image_draw_text (GrlImage       *self,
@@ -1354,12 +1795,1227 @@ grl_image_draw_text (GrlImage       *self,
                      gint            font_size,
                      const GrlColor *color)
 {
+    unsigned char window_ready;
+
     g_return_if_fail (GRL_IS_IMAGE (self));
     g_return_if_fail (text != NULL);
     g_return_if_fail (color != NULL);
 
+    /* bool -> gboolean ABI guard (see graylib CLAUDE.md). */
+    window_ready = IsWindowReady ();
+    if (window_ready == 0)
+    {
+        grl_image_draw_text_bitmap (self, text, x, y, font_size, color);
+        return;
+    }
+
     ImageDrawText (&self->handle, text, x, y, font_size,
                    GRL_TO_RAYLIB_COLOR (color));
+}
+
+/**
+ * grl_image_draw_text_bitmap:
+ * @self: A #GrlImage.
+ * @text: Text to draw.
+ * @x: X position of the top-left of the text.
+ * @y: Y position of the top-left of the text.
+ * @font_size: Target glyph height in pixels (the base font is 10px tall).
+ * @color: Text color.
+ *
+ * Draws text using graylib's embedded CPU bitmap font.
+ *
+ * Unlike grl_image_draw_text(), this never touches raylib's font system or a GL
+ * context, so it is always safe in headless environments and produces identical
+ * output whether or not a window exists. It honours the image's blend mode, clip
+ * rectangle and anti-alias state. Newlines start a new line.
+ */
+void
+grl_image_draw_text_bitmap (GrlImage       *self,
+                            const gchar    *text,
+                            gint            x,
+                            gint            y,
+                            gint            font_size,
+                            const GrlColor *color)
+{
+    GrlDrawCtx ctx;
+    gfloat     scale;
+
+    g_return_if_fail (GRL_IS_IMAGE (self));
+    g_return_if_fail (text != NULL);
+    g_return_if_fail (color != NULL);
+
+    grl_image_font_ensure ();
+
+    scale = (gfloat)font_size / (gfloat)GRL_DEFAULT_FONT_CHAR_HEIGHT;
+    if (scale <= 0.0f)
+        scale = 1.0f;
+
+    grl_image_draw_ctx_init (self, &ctx);
+    grl_image_blit_text (&ctx, text, x, y, scale, GRL_TO_RAYLIB_COLOR (color));
+}
+
+/**
+ * grl_image_measure_text_bitmap:
+ * @text: Text to measure.
+ * @font_size: Target glyph height in pixels.
+ *
+ * Measures the pixel size of @text as it would be rendered by
+ * grl_image_draw_text_bitmap(). The returned vector holds the width in @x and
+ * the height in @y. Multi-line text (containing newlines) is measured across all
+ * lines.
+ *
+ * Returns: (transfer full): A new #GrlVector2 with the text size in pixels.
+ */
+GrlVector2 *
+grl_image_measure_text_bitmap (const gchar *text,
+                               gint         font_size)
+{
+    const guchar *p;
+    gfloat        scale;
+    gfloat        line_w = 0.0f;
+    gfloat        max_w = 0.0f;
+    gint          lines = 1;
+
+    g_return_val_if_fail (text != NULL, grl_vector2_new (0.0f, 0.0f));
+
+    grl_image_font_ensure ();
+
+    scale = (gfloat)font_size / (gfloat)GRL_DEFAULT_FONT_CHAR_HEIGHT;
+    if (scale <= 0.0f)
+        scale = 1.0f;
+
+    for (p = (const guchar *)text; *p != '\0'; p++)
+    {
+        gint index;
+
+        if (*p == '\n')
+        {
+            if (line_w > max_w)
+                max_w = line_w;
+            line_w = 0.0f;
+            lines++;
+            continue;
+        }
+
+        index = grl_image_font_index (*p);
+        if (index < 0 || index >= GRL_DEFAULT_FONT_GLYPH_COUNT)
+            continue;
+
+        line_w += (gfloat)(grl_font_recs[index].w + GRL_DEFAULT_FONT_CHAR_DIVISOR) * scale;
+    }
+
+    if (line_w > max_w)
+        max_w = line_w;
+
+    return grl_vector2_new (max_w, (gfloat)lines * (gfloat)font_size);
+}
+
+/*
+ * =============================================================================
+ * Additional drawing primitives (blend / clip / AA aware)
+ * =============================================================================
+ */
+
+/* Linear interpolation between two colors (straight, per-channel). */
+static Color
+grl_image_color_lerp (Color a,
+                      Color b,
+                      gfloat t)
+{
+    Color r;
+
+    if (t < 0.0f) t = 0.0f;
+    if (t > 1.0f) t = 1.0f;
+
+    r.r = (guint8)((gfloat)a.r + ((gfloat)b.r - (gfloat)a.r) * t + 0.5f);
+    r.g = (guint8)((gfloat)a.g + ((gfloat)b.g - (gfloat)a.g) * t + 0.5f);
+    r.b = (guint8)((gfloat)a.b + ((gfloat)b.b - (gfloat)a.b) * t + 0.5f);
+    r.a = (guint8)((gfloat)a.a + ((gfloat)b.a - (gfloat)a.a) * t + 0.5f);
+
+    return r;
+}
+
+/* Round-capped thick segment via distance field; AA when enabled. */
+static void
+grl_image_thick_segment (const GrlDrawCtx *ctx,
+                         gfloat            x0,
+                         gfloat            y0,
+                         gfloat            x1,
+                         gfloat            y1,
+                         gfloat            half,
+                         Color             c)
+{
+    gfloat dx = x1 - x0;
+    gfloat dy = y1 - y0;
+    gfloat len2 = dx * dx + dy * dy;
+    gint   ix0 = (gint)floorf (MIN (x0, x1) - half - 1.0f);
+    gint   ix1 = (gint)ceilf (MAX (x0, x1) + half + 1.0f);
+    gint   iy0 = (gint)floorf (MIN (y0, y1) - half - 1.0f);
+    gint   iy1 = (gint)ceilf (MAX (y0, y1) + half + 1.0f);
+    gint   px, py;
+
+    if (half < 0.5f)
+        half = 0.5f;
+
+    for (py = iy0; py <= iy1; py++)
+    {
+        for (px = ix0; px <= ix1; px++)
+        {
+            gfloat fx = (gfloat)px + 0.5f;
+            gfloat fy = (gfloat)py + 0.5f;
+            gfloat cx, cy, dist;
+
+            if (len2 <= 0.0001f)
+            {
+                cx = x0;
+                cy = y0;
+            }
+            else
+            {
+                gfloat t = ((fx - x0) * dx + (fy - y0) * dy) / len2;
+
+                if (t < 0.0f) t = 0.0f;
+                if (t > 1.0f) t = 1.0f;
+                cx = x0 + t * dx;
+                cy = y0 + t * dy;
+            }
+
+            dist = sqrtf ((fx - cx) * (fx - cx) + (fy - cy) * (fy - cy));
+
+            if (ctx->antialias)
+            {
+                gfloat cov = half + 0.5f - dist;
+
+                if (cov <= 0.0f)
+                    continue;
+                if (cov > 1.0f)
+                    cov = 1.0f;
+                grl_image_plot (ctx, px, py, c, (guint)(cov * 255.0f + 0.5f));
+            }
+            else if (dist <= half)
+            {
+                grl_image_plot (ctx, px, py, c, 255);
+            }
+        }
+    }
+}
+
+/* Annulus (ring) of the given radius and half-thickness; AA when enabled. */
+static void
+grl_image_ring (const GrlDrawCtx *ctx,
+                gfloat            cx,
+                gfloat            cy,
+                gfloat            radius,
+                gfloat            half,
+                Color             c)
+{
+    gint ix0 = (gint)floorf (cx - radius - half - 1.0f);
+    gint ix1 = (gint)ceilf (cx + radius + half + 1.0f);
+    gint iy0 = (gint)floorf (cy - radius - half - 1.0f);
+    gint iy1 = (gint)ceilf (cy + radius + half + 1.0f);
+    gint px, py;
+
+    if (half < 0.5f)
+        half = 0.5f;
+
+    for (py = iy0; py <= iy1; py++)
+    {
+        for (px = ix0; px <= ix1; px++)
+        {
+            gfloat fx = (gfloat)px + 0.5f;
+            gfloat fy = (gfloat)py + 0.5f;
+            gfloat dist = sqrtf ((fx - cx) * (fx - cx) + (fy - cy) * (fy - cy));
+            gfloat edge = fabsf (dist - radius);
+
+            if (ctx->antialias)
+            {
+                gfloat cov = half + 0.5f - edge;
+
+                if (cov <= 0.0f)
+                    continue;
+                if (cov > 1.0f)
+                    cov = 1.0f;
+                grl_image_plot (ctx, px, py, c, (guint)(cov * 255.0f + 0.5f));
+            }
+            else if (edge <= half)
+            {
+                grl_image_plot (ctx, px, py, c, 255);
+            }
+        }
+    }
+}
+
+/* Even-odd point-in-polygon test. */
+static gboolean
+grl_image_point_in_poly (const gfloat *xs,
+                         const gfloat *ys,
+                         gint          n,
+                         gfloat        px,
+                         gfloat        py)
+{
+    gboolean inside = FALSE;
+    gint     i, j;
+
+    for (i = 0, j = n - 1; i < n; j = i++)
+    {
+        if (((ys[i] > py) != (ys[j] > py)) &&
+            (px < (xs[j] - xs[i]) * (py - ys[i]) / (ys[j] - ys[i]) + xs[i]))
+            inside = !inside;
+    }
+
+    return inside;
+}
+
+/* Filled convex/concave polygon by even-odd rule; 2x2 supersampled when AA. */
+static void
+grl_image_fill_poly (const GrlDrawCtx *ctx,
+                     const gfloat     *xs,
+                     const gfloat     *ys,
+                     gint              n,
+                     Color             c)
+{
+    gfloat minx = xs[0], maxx = xs[0], miny = ys[0], maxy = ys[0];
+    gint   ix0, ix1, iy0, iy1, px, py, i;
+
+    for (i = 1; i < n; i++)
+    {
+        minx = MIN (minx, xs[i]);
+        maxx = MAX (maxx, xs[i]);
+        miny = MIN (miny, ys[i]);
+        maxy = MAX (maxy, ys[i]);
+    }
+
+    ix0 = (gint)floorf (minx);
+    ix1 = (gint)ceilf (maxx);
+    iy0 = (gint)floorf (miny);
+    iy1 = (gint)ceilf (maxy);
+
+    for (py = iy0; py <= iy1; py++)
+    {
+        for (px = ix0; px <= ix1; px++)
+        {
+            if (ctx->antialias)
+            {
+                gint inside = 0, sx, sy;
+
+                for (sy = 0; sy < 2; sy++)
+                {
+                    for (sx = 0; sx < 2; sx++)
+                    {
+                        gfloat fx = (gfloat)px + 0.25f + 0.5f * (gfloat)sx;
+                        gfloat fy = (gfloat)py + 0.25f + 0.5f * (gfloat)sy;
+
+                        if (grl_image_point_in_poly (xs, ys, n, fx, fy))
+                            inside++;
+                    }
+                }
+
+                if (inside > 0)
+                    grl_image_plot (ctx, px, py, c, (guint)(inside * 255 / 4));
+            }
+            else if (grl_image_point_in_poly (xs, ys, n,
+                                              (gfloat)px + 0.5f, (gfloat)py + 0.5f))
+            {
+                grl_image_plot (ctx, px, py, c, 255);
+            }
+        }
+    }
+}
+
+/* Connected polyline of thick segments. */
+static void
+grl_image_stroke_path (const GrlDrawCtx *ctx,
+                       const gfloat     *xs,
+                       const gfloat     *ys,
+                       gint              n,
+                       gboolean          closed,
+                       gfloat            half,
+                       Color             c)
+{
+    gint i;
+
+    for (i = 0; i + 1 < n; i++)
+        grl_image_thick_segment (ctx, xs[i], ys[i], xs[i + 1], ys[i + 1], half, c);
+
+    if (closed && n > 2)
+        grl_image_thick_segment (ctx, xs[n - 1], ys[n - 1], xs[0], ys[0], half, c);
+}
+
+/**
+ * grl_image_draw_line_ex:
+ * @self: A #GrlImage.
+ * @start: Start point.
+ * @end: End point.
+ * @thickness: Line thickness in pixels (minimum 1).
+ * @color: Line color.
+ *
+ * Draws a line of the given thickness with round end caps. Honours the image's
+ * blend mode, clip rectangle and anti-alias state.
+ */
+void
+grl_image_draw_line_ex (GrlImage         *self,
+                        const GrlVector2 *start,
+                        const GrlVector2 *end,
+                        gint              thickness,
+                        const GrlColor   *color)
+{
+    GrlDrawCtx ctx;
+
+    g_return_if_fail (GRL_IS_IMAGE (self));
+    g_return_if_fail (start != NULL);
+    g_return_if_fail (end != NULL);
+    g_return_if_fail (color != NULL);
+
+    if (thickness < 1)
+        thickness = 1;
+
+    grl_image_draw_ctx_init (self, &ctx);
+    grl_image_thick_segment (&ctx, start->x, start->y, end->x, end->y,
+                             (gfloat)thickness * 0.5f, GRL_TO_RAYLIB_COLOR (color));
+}
+
+/**
+ * grl_image_draw_circle_lines:
+ * @self: A #GrlImage.
+ * @center_x: Center X position.
+ * @center_y: Center Y position.
+ * @radius: Circle radius.
+ * @thickness: Outline thickness in pixels (minimum 1).
+ * @color: Outline color.
+ *
+ * Draws a circle outline of the given thickness. Honours the image's blend
+ * mode, clip rectangle and anti-alias state.
+ */
+void
+grl_image_draw_circle_lines (GrlImage       *self,
+                             gint            center_x,
+                             gint            center_y,
+                             gint            radius,
+                             gint            thickness,
+                             const GrlColor *color)
+{
+    GrlDrawCtx ctx;
+
+    g_return_if_fail (GRL_IS_IMAGE (self));
+    g_return_if_fail (color != NULL);
+
+    if (thickness < 1)
+        thickness = 1;
+
+    grl_image_draw_ctx_init (self, &ctx);
+    grl_image_ring (&ctx, (gfloat)center_x + 0.5f, (gfloat)center_y + 0.5f,
+                    (gfloat)radius, (gfloat)thickness * 0.5f,
+                    GRL_TO_RAYLIB_COLOR (color));
+}
+
+/**
+ * grl_image_draw_ellipse:
+ * @self: A #GrlImage.
+ * @center_x: Center X position.
+ * @center_y: Center Y position.
+ * @radius_x: Horizontal radius.
+ * @radius_y: Vertical radius.
+ * @color: Fill color.
+ *
+ * Draws a filled ellipse. Honours the image's blend mode, clip rectangle and
+ * anti-alias state.
+ */
+void
+grl_image_draw_ellipse (GrlImage       *self,
+                        gint            center_x,
+                        gint            center_y,
+                        gint            radius_x,
+                        gint            radius_y,
+                        const GrlColor *color)
+{
+    GrlDrawCtx ctx;
+    Color      c;
+    gfloat     cx, cy, rx, ry;
+    gint       ix0, ix1, iy0, iy1, px, py;
+
+    g_return_if_fail (GRL_IS_IMAGE (self));
+    g_return_if_fail (color != NULL);
+
+    if (radius_x <= 0 || radius_y <= 0)
+        return;
+
+    grl_image_draw_ctx_init (self, &ctx);
+    c = GRL_TO_RAYLIB_COLOR (color);
+
+    cx = (gfloat)center_x + 0.5f;
+    cy = (gfloat)center_y + 0.5f;
+    rx = (gfloat)radius_x;
+    ry = (gfloat)radius_y;
+
+    ix0 = (gint)floorf (cx - rx);
+    ix1 = (gint)ceilf (cx + rx);
+    iy0 = (gint)floorf (cy - ry);
+    iy1 = (gint)ceilf (cy + ry);
+
+    for (py = iy0; py <= iy1; py++)
+    {
+        for (px = ix0; px <= ix1; px++)
+        {
+            if (ctx.antialias)
+            {
+                gint inside = 0, sx, sy;
+
+                for (sy = 0; sy < 2; sy++)
+                {
+                    for (sx = 0; sx < 2; sx++)
+                    {
+                        gfloat fx = (gfloat)px + 0.25f + 0.5f * (gfloat)sx;
+                        gfloat fy = (gfloat)py + 0.25f + 0.5f * (gfloat)sy;
+                        gfloat nx = (fx - cx) / rx;
+                        gfloat ny = (fy - cy) / ry;
+
+                        if (nx * nx + ny * ny <= 1.0f)
+                            inside++;
+                    }
+                }
+
+                if (inside > 0)
+                    grl_image_plot (&ctx, px, py, c, (guint)(inside * 255 / 4));
+            }
+            else
+            {
+                gfloat fx = (gfloat)px + 0.5f;
+                gfloat fy = (gfloat)py + 0.5f;
+                gfloat nx = (fx - cx) / rx;
+                gfloat ny = (fy - cy) / ry;
+
+                if (nx * nx + ny * ny <= 1.0f)
+                    grl_image_plot (&ctx, px, py, c, 255);
+            }
+        }
+    }
+}
+
+/**
+ * grl_image_draw_ellipse_lines:
+ * @self: A #GrlImage.
+ * @center_x: Center X position.
+ * @center_y: Center Y position.
+ * @radius_x: Horizontal radius.
+ * @radius_y: Vertical radius.
+ * @thickness: Outline thickness in pixels (minimum 1).
+ * @color: Outline color.
+ *
+ * Draws an ellipse outline of the given thickness. Honours the image's blend
+ * mode, clip rectangle and anti-alias state.
+ */
+void
+grl_image_draw_ellipse_lines (GrlImage       *self,
+                              gint            center_x,
+                              gint            center_y,
+                              gint            radius_x,
+                              gint            radius_y,
+                              gint            thickness,
+                              const GrlColor *color)
+{
+    GrlDrawCtx ctx;
+    Color      c;
+    gfloat     cx, cy, rx, ry, half;
+    gint       ix0, ix1, iy0, iy1, px, py;
+
+    g_return_if_fail (GRL_IS_IMAGE (self));
+    g_return_if_fail (color != NULL);
+
+    if (radius_x <= 0 || radius_y <= 0)
+        return;
+    if (thickness < 1)
+        thickness = 1;
+
+    grl_image_draw_ctx_init (self, &ctx);
+    c = GRL_TO_RAYLIB_COLOR (color);
+    half = (gfloat)thickness * 0.5f;
+
+    cx = (gfloat)center_x + 0.5f;
+    cy = (gfloat)center_y + 0.5f;
+    rx = (gfloat)radius_x;
+    ry = (gfloat)radius_y;
+
+    ix0 = (gint)floorf (cx - rx - half - 1.0f);
+    ix1 = (gint)ceilf (cx + rx + half + 1.0f);
+    iy0 = (gint)floorf (cy - ry - half - 1.0f);
+    iy1 = (gint)ceilf (cy + ry + half + 1.0f);
+
+    /* Approximate signed distance to the ellipse boundary; good enough for a
+     * smooth, even-thickness outline at typical radii. */
+    for (py = iy0; py <= iy1; py++)
+    {
+        for (px = ix0; px <= ix1; px++)
+        {
+            gfloat fx = (gfloat)px + 0.5f;
+            gfloat fy = (gfloat)py + 0.5f;
+            gfloat nx = (fx - cx) / rx;
+            gfloat ny = (fy - cy) / ry;
+            gfloat rr = sqrtf (nx * nx + ny * ny);
+            gfloat grad, edge;
+
+            if (rr <= 0.0001f)
+                continue;
+
+            /* Distance in pixels: (||p||/scale - 1) over the local gradient. */
+            grad = sqrtf ((nx / rx) * (nx / rx) + (ny / ry) * (ny / ry));
+            if (grad <= 0.0001f)
+                continue;
+            edge = fabsf (rr - 1.0f) / grad;
+
+            if (ctx.antialias)
+            {
+                gfloat cov = half + 0.5f - edge;
+
+                if (cov <= 0.0f)
+                    continue;
+                if (cov > 1.0f)
+                    cov = 1.0f;
+                grl_image_plot (&ctx, px, py, c, (guint)(cov * 255.0f + 0.5f));
+            }
+            else if (edge <= half)
+            {
+                grl_image_plot (&ctx, px, py, c, 255);
+            }
+        }
+    }
+}
+
+/**
+ * grl_image_draw_triangle:
+ * @self: A #GrlImage.
+ * @v1: First vertex.
+ * @v2: Second vertex.
+ * @v3: Third vertex.
+ * @color: Fill color.
+ *
+ * Draws a filled triangle. Honours the image's blend mode, clip rectangle and
+ * anti-alias state.
+ */
+void
+grl_image_draw_triangle (GrlImage         *self,
+                         const GrlVector2 *v1,
+                         const GrlVector2 *v2,
+                         const GrlVector2 *v3,
+                         const GrlColor   *color)
+{
+    GrlDrawCtx ctx;
+    gfloat     xs[3], ys[3];
+
+    g_return_if_fail (GRL_IS_IMAGE (self));
+    g_return_if_fail (v1 != NULL && v2 != NULL && v3 != NULL);
+    g_return_if_fail (color != NULL);
+
+    xs[0] = v1->x; ys[0] = v1->y;
+    xs[1] = v2->x; ys[1] = v2->y;
+    xs[2] = v3->x; ys[2] = v3->y;
+
+    grl_image_draw_ctx_init (self, &ctx);
+    grl_image_fill_poly (&ctx, xs, ys, 3, GRL_TO_RAYLIB_COLOR (color));
+}
+
+/**
+ * grl_image_draw_triangle_lines:
+ * @self: A #GrlImage.
+ * @v1: First vertex.
+ * @v2: Second vertex.
+ * @v3: Third vertex.
+ * @thickness: Outline thickness in pixels (minimum 1).
+ * @color: Outline color.
+ *
+ * Draws a triangle outline of the given thickness. Honours the image's blend
+ * mode, clip rectangle and anti-alias state.
+ */
+void
+grl_image_draw_triangle_lines (GrlImage         *self,
+                               const GrlVector2 *v1,
+                               const GrlVector2 *v2,
+                               const GrlVector2 *v3,
+                               gint              thickness,
+                               const GrlColor   *color)
+{
+    GrlDrawCtx ctx;
+    gfloat     xs[3], ys[3];
+
+    g_return_if_fail (GRL_IS_IMAGE (self));
+    g_return_if_fail (v1 != NULL && v2 != NULL && v3 != NULL);
+    g_return_if_fail (color != NULL);
+
+    if (thickness < 1)
+        thickness = 1;
+
+    xs[0] = v1->x; ys[0] = v1->y;
+    xs[1] = v2->x; ys[1] = v2->y;
+    xs[2] = v3->x; ys[2] = v3->y;
+
+    grl_image_draw_ctx_init (self, &ctx);
+    grl_image_stroke_path (&ctx, xs, ys, 3, TRUE,
+                           (gfloat)thickness * 0.5f, GRL_TO_RAYLIB_COLOR (color));
+}
+
+/**
+ * grl_image_draw_polygon:
+ * @self: A #GrlImage.
+ * @points: (array length=point_count): Polygon vertices.
+ * @point_count: Number of vertices (minimum 3).
+ * @color: Fill color.
+ *
+ * Draws a filled polygon (even-odd rule, supports concave shapes). Honours the
+ * image's blend mode, clip rectangle and anti-alias state.
+ */
+void
+grl_image_draw_polygon (GrlImage         *self,
+                        const GrlVector2 *points,
+                        gint              point_count,
+                        const GrlColor   *color)
+{
+    GrlDrawCtx  ctx;
+    gfloat     *xs, *ys;
+    gint        i;
+
+    g_return_if_fail (GRL_IS_IMAGE (self));
+    g_return_if_fail (points != NULL);
+    g_return_if_fail (point_count >= 3);
+    g_return_if_fail (color != NULL);
+
+    xs = g_new (gfloat, point_count);
+    ys = g_new (gfloat, point_count);
+    for (i = 0; i < point_count; i++)
+    {
+        xs[i] = points[i].x;
+        ys[i] = points[i].y;
+    }
+
+    grl_image_draw_ctx_init (self, &ctx);
+    grl_image_fill_poly (&ctx, xs, ys, point_count, GRL_TO_RAYLIB_COLOR (color));
+
+    g_free (xs);
+    g_free (ys);
+}
+
+/**
+ * grl_image_draw_polyline:
+ * @self: A #GrlImage.
+ * @points: (array length=point_count): Vertices.
+ * @point_count: Number of vertices (minimum 2).
+ * @closed: %TRUE to connect the last point back to the first.
+ * @thickness: Line thickness in pixels (minimum 1).
+ * @color: Line color.
+ *
+ * Draws a connected sequence of thick line segments. Honours the image's blend
+ * mode, clip rectangle and anti-alias state.
+ */
+void
+grl_image_draw_polyline (GrlImage         *self,
+                         const GrlVector2 *points,
+                         gint              point_count,
+                         gboolean          closed,
+                         gint              thickness,
+                         const GrlColor   *color)
+{
+    GrlDrawCtx  ctx;
+    gfloat     *xs, *ys;
+    gint        i;
+
+    g_return_if_fail (GRL_IS_IMAGE (self));
+    g_return_if_fail (points != NULL);
+    g_return_if_fail (point_count >= 2);
+    g_return_if_fail (color != NULL);
+
+    if (thickness < 1)
+        thickness = 1;
+
+    xs = g_new (gfloat, point_count);
+    ys = g_new (gfloat, point_count);
+    for (i = 0; i < point_count; i++)
+    {
+        xs[i] = points[i].x;
+        ys[i] = points[i].y;
+    }
+
+    grl_image_draw_ctx_init (self, &ctx);
+    grl_image_stroke_path (&ctx, xs, ys, point_count, closed,
+                           (gfloat)thickness * 0.5f, GRL_TO_RAYLIB_COLOR (color));
+
+    g_free (xs);
+    g_free (ys);
+}
+
+/**
+ * grl_image_draw_bezier:
+ * @self: A #GrlImage.
+ * @p0: Start point.
+ * @p1: First control point.
+ * @p2: Second control point.
+ * @p3: End point.
+ * @thickness: Curve thickness in pixels (minimum 1).
+ * @color: Curve color.
+ *
+ * Draws a cubic Bezier curve as a thick polyline. The number of segments is
+ * chosen from the control-point span. Honours the image's blend mode, clip
+ * rectangle and anti-alias state.
+ */
+void
+grl_image_draw_bezier (GrlImage         *self,
+                       const GrlVector2 *p0,
+                       const GrlVector2 *p1,
+                       const GrlVector2 *p2,
+                       const GrlVector2 *p3,
+                       gint              thickness,
+                       const GrlColor   *color)
+{
+    GrlDrawCtx  ctx;
+    gfloat     *xs, *ys;
+    gfloat      span;
+    gint        segments, i;
+
+    g_return_if_fail (GRL_IS_IMAGE (self));
+    g_return_if_fail (p0 != NULL && p1 != NULL && p2 != NULL && p3 != NULL);
+    g_return_if_fail (color != NULL);
+
+    if (thickness < 1)
+        thickness = 1;
+
+    /* Rough chord length to pick a sensible tessellation. */
+    span = fabsf (p1->x - p0->x) + fabsf (p1->y - p0->y) +
+           fabsf (p2->x - p1->x) + fabsf (p2->y - p1->y) +
+           fabsf (p3->x - p2->x) + fabsf (p3->y - p2->y);
+    segments = (gint)(span / 4.0f);
+    segments = CLAMP (segments, 8, 256);
+
+    xs = g_new (gfloat, segments + 1);
+    ys = g_new (gfloat, segments + 1);
+    for (i = 0; i <= segments; i++)
+    {
+        gfloat t = (gfloat)i / (gfloat)segments;
+        gfloat u = 1.0f - t;
+        gfloat w0 = u * u * u;
+        gfloat w1 = 3.0f * u * u * t;
+        gfloat w2 = 3.0f * u * t * t;
+        gfloat w3 = t * t * t;
+
+        xs[i] = w0 * p0->x + w1 * p1->x + w2 * p2->x + w3 * p3->x;
+        ys[i] = w0 * p0->y + w1 * p1->y + w2 * p2->y + w3 * p3->y;
+    }
+
+    grl_image_draw_ctx_init (self, &ctx);
+    grl_image_stroke_path (&ctx, xs, ys, segments + 1, FALSE,
+                           (gfloat)thickness * 0.5f, GRL_TO_RAYLIB_COLOR (color));
+
+    g_free (xs);
+    g_free (ys);
+}
+
+/**
+ * grl_image_draw_gradient_rect:
+ * @self: A #GrlImage.
+ * @rect: Region to fill.
+ * @color_a: Start color (left for horizontal, top for vertical).
+ * @color_b: End color (right for horizontal, bottom for vertical).
+ * @axis: Interpolation axis.
+ *
+ * Fills a rectangular region of the image with a linear gradient. Unlike
+ * grl_image_new_gradient_linear(), this draws onto the existing image. Honours
+ * the image's blend mode and clip rectangle.
+ */
+void
+grl_image_draw_gradient_rect (GrlImage           *self,
+                              const GrlRectangle *rect,
+                              const GrlColor     *color_a,
+                              const GrlColor     *color_b,
+                              GrlGradientAxis     axis)
+{
+    GrlDrawCtx ctx;
+    Color      ca, cb;
+    gint       x0, y0, x1, y1, px, py;
+    gfloat     denom;
+
+    g_return_if_fail (GRL_IS_IMAGE (self));
+    g_return_if_fail (rect != NULL);
+    g_return_if_fail (color_a != NULL);
+    g_return_if_fail (color_b != NULL);
+
+    grl_image_draw_ctx_init (self, &ctx);
+    ca = GRL_TO_RAYLIB_COLOR (color_a);
+    cb = GRL_TO_RAYLIB_COLOR (color_b);
+
+    x0 = (gint)rect->x;
+    y0 = (gint)rect->y;
+    x1 = x0 + (gint)rect->width;
+    y1 = y0 + (gint)rect->height;
+
+    if (axis == GRL_GRADIENT_AXIS_VERTICAL)
+    {
+        denom = (gfloat)(y1 - y0 - 1);
+        if (denom < 1.0f)
+            denom = 1.0f;
+        for (py = y0; py < y1; py++)
+        {
+            Color c = grl_image_color_lerp (ca, cb, (gfloat)(py - y0) / denom);
+            grl_image_span (&ctx, py, x0, x1, c);
+        }
+    }
+    else
+    {
+        denom = (gfloat)(x1 - x0 - 1);
+        if (denom < 1.0f)
+            denom = 1.0f;
+        for (px = x0; px < x1; px++)
+        {
+            Color c = grl_image_color_lerp (ca, cb, (gfloat)(px - x0) / denom);
+
+            for (py = y0; py < y1; py++)
+                grl_image_plot (&ctx, px, py, c, 255);
+        }
+    }
+}
+
+/**
+ * grl_image_draw_gradient_radial:
+ * @self: A #GrlImage.
+ * @center_x: Center X position.
+ * @center_y: Center Y position.
+ * @radius: Outer radius.
+ * @inner: Color at the center.
+ * @outer: Color at the edge.
+ *
+ * Fills a disc with a radial gradient from @inner at the center to @outer at
+ * @radius. Pixels beyond @radius are untouched. Ideal for glows and halos
+ * (combine with %GRL_IMAGE_BLEND_ADD). Honours the image's blend mode, clip
+ * rectangle and anti-alias state (soft outer edge).
+ */
+void
+grl_image_draw_gradient_radial (GrlImage       *self,
+                                gint            center_x,
+                                gint            center_y,
+                                gint            radius,
+                                const GrlColor *inner,
+                                const GrlColor *outer)
+{
+    GrlDrawCtx ctx;
+    Color      ci, co;
+    gfloat     cx, cy, r;
+    gint       ix0, ix1, iy0, iy1, px, py;
+
+    g_return_if_fail (GRL_IS_IMAGE (self));
+    g_return_if_fail (inner != NULL);
+    g_return_if_fail (outer != NULL);
+
+    if (radius <= 0)
+        return;
+
+    grl_image_draw_ctx_init (self, &ctx);
+    ci = GRL_TO_RAYLIB_COLOR (inner);
+    co = GRL_TO_RAYLIB_COLOR (outer);
+
+    cx = (gfloat)center_x + 0.5f;
+    cy = (gfloat)center_y + 0.5f;
+    r = (gfloat)radius;
+
+    ix0 = center_x - radius;
+    ix1 = center_x + radius;
+    iy0 = center_y - radius;
+    iy1 = center_y + radius;
+
+    for (py = iy0; py <= iy1; py++)
+    {
+        for (px = ix0; px <= ix1; px++)
+        {
+            gfloat fx = (gfloat)px + 0.5f;
+            gfloat fy = (gfloat)py + 0.5f;
+            gfloat dist = sqrtf ((fx - cx) * (fx - cx) + (fy - cy) * (fy - cy));
+            Color  c;
+
+            if (dist > r)
+                continue;
+
+            c = grl_image_color_lerp (ci, co, dist / r);
+
+            if (ctx.antialias && (r - dist) < 1.0f)
+                grl_image_plot (&ctx, px, py, c, (guint)((r - dist) * 255.0f + 0.5f));
+            else
+                grl_image_plot (&ctx, px, py, c, 255);
+        }
+    }
+}
+
+/**
+ * grl_image_flood_fill:
+ * @self: A #GrlImage.
+ * @x: Seed X position.
+ * @y: Seed Y position.
+ * @color: Replacement color.
+ * @tolerance: Per-channel match tolerance (0-255) against the seed color.
+ *
+ * Performs a 4-connected scanline flood fill starting at (@x, @y), replacing
+ * the contiguous region whose color matches the seed pixel within @tolerance.
+ *
+ * The fill overwrites matched pixels with @color (it does not blend), and is
+ * constrained to the active clip rectangle. Requires the image to be readable
+ * via pixel sampling; works on any pixel format.
+ */
+void
+grl_image_flood_fill (GrlImage       *self,
+                      gint            x,
+                      gint            y,
+                      const GrlColor *color,
+                      gint            tolerance)
+{
+    GrlDrawCtx ctx;
+    GArray    *stack;
+    Color      fill, seed;
+    gint64     packed;
+
+    g_return_if_fail (GRL_IS_IMAGE (self));
+    g_return_if_fail (color != NULL);
+
+    grl_image_draw_ctx_init (self, &ctx);
+
+    if (x < ctx.cx0 || x >= ctx.cx1 || y < ctx.cy0 || y >= ctx.cy1)
+        return;
+
+    fill = GRL_TO_RAYLIB_COLOR (color);
+    seed = GetImageColor (self->handle, x, y);
+
+    /* Nothing to do if the seed already matches the fill (also avoids loops). */
+    if (abs ((gint)seed.r - (gint)fill.r) <= tolerance &&
+        abs ((gint)seed.g - (gint)fill.g) <= tolerance &&
+        abs ((gint)seed.b - (gint)fill.b) <= tolerance &&
+        abs ((gint)seed.a - (gint)fill.a) <= tolerance)
+        return;
+
+    stack = g_array_new (FALSE, FALSE, sizeof (gint64));
+    packed = ((gint64)x << 32) | (guint32)y;
+    g_array_append_val (stack, packed);
+
+    while (stack->len > 0)
+    {
+        gint64 v = g_array_index (stack, gint64, stack->len - 1);
+        gint   cx = (gint)(v >> 32);
+        gint   cy = (gint)(v & 0xffffffff);
+        gint   lx = cx;
+        gint   rx = cx;
+        gint   px;
+        gint   row;
+
+        g_array_set_size (stack, stack->len - 1);
+
+        /* Extend the span left and right while it matches the seed. */
+        while (lx - 1 >= ctx.cx0)
+        {
+            Color s = GetImageColor (self->handle, lx - 1, cy);
+
+            if (abs ((gint)s.r - (gint)seed.r) > tolerance ||
+                abs ((gint)s.g - (gint)seed.g) > tolerance ||
+                abs ((gint)s.b - (gint)seed.b) > tolerance ||
+                abs ((gint)s.a - (gint)seed.a) > tolerance)
+                break;
+            lx--;
+        }
+        while (rx + 1 < ctx.cx1)
+        {
+            Color s = GetImageColor (self->handle, rx + 1, cy);
+
+            if (abs ((gint)s.r - (gint)seed.r) > tolerance ||
+                abs ((gint)s.g - (gint)seed.g) > tolerance ||
+                abs ((gint)s.b - (gint)seed.b) > tolerance ||
+                abs ((gint)s.a - (gint)seed.a) > tolerance)
+                break;
+            rx++;
+        }
+
+        for (px = lx; px <= rx; px++)
+            ImageDrawPixel (&self->handle, px, cy, fill);
+
+        /* Seed the rows above and below. */
+        for (row = cy - 1; row <= cy + 1; row += 2)
+        {
+            if (row < ctx.cy0 || row >= ctx.cy1)
+                continue;
+
+            px = lx;
+            while (px <= rx)
+            {
+                Color s = GetImageColor (self->handle, px, row);
+                gboolean match =
+                    (abs ((gint)s.r - (gint)seed.r) <= tolerance &&
+                     abs ((gint)s.g - (gint)seed.g) <= tolerance &&
+                     abs ((gint)s.b - (gint)seed.b) <= tolerance &&
+                     abs ((gint)s.a - (gint)seed.a) <= tolerance);
+
+                if (match)
+                {
+                    gint64 np = ((gint64)px << 32) | (guint32)row;
+
+                    g_array_append_val (stack, np);
+                    /* Skip the rest of this matching run; it will be filled
+                     * when the seed we just pushed is processed. */
+                    while (px <= rx)
+                    {
+                        Color s2 = GetImageColor (self->handle, px, row);
+
+                        if (abs ((gint)s2.r - (gint)seed.r) > tolerance ||
+                            abs ((gint)s2.g - (gint)seed.g) > tolerance ||
+                            abs ((gint)s2.b - (gint)seed.b) > tolerance ||
+                            abs ((gint)s2.a - (gint)seed.a) > tolerance)
+                            break;
+                        px++;
+                    }
+                }
+                else
+                {
+                    px++;
+                }
+            }
+        }
+    }
+
+    g_array_free (stack, TRUE);
+}
+
+/*
+ * Public API - Drawing state
+ */
+
+/**
+ * grl_image_set_blend_mode:
+ * @self: A #GrlImage.
+ * @mode: The blend mode to use for subsequent drawing.
+ *
+ * Sets the blend mode applied by every grl_image_draw_* primitive.
+ *
+ * The default, %GRL_IMAGE_BLEND_REPLACE, overwrites destination pixels and is
+ * byte-identical to drawing with no blend mode set. Other modes blend the
+ * source against the existing pixels (for example %GRL_IMAGE_BLEND_ADD gives
+ * additive glow with per-channel saturation).
+ *
+ * Blend modes other than %GRL_IMAGE_BLEND_REPLACE require the image to be in
+ * %GRL_PIXELFORMAT_UNCOMPRESSED_R8G8B8A8 format; on any other format drawing
+ * silently falls back to %GRL_IMAGE_BLEND_REPLACE.
+ */
+void
+grl_image_set_blend_mode (GrlImage          *self,
+                          GrlImageBlendMode  mode)
+{
+    g_return_if_fail (GRL_IS_IMAGE (self));
+
+    self->blend_mode = mode;
+}
+
+/**
+ * grl_image_get_blend_mode:
+ * @self: A #GrlImage.
+ *
+ * Gets the current blend mode.
+ *
+ * Returns: The current #GrlImageBlendMode.
+ */
+GrlImageBlendMode
+grl_image_get_blend_mode (GrlImage *self)
+{
+    g_return_val_if_fail (GRL_IS_IMAGE (self), GRL_IMAGE_BLEND_REPLACE);
+
+    return self->blend_mode;
+}
+
+/**
+ * grl_image_set_clip_rect:
+ * @self: A #GrlImage.
+ * @clip: (nullable): Clip rectangle in image space, or %NULL to clear clipping.
+ *
+ * Constrains subsequent grl_image_draw_* primitives to the given rectangle.
+ * Pixels outside the (half-open) clip box are left untouched. Passing %NULL
+ * removes the clip and drawing may again affect the whole image.
+ *
+ * The clip is intersected with the image bounds; fractional coordinates are
+ * truncated to integer pixels.
+ */
+void
+grl_image_set_clip_rect (GrlImage           *self,
+                         const GrlRectangle *clip)
+{
+    g_return_if_fail (GRL_IS_IMAGE (self));
+
+    if (clip == NULL)
+    {
+        self->has_clip = FALSE;
+        self->clip_x = 0;
+        self->clip_y = 0;
+        self->clip_w = 0;
+        self->clip_h = 0;
+        return;
+    }
+
+    self->has_clip = TRUE;
+    self->clip_x = (gint)clip->x;
+    self->clip_y = (gint)clip->y;
+    self->clip_w = (gint)clip->width;
+    self->clip_h = (gint)clip->height;
+}
+
+/**
+ * grl_image_get_clip_rect:
+ * @self: A #GrlImage.
+ * @out_clip: (out caller-allocates): Filled with the active clip rectangle.
+ *
+ * Retrieves the current clip rectangle, if any.
+ *
+ * Returns: %TRUE and fills @out_clip if clipping is active, %FALSE otherwise.
+ */
+gboolean
+grl_image_get_clip_rect (GrlImage     *self,
+                         GrlRectangle *out_clip)
+{
+    g_return_val_if_fail (GRL_IS_IMAGE (self), FALSE);
+
+    if (!self->has_clip)
+        return FALSE;
+
+    if (out_clip != NULL)
+    {
+        out_clip->x = (gfloat)self->clip_x;
+        out_clip->y = (gfloat)self->clip_y;
+        out_clip->width = (gfloat)self->clip_w;
+        out_clip->height = (gfloat)self->clip_h;
+    }
+
+    return TRUE;
+}
+
+/**
+ * grl_image_set_antialias:
+ * @self: A #GrlImage.
+ * @enabled: %TRUE to anti-alias the edges of new primitives.
+ *
+ * Enables or disables edge anti-aliasing for grl_image_draw_* primitives that
+ * support it (circle/ellipse outlines, thick lines, polylines and beziers).
+ *
+ * Anti-aliasing blends partially-covered edge pixels and therefore requires an
+ * %GRL_PIXELFORMAT_UNCOMPRESSED_R8G8B8A8 image; it is ignored on other formats.
+ * Edge pixels are blended even when the blend mode is %GRL_IMAGE_BLEND_REPLACE.
+ */
+void
+grl_image_set_antialias (GrlImage *self,
+                         gboolean  enabled)
+{
+    g_return_if_fail (GRL_IS_IMAGE (self));
+
+    self->antialias = enabled;
+}
+
+/**
+ * grl_image_get_antialias:
+ * @self: A #GrlImage.
+ *
+ * Gets whether edge anti-aliasing is enabled.
+ *
+ * Returns: %TRUE if anti-aliasing is enabled.
+ */
+gboolean
+grl_image_get_antialias (GrlImage *self)
+{
+    g_return_val_if_fail (GRL_IS_IMAGE (self), FALSE);
+
+    return self->antialias;
 }
 
 /*

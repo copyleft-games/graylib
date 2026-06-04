@@ -43,6 +43,7 @@ PUBLIC_HEADERS := \
 	src/core/grl-window.h \
 	src/core/grl-input.h \
 	src/graphics/grl-image.h \
+	src/graphics/grl-gif-writer.h \
 	src/graphics/grl-texture.h \
 	src/graphics/grl-font.h \
 	src/graphics/grl-camera2d.h \
@@ -111,6 +112,7 @@ SOURCES := \
 	src/core/grl-window.c \
 	src/core/grl-input.c \
 	src/graphics/grl-image.c \
+	src/graphics/grl-gif-writer.c \
 	src/graphics/grl-texture.c \
 	src/graphics/grl-font.c \
 	src/graphics/grl-camera2d.c \
@@ -434,6 +436,7 @@ endif
 	$(INSTALL_DATA) src/core/grl-window.h $(DESTDIR)$(INCLUDEDIR)/graylib/core/
 	$(INSTALL_DATA) src/core/grl-input.h $(DESTDIR)$(INCLUDEDIR)/graylib/core/
 	$(INSTALL_DATA) src/graphics/grl-image.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
+	$(INSTALL_DATA) src/graphics/grl-gif-writer.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
 	$(INSTALL_DATA) src/graphics/grl-texture.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
 	$(INSTALL_DATA) src/graphics/grl-font.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
 	$(INSTALL_DATA) src/graphics/grl-camera2d.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
@@ -599,6 +602,10 @@ $(OBJDIR)/src/core/grl-input.o: src/core/grl-input.c
 
 # Graphics module
 $(OBJDIR)/src/graphics/grl-image.o: src/graphics/grl-image.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(LIB_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/graphics/grl-gif-writer.o: src/graphics/grl-gif-writer.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 

@@ -354,6 +354,53 @@ grl_blend_mode_get_type (void)
 }
 
 /*
+ * GrlImageBlendMode
+ */
+GType
+grl_image_blend_mode_get_type (void)
+{
+    static volatile gsize g_define_type_id__volatile = 0;
+
+    if (g_once_init_enter (&g_define_type_id__volatile))
+    {
+        static const GEnumValue values[] = {
+            { GRL_IMAGE_BLEND_REPLACE, "GRL_IMAGE_BLEND_REPLACE", "replace" },
+            { GRL_IMAGE_BLEND_OVER, "GRL_IMAGE_BLEND_OVER", "over" },
+            { GRL_IMAGE_BLEND_ADD, "GRL_IMAGE_BLEND_ADD", "add" },
+            { GRL_IMAGE_BLEND_MULTIPLY, "GRL_IMAGE_BLEND_MULTIPLY", "multiply" },
+            { GRL_IMAGE_BLEND_SUBTRACT, "GRL_IMAGE_BLEND_SUBTRACT", "subtract" },
+            { 0, NULL, NULL }
+        };
+        GType g_define_type_id = g_enum_register_static ("GrlImageBlendMode", values);
+        g_once_init_leave (&g_define_type_id__volatile, g_define_type_id);
+    }
+
+    return g_define_type_id__volatile;
+}
+
+/*
+ * GrlGradientAxis
+ */
+GType
+grl_gradient_axis_get_type (void)
+{
+    static volatile gsize g_define_type_id__volatile = 0;
+
+    if (g_once_init_enter (&g_define_type_id__volatile))
+    {
+        static const GEnumValue values[] = {
+            { GRL_GRADIENT_AXIS_HORIZONTAL, "GRL_GRADIENT_AXIS_HORIZONTAL", "horizontal" },
+            { GRL_GRADIENT_AXIS_VERTICAL, "GRL_GRADIENT_AXIS_VERTICAL", "vertical" },
+            { 0, NULL, NULL }
+        };
+        GType g_define_type_id = g_enum_register_static ("GrlGradientAxis", values);
+        g_once_init_leave (&g_define_type_id__volatile, g_define_type_id);
+    }
+
+    return g_define_type_id__volatile;
+}
+
+/*
  * GrlTextureFilter
  */
 GType

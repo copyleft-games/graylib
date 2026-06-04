@@ -533,6 +533,57 @@ GType grl_blend_mode_get_type (void) G_GNUC_CONST;
 #define GRL_TYPE_BLEND_MODE (grl_blend_mode_get_type ())
 
 /**
+ * GrlImageBlendMode:
+ * @GRL_IMAGE_BLEND_REPLACE: Overwrite destination pixels, ignoring alpha (default; legacy behavior)
+ * @GRL_IMAGE_BLEND_OVER: Standard straight-alpha source-over compositing
+ * @GRL_IMAGE_BLEND_ADD: Saturating additive blend (source scaled by its alpha)
+ * @GRL_IMAGE_BLEND_MULTIPLY: Multiplicative blend
+ * @GRL_IMAGE_BLEND_SUBTRACT: Saturating subtractive blend
+ *
+ * Per-image CPU blend mode for #GrlImage drawing primitives. This controls how
+ * newly drawn pixels combine with the existing pixels of the destination image.
+ *
+ * The default, %GRL_IMAGE_BLEND_REPLACE, is byte-for-byte identical to drawing
+ * without any blend mode set: source pixels simply overwrite the destination.
+ *
+ * Blend modes other than %GRL_IMAGE_BLEND_REPLACE require the image to be in
+ * %GRL_PIXELFORMAT_UNCOMPRESSED_R8G8B8A8 format; on any other format the draw
+ * silently falls back to %GRL_IMAGE_BLEND_REPLACE.
+ *
+ * This is distinct from #GrlBlendMode, which controls GPU/texture blending.
+ */
+typedef enum
+{
+    GRL_IMAGE_BLEND_REPLACE = 0,
+    GRL_IMAGE_BLEND_OVER,
+    GRL_IMAGE_BLEND_ADD,
+    GRL_IMAGE_BLEND_MULTIPLY,
+    GRL_IMAGE_BLEND_SUBTRACT
+} GrlImageBlendMode;
+
+GRL_AVAILABLE_IN_ALL
+GType grl_image_blend_mode_get_type (void) G_GNUC_CONST;
+#define GRL_TYPE_IMAGE_BLEND_MODE (grl_image_blend_mode_get_type ())
+
+/**
+ * GrlGradientAxis:
+ * @GRL_GRADIENT_AXIS_HORIZONTAL: Interpolate left-to-right (along X)
+ * @GRL_GRADIENT_AXIS_VERTICAL: Interpolate top-to-bottom (along Y)
+ *
+ * Axis along which a linear gradient is interpolated when drawing onto an
+ * existing image with grl_image_draw_gradient_rect().
+ */
+typedef enum
+{
+    GRL_GRADIENT_AXIS_HORIZONTAL = 0,
+    GRL_GRADIENT_AXIS_VERTICAL
+} GrlGradientAxis;
+
+GRL_AVAILABLE_IN_ALL
+GType grl_gradient_axis_get_type (void) G_GNUC_CONST;
+#define GRL_TYPE_GRADIENT_AXIS (grl_gradient_axis_get_type ())
+
+/**
  * GrlTextureFilter:
  * @GRL_TEXTURE_FILTER_POINT: No filter, pixel approximation
  * @GRL_TEXTURE_FILTER_BILINEAR: Linear filtering

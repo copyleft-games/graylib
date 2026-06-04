@@ -545,3 +545,26 @@ When adding a new type:
    This generates proper assembly: `test %al,%al` + `movzbl %al,%eax` instead of `test %eax,%eax`.
 
    **Affected functions**: All raylib functions returning `bool` - input functions (`IsKeyDown`, `IsMouseButtonPressed`, etc.), collision detection (`CheckCollision*`), and any other boolean-returning APIs. See `docs/api/input.md` for the full list.
+
+## GrlImage CPU Drawing
+
+`GrlImage` (`src/graphics/grl-image.c`) draws on CPU pixel buffers without a GL
+context, so it works headless (asset bakers, tests, CLI tools).
+
+- **Headless text**: `grl_image_draw_text()` falls back to an embedded CPU
+  bitmap font (`grl-image-font-data.h`) when no window exists. raylib's own
+  `ImageDrawText` crashes headless (its default-font loader lays out the glyph
+  atlas against a not-yet-uploaded GL texture). Use
+  `grl_image_draw_text_bitmap()` for output that is identical headless or
+  windowed.
+- **Blend-aware primitives**: the newer primitives (line_ex, circle_lines,
+  ellipse, triangle, polygon, polyline, bezier, gradient_rect/radial, flood_fill)
+  route through a software raster core (`grl_image_plot`) that honours the
+  per-image blend mode (`GrlImageBlendMode`), clip rectangle and anti-alias flag.
+  Default blend mode is `GRL_IMAGE_BLEND_REPLACE` (== legacy overwrite). Real
+  blending requires `R8G8B8A8`; other formats fall back to REPLACE.
+- The basic raylib-backed wrappers (`grl_image_draw_pixel/line/circle/rectangle`)
+  remain overwrite-only and are unchanged.
+- **Animated GIF**: `GrlGifWriter` (`src/graphics/grl-gif-writer.c`) is a
+  self-contained, in-tree GIF89a encoder (uncompressed LZW + web-safe palette).
+  No external/vendored encoder.

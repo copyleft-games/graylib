@@ -322,6 +322,56 @@ grl_draw_texture (glow_texture, x, y, white);
 grl_set_blend_mode (GRL_BLEND_ALPHA);  /* Reset to default */
 ```
 
+### GrlImageBlendMode
+
+Per-image CPU blend mode for `grl_image_draw_*` primitives. Distinct from
+`GrlBlendMode` (which controls GPU/texture blending). All modes except
+`GRL_IMAGE_BLEND_REPLACE` require an `R8G8B8A8` image; on other formats drawing
+falls back to `GRL_IMAGE_BLEND_REPLACE`.
+
+```c
+typedef enum
+{
+    GRL_IMAGE_BLEND_REPLACE = 0,
+    GRL_IMAGE_BLEND_OVER,
+    GRL_IMAGE_BLEND_ADD,
+    GRL_IMAGE_BLEND_MULTIPLY,
+    GRL_IMAGE_BLEND_SUBTRACT
+} GrlImageBlendMode;
+```
+
+| Mode | Description |
+|------|-------------|
+| `GRL_IMAGE_BLEND_REPLACE` | Overwrite destination, ignore alpha (default; legacy behavior) |
+| `GRL_IMAGE_BLEND_OVER` | Standard straight-alpha source-over compositing |
+| `GRL_IMAGE_BLEND_ADD` | Saturating additive blend (glow) |
+| `GRL_IMAGE_BLEND_MULTIPLY` | Multiplicative blend |
+| `GRL_IMAGE_BLEND_SUBTRACT` | Saturating subtractive blend |
+
+**Usage:**
+```c
+grl_image_set_blend_mode (img, GRL_IMAGE_BLEND_ADD);
+grl_image_draw_gradient_radial (img, cx, cy, r, hot, edge);
+grl_image_set_blend_mode (img, GRL_IMAGE_BLEND_REPLACE);  /* Reset to default */
+```
+
+### GrlGradientAxis
+
+Interpolation axis for `grl_image_draw_gradient_rect()`.
+
+```c
+typedef enum
+{
+    GRL_GRADIENT_AXIS_HORIZONTAL = 0,
+    GRL_GRADIENT_AXIS_VERTICAL
+} GrlGradientAxis;
+```
+
+| Value | Description |
+|-------|-------------|
+| `GRL_GRADIENT_AXIS_HORIZONTAL` | Interpolate left-to-right |
+| `GRL_GRADIENT_AXIS_VERTICAL` | Interpolate top-to-bottom |
+
 ### GrlTextureFilter
 
 Texture filtering modes.

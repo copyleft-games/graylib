@@ -186,6 +186,16 @@ typedef struct _GrlImage GrlImage;
 /* Note: GrlImageClass is defined by G_DECLARE_FINAL_TYPE in grl-image.h */
 
 /**
+ * GrlGifWriter:
+ *
+ * A streaming animated GIF writer.
+ *
+ * This is a final GObject type.
+ */
+typedef struct _GrlGifWriter GrlGifWriter;
+/* Note: GrlGifWriterClass is defined by G_DECLARE_FINAL_TYPE in grl-gif-writer.h */
+
+/**
  * GrlTexture:
  *
  * A GPU texture (pixel data in VRAM).
