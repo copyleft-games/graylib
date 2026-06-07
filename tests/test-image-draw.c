@@ -18,6 +18,7 @@
 #include "src/math/grl-color.h"
 #include "src/math/grl-vector2.h"
 #include "src/math/grl-rectangle.h"
+#include "src/math/grl-matrix.h"
 
 static void
 assert_pixel (GrlImage *img,
@@ -1413,6 +1414,152 @@ test_line_thin_subpixel_position (void)
     g_assert_cmpint (ABS ((gint)lc->r - (gint)hc->r), >, 20);
 }
 
+/*
+ * 2D affine transform stack
+ */
+
+static void
+test_transform_identity_default (void)
+{
+    g_autoptr(GrlColor) bg  = grl_color_new (0, 0, 0, 255);
+    g_autoptr(GrlImage) img = grl_image_new_color (8, 8, bg);
+    g_autoptr(GrlMatrix) m  = grl_image_get_matrix (img);
+
+    g_assert_nonnull (m);
+    g_assert_cmpfloat_with_epsilon (m->m0, 1.0f, 0.0001f);
+    g_assert_cmpfloat_with_epsilon (m->m5, 1.0f, 0.0001f);
+    g_assert_cmpfloat_with_epsilon (m->m1, 0.0f, 0.0001f);
+    g_assert_cmpfloat_with_epsilon (m->m4, 0.0f, 0.0001f);
+    g_assert_cmpfloat_with_epsilon (m->m12, 0.0f, 0.0001f);
+    g_assert_cmpfloat_with_epsilon (m->m13, 0.0f, 0.0001f);
+}
+
+static void
+test_transform_set_get_roundtrip (void)
+{
+    g_autoptr(GrlColor) bg  = grl_color_new (0, 0, 0, 255);
+    g_autoptr(GrlImage) img = grl_image_new_color (8, 8, bg);
+    g_autoptr(GrlMatrix) t  = grl_matrix_new_translate (3.0f, 5.0f, 0.0f);
+    g_autoptr(GrlMatrix) got = NULL;
+    g_autoptr(GrlMatrix) ident = NULL;
+
+    grl_image_set_matrix (img, t);
+    got = grl_image_get_matrix (img);
+    g_assert_cmpfloat_with_epsilon (got->m12, 3.0f, 0.01f);
+    g_assert_cmpfloat_with_epsilon (got->m13, 5.0f, 0.01f);
+
+    grl_image_set_matrix (img, NULL);   /* NULL == identity */
+    ident = grl_image_get_matrix (img);
+    g_assert_cmpfloat_with_epsilon (ident->m0, 1.0f, 0.0001f);
+    g_assert_cmpfloat_with_epsilon (ident->m12, 0.0f, 0.0001f);
+}
+
+/* Fill a 4-vertex box [x0,x0+4] x [y0,y0+4] via the transformed polygon path. */
+static void
+fill_box (GrlImage *img, gfloat x0, gfloat y0, const GrlColor *color)
+{
+    GrlVector2 pts[4];
+
+    pts[0].x = x0;        pts[0].y = y0;
+    pts[1].x = x0 + 4.0f; pts[1].y = y0;
+    pts[2].x = x0 + 4.0f; pts[2].y = y0 + 4.0f;
+    pts[3].x = x0;        pts[3].y = y0 + 4.0f;
+    grl_image_draw_polygon (img, pts, 4, color);
+}
+
+static void
+test_transform_translate_shifts (void)
+{
+    g_autoptr(GrlColor) bg    = grl_color_new (0, 0, 0, 255);
+    g_autoptr(GrlColor) white = grl_color_new (255, 255, 255, 255);
+    g_autoptr(GrlImage) img   = grl_image_new_color (20, 20, bg);
+
+    grl_image_translate (img, 8.0f, 8.0f);
+    fill_box (img, 2.0f, 2.0f, white);   /* box (2,2)-(6,6) shifted to (10,10)-(14,14) */
+
+    assert_pixel (img, 12, 12, 255, 255, 255, 255, 0);  /* inside shifted box */
+    assert_pixel (img,  4,  4,   0,   0,   0, 255, 0);  /* original spot empty */
+}
+
+static void
+test_transform_scale_grows (void)
+{
+    g_autoptr(GrlColor) bg    = grl_color_new (0, 0, 0, 255);
+    g_autoptr(GrlColor) white = grl_color_new (255, 255, 255, 255);
+    g_autoptr(GrlImage) img   = grl_image_new_color (20, 20, bg);
+
+    grl_image_scale (img, 2.0f, 2.0f);
+    fill_box (img, 1.0f, 1.0f, white);   /* box (1,1)-(5,5) scaled x2 -> (2,2)-(10,10) */
+
+    /* (8,8) is inside the scaled box but outside the unscaled (1,1)-(5,5) one. */
+    assert_pixel (img, 8, 8, 255, 255, 255, 255, 0);
+}
+
+static void
+test_transform_rotate_matrix (void)
+{
+    g_autoptr(GrlColor) bg  = grl_color_new (0, 0, 0, 255);
+    g_autoptr(GrlImage) img = grl_image_new_color (8, 8, bg);
+    g_autoptr(GrlMatrix) m  = NULL;
+
+    grl_image_rotate_matrix (img, (gfloat) G_PI_2);
+    m = grl_image_get_matrix (img);
+
+    /* 90-degree rotation: cos -> 0, |sin| -> 1. */
+    g_assert_cmpfloat (ABS (m->m0), <, 0.01f);
+    g_assert_cmpfloat (ABS (m->m5), <, 0.01f);
+    g_assert_cmpfloat (ABS (ABS (m->m1) - 1.0f), <, 0.01f);
+    g_assert_cmpfloat (ABS (ABS (m->m4) - 1.0f), <, 0.01f);
+}
+
+static void
+test_transform_push_pop_restores (void)
+{
+    g_autoptr(GrlColor) bg  = grl_color_new (0, 0, 0, 255);
+    g_autoptr(GrlImage) img = grl_image_new_color (8, 8, bg);
+    g_autoptr(GrlMatrix) m  = NULL;
+
+    grl_image_translate (img, 5.0f, 5.0f);
+    grl_image_push_matrix (img);
+    grl_image_translate (img, 10.0f, 10.0f);   /* now (15,15) */
+    grl_image_pop_matrix (img);                 /* restore (5,5) */
+
+    m = grl_image_get_matrix (img);
+    g_assert_cmpfloat_with_epsilon (m->m12, 5.0f, 0.01f);
+    g_assert_cmpfloat_with_epsilon (m->m13, 5.0f, 0.01f);
+}
+
+static void
+test_transform_reset (void)
+{
+    g_autoptr(GrlColor) bg  = grl_color_new (0, 0, 0, 255);
+    g_autoptr(GrlImage) img = grl_image_new_color (8, 8, bg);
+    g_autoptr(GrlMatrix) m  = NULL;
+
+    grl_image_translate (img, 7.0f, 7.0f);
+    grl_image_reset_matrix (img);
+
+    m = grl_image_get_matrix (img);
+    g_assert_cmpfloat_with_epsilon (m->m0, 1.0f, 0.0001f);
+    g_assert_cmpfloat_with_epsilon (m->m12, 0.0f, 0.0001f);
+    g_assert_cmpfloat_with_epsilon (m->m13, 0.0f, 0.0001f);
+}
+
+static void
+test_transform_scale_zero_no_crash (void)
+{
+    g_autoptr(GrlColor) bg    = grl_color_new (0, 0, 0, 255);
+    g_autoptr(GrlColor) white = grl_color_new (255, 255, 255, 255);
+    g_autoptr(GrlImage) img   = grl_image_new_color (8, 8, bg);
+
+    /* Degenerate scale collapses geometry; must not NaN/crash. */
+    grl_image_scale (img, 0.0f, 0.0f);
+    fill_box (img, 1.0f, 1.0f, white);
+    grl_image_draw_circle_lines (img, 4, 4, 3, 1, white);
+
+    g_assert_true (grl_image_is_valid (img));
+}
+
 int
 main (int   argc,
       char *argv[])
@@ -1529,6 +1676,23 @@ main (int   argc,
                      test_line_thin_subpixel_attenuated);
     g_test_add_func ("/image-draw/line-thin/subpixel-position",
                      test_line_thin_subpixel_position);
+
+    g_test_add_func ("/image-draw/transform/identity-default",
+                     test_transform_identity_default);
+    g_test_add_func ("/image-draw/transform/set-get-roundtrip",
+                     test_transform_set_get_roundtrip);
+    g_test_add_func ("/image-draw/transform/translate-shifts",
+                     test_transform_translate_shifts);
+    g_test_add_func ("/image-draw/transform/scale-grows",
+                     test_transform_scale_grows);
+    g_test_add_func ("/image-draw/transform/rotate-matrix",
+                     test_transform_rotate_matrix);
+    g_test_add_func ("/image-draw/transform/push-pop-restores",
+                     test_transform_push_pop_restores);
+    g_test_add_func ("/image-draw/transform/reset",
+                     test_transform_reset);
+    g_test_add_func ("/image-draw/transform/scale-zero-no-crash",
+                     test_transform_scale_zero_no_crash);
 
     return g_test_run ();
 }

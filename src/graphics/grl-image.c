@@ -11,6 +11,7 @@
 #include "grl-image.h"
 #include "grl-png.h"
 #include "grl-graphics-private.h"
+#include "../math/grl-matrix.h"
 #include "../resources/grl-resource-pack.h"
 #include <raylib.h>
 #include <rpng.h>
@@ -59,6 +60,8 @@ struct _GrlImage
     gint              clip_h;
     gboolean          antialias;     /* default FALSE */
     GrlImageColorSpace blend_space;  /* default GRL_IMAGE_COLOR_SPACE_GAMMA */
+    GrlMatrix         ctm;           /* current 2D affine transform (identity default) */
+    GArray           *matrix_stack;  /* lazy GArray<GrlMatrix> for push/pop */
 };
 
 G_DEFINE_TYPE (GrlImage, grl_image, G_TYPE_OBJECT)
@@ -259,6 +262,68 @@ grl_image_plot_linear (const GrlDrawCtx *ctx,
     default:
         break;
     }
+}
+
+/*
+ * 2D affine transform stack helpers. The current transform is self->ctm (a
+ * GrlMatrix; only the 2D affine part — the 2x2 linear block and the m12/m13
+ * translation — is used). Drawing primitives transform their input geometry
+ * through it at the API boundary.
+ */
+
+static void
+grl_image_mat_set_identity (GrlMatrix *m)
+{
+    m->m0 = 1.0f; m->m4 = 0.0f; m->m8  = 0.0f; m->m12 = 0.0f;
+    m->m1 = 0.0f; m->m5 = 1.0f; m->m9  = 0.0f; m->m13 = 0.0f;
+    m->m2 = 0.0f; m->m6 = 0.0f; m->m10 = 1.0f; m->m14 = 0.0f;
+    m->m3 = 0.0f; m->m7 = 0.0f; m->m11 = 0.0f; m->m15 = 1.0f;
+}
+
+static gboolean
+grl_image_mat_is_identity (const GrlMatrix *m)
+{
+    return (m->m0 == 1.0f && m->m5 == 1.0f &&
+            m->m1 == 0.0f && m->m4 == 0.0f &&
+            m->m12 == 0.0f && m->m13 == 0.0f);
+}
+
+/* Apply the 2D affine part of @m to a point, in place. */
+static void
+grl_image_mat_apply (const GrlMatrix *m,
+                     gfloat          *x,
+                     gfloat          *y)
+{
+    gfloat ix = *x;
+    gfloat iy = *y;
+
+    *x = m->m0 * ix + m->m4 * iy + m->m12;
+    *y = m->m1 * ix + m->m5 * iy + m->m13;
+}
+
+/* Mean (area-preserving) scale of the 2x2 linear part — used to scale stroke
+ * thickness and circle/ellipse radii under the current transform. */
+static gfloat
+grl_image_mat_scale (const GrlMatrix *m)
+{
+    gfloat det = m->m0 * m->m5 - m->m4 * m->m1;
+
+    if (det < 0.0f)
+        det = -det;
+    return sqrtf (det);
+}
+
+/* Transform an array of points by @m, in place. */
+static void
+grl_image_mat_apply_array (const GrlMatrix *m,
+                           gfloat          *xs,
+                           gfloat          *ys,
+                           gint             n)
+{
+    gint i;
+
+    for (i = 0; i < n; i++)
+        grl_image_mat_apply (m, &xs[i], &ys[i]);
 }
 
 static void
@@ -513,6 +578,8 @@ grl_image_finalize (GObject *object)
         self->valid = FALSE;
     }
 
+    g_clear_pointer (&self->matrix_stack, g_array_unref);
+
     G_OBJECT_CLASS (grl_image_parent_class)->finalize (object);
 }
 
@@ -606,6 +673,8 @@ grl_image_init (GrlImage *self)
     self->clip_h = 0;
     self->antialias = FALSE;
     self->blend_space = GRL_IMAGE_COLOR_SPACE_GAMMA;
+    grl_image_mat_set_identity (&self->ctm);
+    self->matrix_stack = NULL;
 }
 
 /*
@@ -2339,6 +2408,7 @@ grl_image_draw_line_ex (GrlImage         *self,
                         const GrlColor   *color)
 {
     GrlDrawCtx ctx;
+    gfloat     x0, y0, x1, y1, half;
 
     g_return_if_fail (GRL_IS_IMAGE (self));
     g_return_if_fail (start != NULL);
@@ -2349,8 +2419,19 @@ grl_image_draw_line_ex (GrlImage         *self,
         thickness = 1;
 
     grl_image_draw_ctx_init (self, &ctx);
-    grl_image_thick_segment (&ctx, start->x, start->y, end->x, end->y,
-                             (gfloat)thickness * 0.5f, GRL_TO_RAYLIB_COLOR (color));
+
+    x0 = start->x; y0 = start->y;
+    x1 = end->x;   y1 = end->y;
+    half = (gfloat)thickness * 0.5f;
+    if (!grl_image_mat_is_identity (&self->ctm))
+    {
+        grl_image_mat_apply (&self->ctm, &x0, &y0);
+        grl_image_mat_apply (&self->ctm, &x1, &y1);
+        half *= grl_image_mat_scale (&self->ctm);
+    }
+
+    grl_image_thick_segment (&ctx, x0, y0, x1, y1, half,
+                             GRL_TO_RAYLIB_COLOR (color));
 }
 
 /**
@@ -2381,6 +2462,7 @@ grl_image_draw_line_thin (GrlImage         *self,
                           const GrlColor   *color)
 {
     GrlDrawCtx ctx;
+    gfloat     x0, y0, x1, y1, half;
 
     g_return_if_fail (GRL_IS_IMAGE (self));
     g_return_if_fail (start != NULL);
@@ -2391,8 +2473,19 @@ grl_image_draw_line_thin (GrlImage         *self,
         return;
 
     grl_image_draw_ctx_init (self, &ctx);
-    grl_image_thick_segment (&ctx, start->x, start->y, end->x, end->y,
-                             thickness * 0.5f, GRL_TO_RAYLIB_COLOR (color));
+
+    x0 = start->x; y0 = start->y;
+    x1 = end->x;   y1 = end->y;
+    half = thickness * 0.5f;
+    if (!grl_image_mat_is_identity (&self->ctm))
+    {
+        grl_image_mat_apply (&self->ctm, &x0, &y0);
+        grl_image_mat_apply (&self->ctm, &x1, &y1);
+        half *= grl_image_mat_scale (&self->ctm);
+    }
+
+    grl_image_thick_segment (&ctx, x0, y0, x1, y1, half,
+                             GRL_TO_RAYLIB_COLOR (color));
 }
 
 /**
@@ -2416,6 +2509,7 @@ grl_image_draw_circle_lines (GrlImage       *self,
                              const GrlColor *color)
 {
     GrlDrawCtx ctx;
+    gfloat     cx, cy, r, half;
 
     g_return_if_fail (GRL_IS_IMAGE (self));
     g_return_if_fail (color != NULL);
@@ -2424,9 +2518,21 @@ grl_image_draw_circle_lines (GrlImage       *self,
         thickness = 1;
 
     grl_image_draw_ctx_init (self, &ctx);
-    grl_image_ring (&ctx, (gfloat)center_x + 0.5f, (gfloat)center_y + 0.5f,
-                    (gfloat)radius, (gfloat)thickness * 0.5f,
-                    GRL_TO_RAYLIB_COLOR (color));
+
+    cx = (gfloat)center_x + 0.5f;
+    cy = (gfloat)center_y + 0.5f;
+    r = (gfloat)radius;
+    half = (gfloat)thickness * 0.5f;
+    if (!grl_image_mat_is_identity (&self->ctm))
+    {
+        gfloat s = grl_image_mat_scale (&self->ctm);
+
+        grl_image_mat_apply (&self->ctm, &cx, &cy);
+        r *= s;
+        half *= s;
+    }
+
+    grl_image_ring (&ctx, cx, cy, r, half, GRL_TO_RAYLIB_COLOR (color));
 }
 
 /**
@@ -2467,6 +2573,14 @@ grl_image_draw_ellipse (GrlImage       *self,
     cy = (gfloat)center_y + 0.5f;
     rx = (gfloat)radius_x;
     ry = (gfloat)radius_y;
+    if (!grl_image_mat_is_identity (&self->ctm))
+    {
+        gfloat s = grl_image_mat_scale (&self->ctm);
+
+        grl_image_mat_apply (&self->ctm, &cx, &cy);
+        rx *= s;
+        ry *= s;
+    }
 
     ix0 = (gint)floorf (cx - rx);
     ix1 = (gint)ceilf (cx + rx);
@@ -2555,6 +2669,15 @@ grl_image_draw_ellipse_lines (GrlImage       *self,
     cy = (gfloat)center_y + 0.5f;
     rx = (gfloat)radius_x;
     ry = (gfloat)radius_y;
+    if (!grl_image_mat_is_identity (&self->ctm))
+    {
+        gfloat s = grl_image_mat_scale (&self->ctm);
+
+        grl_image_mat_apply (&self->ctm, &cx, &cy);
+        rx *= s;
+        ry *= s;
+        half *= s;
+    }
 
     ix0 = (gint)floorf (cx - rx - half - 1.0f);
     ix1 = (gint)ceilf (cx + rx + half + 1.0f);
@@ -2631,6 +2754,8 @@ grl_image_draw_triangle (GrlImage         *self,
     xs[2] = v3->x; ys[2] = v3->y;
 
     grl_image_draw_ctx_init (self, &ctx);
+    if (!grl_image_mat_is_identity (&self->ctm))
+        grl_image_mat_apply_array (&self->ctm, xs, ys, 3);
     grl_image_fill_poly (&ctx, xs, ys, 3, GRL_TO_RAYLIB_COLOR (color));
 }
 
@@ -2656,6 +2781,7 @@ grl_image_draw_triangle_lines (GrlImage         *self,
 {
     GrlDrawCtx ctx;
     gfloat     xs[3], ys[3];
+    gfloat     half;
 
     g_return_if_fail (GRL_IS_IMAGE (self));
     g_return_if_fail (v1 != NULL && v2 != NULL && v3 != NULL);
@@ -2667,10 +2793,16 @@ grl_image_draw_triangle_lines (GrlImage         *self,
     xs[0] = v1->x; ys[0] = v1->y;
     xs[1] = v2->x; ys[1] = v2->y;
     xs[2] = v3->x; ys[2] = v3->y;
+    half = (gfloat)thickness * 0.5f;
 
     grl_image_draw_ctx_init (self, &ctx);
-    grl_image_stroke_path (&ctx, xs, ys, 3, TRUE,
-                           (gfloat)thickness * 0.5f, GRL_TO_RAYLIB_COLOR (color));
+    if (!grl_image_mat_is_identity (&self->ctm))
+    {
+        grl_image_mat_apply_array (&self->ctm, xs, ys, 3);
+        half *= grl_image_mat_scale (&self->ctm);
+    }
+    grl_image_stroke_path (&ctx, xs, ys, 3, TRUE, half,
+                           GRL_TO_RAYLIB_COLOR (color));
 }
 
 /**
@@ -2707,6 +2839,8 @@ grl_image_draw_polygon (GrlImage         *self,
     }
 
     grl_image_draw_ctx_init (self, &ctx);
+    if (!grl_image_mat_is_identity (&self->ctm))
+        grl_image_mat_apply_array (&self->ctm, xs, ys, point_count);
     grl_image_fill_poly (&ctx, xs, ys, point_count, GRL_TO_RAYLIB_COLOR (color));
 
     g_free (xs);
@@ -2735,6 +2869,7 @@ grl_image_draw_polyline (GrlImage         *self,
 {
     GrlDrawCtx  ctx;
     gfloat     *xs, *ys;
+    gfloat      half;
     gint        i;
 
     g_return_if_fail (GRL_IS_IMAGE (self));
@@ -2752,10 +2887,16 @@ grl_image_draw_polyline (GrlImage         *self,
         xs[i] = points[i].x;
         ys[i] = points[i].y;
     }
+    half = (gfloat)thickness * 0.5f;
 
     grl_image_draw_ctx_init (self, &ctx);
-    grl_image_stroke_path (&ctx, xs, ys, point_count, closed,
-                           (gfloat)thickness * 0.5f, GRL_TO_RAYLIB_COLOR (color));
+    if (!grl_image_mat_is_identity (&self->ctm))
+    {
+        grl_image_mat_apply_array (&self->ctm, xs, ys, point_count);
+        half *= grl_image_mat_scale (&self->ctm);
+    }
+    grl_image_stroke_path (&ctx, xs, ys, point_count, closed, half,
+                           GRL_TO_RAYLIB_COLOR (color));
 
     g_free (xs);
     g_free (ys);
@@ -2786,7 +2927,7 @@ grl_image_draw_bezier (GrlImage         *self,
 {
     GrlDrawCtx  ctx;
     gfloat     *xs, *ys;
-    gfloat      span;
+    gfloat      span, half;
     gint        segments, i;
 
     g_return_if_fail (GRL_IS_IMAGE (self));
@@ -2818,9 +2959,16 @@ grl_image_draw_bezier (GrlImage         *self,
         ys[i] = w0 * p0->y + w1 * p1->y + w2 * p2->y + w3 * p3->y;
     }
 
+    half = (gfloat)thickness * 0.5f;
+
     grl_image_draw_ctx_init (self, &ctx);
-    grl_image_stroke_path (&ctx, xs, ys, segments + 1, FALSE,
-                           (gfloat)thickness * 0.5f, GRL_TO_RAYLIB_COLOR (color));
+    if (!grl_image_mat_is_identity (&self->ctm))
+    {
+        grl_image_mat_apply_array (&self->ctm, xs, ys, segments + 1);
+        half *= grl_image_mat_scale (&self->ctm);
+    }
+    grl_image_stroke_path (&ctx, xs, ys, segments + 1, FALSE, half,
+                           GRL_TO_RAYLIB_COLOR (color));
 
     g_free (xs);
     g_free (ys);
@@ -3179,6 +3327,179 @@ grl_image_get_blend_color_space (GrlImage *self)
     g_return_val_if_fail (GRL_IS_IMAGE (self), GRL_IMAGE_COLOR_SPACE_GAMMA);
 
     return self->blend_space;
+}
+
+/**
+ * grl_image_push_matrix:
+ * @self: A #GrlImage.
+ *
+ * Saves the current transform onto the matrix stack; restore it with
+ * grl_image_pop_matrix(). The stack depth is capped at 256; pushing past the
+ * cap is a no-op and emits a warning.
+ */
+void
+grl_image_push_matrix (GrlImage *self)
+{
+    g_return_if_fail (GRL_IS_IMAGE (self));
+
+    if (self->matrix_stack == NULL)
+        self->matrix_stack = g_array_new (FALSE, FALSE, sizeof (GrlMatrix));
+
+    if (self->matrix_stack->len >= 256)
+    {
+        g_warning ("grl_image_push_matrix: stack depth cap (256) reached");
+        return;
+    }
+
+    g_array_append_val (self->matrix_stack, self->ctm);
+}
+
+/**
+ * grl_image_pop_matrix:
+ * @self: A #GrlImage.
+ *
+ * Restores the transform saved by the most recent grl_image_push_matrix().
+ * Popping an empty stack is a no-op and emits a warning.
+ */
+void
+grl_image_pop_matrix (GrlImage *self)
+{
+    guint n;
+
+    g_return_if_fail (GRL_IS_IMAGE (self));
+
+    if (self->matrix_stack == NULL || self->matrix_stack->len == 0)
+    {
+        g_warning ("grl_image_pop_matrix: matrix stack is empty");
+        return;
+    }
+
+    n = self->matrix_stack->len - 1;
+    self->ctm = g_array_index (self->matrix_stack, GrlMatrix, n);
+    g_array_remove_index (self->matrix_stack, n);
+}
+
+/**
+ * grl_image_reset_matrix:
+ * @self: A #GrlImage.
+ *
+ * Resets the current transform to the identity. The stack is left untouched.
+ */
+void
+grl_image_reset_matrix (GrlImage *self)
+{
+    g_return_if_fail (GRL_IS_IMAGE (self));
+
+    grl_image_mat_set_identity (&self->ctm);
+}
+
+/**
+ * grl_image_translate:
+ * @self: A #GrlImage.
+ * @x: Translation along X, in pixels.
+ * @y: Translation along Y, in pixels.
+ *
+ * Post-multiplies the current transform by a translation, so subsequent drawing
+ * is shifted by (@x, @y).
+ */
+void
+grl_image_translate (GrlImage *self,
+                     gfloat    x,
+                     gfloat    y)
+{
+    g_autoptr(GrlMatrix) t = NULL;
+    g_autoptr(GrlMatrix) r = NULL;
+
+    g_return_if_fail (GRL_IS_IMAGE (self));
+
+    t = grl_matrix_new_translate (x, y, 0.0f);
+    r = grl_matrix_multiply (&self->ctm, t);
+    self->ctm = *r;
+}
+
+/**
+ * grl_image_scale:
+ * @self: A #GrlImage.
+ * @sx: Scale factor along X.
+ * @sy: Scale factor along Y.
+ *
+ * Post-multiplies the current transform by a scale. Note that filled circles
+ * and circle/ellipse outlines are center-and-radius primitives: their radius is
+ * scaled by the mean factor, so a non-uniform scale keeps a circle circular
+ * rather than turning it into an ellipse (use grl_image_draw_ellipse() or a
+ * polygon for that).
+ */
+void
+grl_image_scale (GrlImage *self,
+                 gfloat    sx,
+                 gfloat    sy)
+{
+    g_autoptr(GrlMatrix) s = NULL;
+    g_autoptr(GrlMatrix) r = NULL;
+
+    g_return_if_fail (GRL_IS_IMAGE (self));
+
+    s = grl_matrix_new_scale (sx, sy, 1.0f);
+    r = grl_matrix_multiply (&self->ctm, s);
+    self->ctm = *r;
+}
+
+/**
+ * grl_image_rotate_matrix:
+ * @self: A #GrlImage.
+ * @radians: Rotation angle in radians (clockwise in image space).
+ *
+ * Post-multiplies the current transform by a rotation about the origin. Named
+ * to avoid colliding with grl_image_rotate(), which rotates pixel data in place.
+ */
+void
+grl_image_rotate_matrix (GrlImage *self,
+                         gfloat    radians)
+{
+    g_autoptr(GrlMatrix) rot = NULL;
+    g_autoptr(GrlMatrix) r = NULL;
+
+    g_return_if_fail (GRL_IS_IMAGE (self));
+
+    rot = grl_matrix_new_rotate_xyz (0.0f, 0.0f, radians);
+    r = grl_matrix_multiply (&self->ctm, rot);
+    self->ctm = *r;
+}
+
+/**
+ * grl_image_set_matrix:
+ * @self: A #GrlImage.
+ * @matrix: (nullable): The transform to install, or %NULL for the identity.
+ *
+ * Replaces the current transform. Only the 2D affine part of @matrix (the 2x2
+ * linear block plus the translation column) is used.
+ */
+void
+grl_image_set_matrix (GrlImage        *self,
+                      const GrlMatrix *matrix)
+{
+    g_return_if_fail (GRL_IS_IMAGE (self));
+
+    if (matrix == NULL)
+        grl_image_mat_set_identity (&self->ctm);
+    else
+        self->ctm = *matrix;
+}
+
+/**
+ * grl_image_get_matrix:
+ * @self: A #GrlImage.
+ *
+ * Gets a copy of the current transform.
+ *
+ * Returns: (transfer full): A newly allocated #GrlMatrix.
+ */
+GrlMatrix *
+grl_image_get_matrix (GrlImage *self)
+{
+    g_return_val_if_fail (GRL_IS_IMAGE (self), NULL);
+
+    return grl_matrix_copy (&self->ctm);
 }
 
 /**

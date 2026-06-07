@@ -360,6 +360,46 @@ no-op. The image must be `R8G8B8A8`; on other formats returns silently.
 grl_image_blur_box (shadow, 8);
 ```
 
+#### Transform stack
+
+A 2D affine transform stack lets you author at a natural scale and position
+without baking coordinates by hand. The current transform is applied to the
+geometry of the blend-aware primitives at draw time.
+
+```c
+grl_image_push_matrix (img);
+grl_image_translate (img, 100.0f, 80.0f);
+grl_image_rotate_matrix (img, G_PI_4);     /* radians */
+grl_image_scale (img, 2.0f, 2.0f);
+grl_image_draw_polygon (img, points, n, color);  /* drawn transformed */
+grl_image_pop_matrix (img);                 /* restore previous transform */
+
+/* Also: grl_image_reset_matrix(), grl_image_set_matrix(img, m_or_NULL),
+ * grl_image_get_matrix(img) -> (transfer full) GrlMatrix. */
+```
+
+The transform affects the point-list and centre/radius primitives that route
+through the software rasterizer: `draw_line_ex`, `draw_line_thin`,
+`draw_circle_lines`, `draw_ellipse`, `draw_ellipse_lines`, `draw_triangle`,
+`draw_triangle_lines`, `draw_polygon`, `draw_polyline`, `draw_bezier`. Stroke
+thickness and circle/ellipse radii are scaled by the transform's mean
+(area-preserving) factor.
+
+**Limitations** (by design — these favour speed and simplicity):
+
+- Point-list primitives (polygons, triangles, lines, beziers) transform fully,
+  including rotation and shear. Centre/radius primitives (circles, ellipses)
+  transform their centre and scale their radius by the mean factor, so a
+  **non-uniform scale keeps a circle circular** rather than turning it into an
+  ellipse — use `grl_image_draw_ellipse()` or a polygon for that, and note that
+  circle/ellipse outlines do not represent rotation/shear of the ring.
+- The legacy raylib-backed overwrite primitives (`grl_image_draw_pixel` /
+  `_line` / `_circle` / `_rectangle`) and the gradient fills ignore the
+  transform. The default transform is the identity, so output is byte-identical
+  unless you set a transform.
+- The stack depth is capped at 256; pushing past it or popping an empty stack
+  warns and is a no-op.
+
 ### Drawing Text on Images
 
 ```c

@@ -400,6 +400,36 @@ GRL_AVAILABLE_IN_ALL
 GrlImageColorSpace  grl_image_get_blend_color_space (GrlImage           *self);
 
 GRL_AVAILABLE_IN_ALL
+void                grl_image_push_matrix       (GrlImage           *self);
+
+GRL_AVAILABLE_IN_ALL
+void                grl_image_pop_matrix        (GrlImage           *self);
+
+GRL_AVAILABLE_IN_ALL
+void                grl_image_reset_matrix      (GrlImage           *self);
+
+GRL_AVAILABLE_IN_ALL
+void                grl_image_translate         (GrlImage           *self,
+                                                 gfloat              x,
+                                                 gfloat              y);
+
+GRL_AVAILABLE_IN_ALL
+void                grl_image_scale             (GrlImage           *self,
+                                                 gfloat              sx,
+                                                 gfloat              sy);
+
+GRL_AVAILABLE_IN_ALL
+void                grl_image_rotate_matrix     (GrlImage           *self,
+                                                 gfloat              radians);
+
+GRL_AVAILABLE_IN_ALL
+void                grl_image_set_matrix        (GrlImage           *self,
+                                                 const GrlMatrix    *matrix);
+
+GRL_AVAILABLE_IN_ALL
+GrlMatrix *         grl_image_get_matrix        (GrlImage           *self);
+
+GRL_AVAILABLE_IN_ALL
 void                grl_image_set_clip_rect     (GrlImage           *self,
                                                  const GrlRectangle *clip);
 
