@@ -58,6 +58,7 @@ struct _GrlImage
     gint              clip_w;
     gint              clip_h;
     gboolean          antialias;     /* default FALSE */
+    GrlImageColorSpace blend_space;  /* default GRL_IMAGE_COLOR_SPACE_GAMMA */
 };
 
 G_DEFINE_TYPE (GrlImage, grl_image, G_TYPE_OBJECT)
@@ -104,11 +105,161 @@ typedef struct
 {
     Image            *img;
     GrlImageBlendMode mode;        /* effective mode (REPLACE if blending unsupported) */
+    GrlImageColorSpace space;      /* effective blend colour space (GAMMA unless rgba)  */
     gboolean          rgba;        /* TRUE if R8G8B8A8 (inline fast path available)     */
     gboolean          antialias;   /* AA enabled (requires rgba)                        */
     gint              cx0, cy0;     /* clip box, half-open: [cx0, cx1) x [cy0, cy1)      */
     gint              cx1, cy1;
 } GrlDrawCtx;
+
+/*
+ * sRGB <-> linear-light conversion for colour-correct compositing.
+ *
+ * grl_srgb_to_linear_lut decodes an 8-bit sRGB channel to a linear float in
+ * [0, 1]; grl_linear_to_srgb_lut encodes a linear value (quantised to 4096
+ * buckets to avoid banding) back to an 8-bit sRGB channel. Both are built once
+ * via grl_image_blend_luts_init() the first time a LINEAR draw is set up.
+ */
+static gfloat grl_srgb_to_linear_lut[256];
+static guint8 grl_linear_to_srgb_lut[4096];
+
+static gfloat
+grl_srgb_decode (gfloat c)
+{
+    if (c <= 0.04045f)
+        return c / 12.92f;
+    return powf ((c + 0.055f) / 1.055f, 2.4f);
+}
+
+static gfloat
+grl_srgb_encode (gfloat c)
+{
+    if (c <= 0.0031308f)
+        return c * 12.92f;
+    return 1.055f * powf (c, 1.0f / 2.4f) - 0.055f;
+}
+
+static void
+grl_image_blend_luts_init (void)
+{
+    static volatile gsize once = 0;
+
+    if (g_once_init_enter (&once))
+    {
+        gint i;
+
+        for (i = 0; i < 256; i++)
+            grl_srgb_to_linear_lut[i] = grl_srgb_decode ((gfloat)i / 255.0f);
+
+        for (i = 0; i < 4096; i++)
+        {
+            gfloat e = grl_srgb_encode ((gfloat)i / 4095.0f) * 255.0f + 0.5f;
+
+            if (e < 0.0f) e = 0.0f;
+            if (e > 255.0f) e = 255.0f;
+            grl_linear_to_srgb_lut[i] = (guint8)e;
+        }
+
+        g_once_init_leave (&once, 1);
+    }
+}
+
+/* Encode a linear-light channel value in [0, 1] to an 8-bit sRGB byte. */
+static guint8
+grl_lin_to_srgb_byte (gfloat lin)
+{
+    gint idx;
+
+    if (lin <= 0.0f)
+        return 0;
+    if (lin >= 1.0f)
+        return 255;
+
+    idx = (gint)(lin * 4095.0f + 0.5f);
+    return grl_linear_to_srgb_lut[idx];
+}
+
+/*
+ * Composite one already-clipped, coverage-folded pixel in linear light.
+ * @p points at the destination R8G8B8A8 pixel and @sa is the (coverage-folded)
+ * source alpha. Only the true blending modes reach here; REPLACE and opaque
+ * OVER are short-circuited by the fast paths in grl_image_plot(). Alpha is a
+ * coverage value and is composited unchanged (it is never gamma-transformed).
+ */
+static void
+grl_image_plot_linear (const GrlDrawCtx *ctx,
+                       guint8           *p,
+                       Color             c,
+                       guint             sa)
+{
+    gfloat sr = grl_srgb_to_linear_lut[c.r];
+    gfloat sg = grl_srgb_to_linear_lut[c.g];
+    gfloat sb = grl_srgb_to_linear_lut[c.b];
+    gfloat dr = grl_srgb_to_linear_lut[p[0]];
+    gfloat dg = grl_srgb_to_linear_lut[p[1]];
+    gfloat db = grl_srgb_to_linear_lut[p[2]];
+    gfloat saf = (gfloat)sa / 255.0f;
+    guint  da = p[3];
+    gfloat daf = (gfloat)da / 255.0f;
+
+    switch (ctx->mode)
+    {
+    case GRL_IMAGE_BLEND_OVER:
+        {
+            gfloat iaf = 1.0f - saf;
+            gfloat oaf = saf + daf * iaf;
+
+            if (oaf <= 0.0f)
+            {
+                p[0] = p[1] = p[2] = p[3] = 0;
+            }
+            else
+            {
+                p[0] = grl_lin_to_srgb_byte ((sr * saf + dr * daf * iaf) / oaf);
+                p[1] = grl_lin_to_srgb_byte ((sg * saf + dg * daf * iaf) / oaf);
+                p[2] = grl_lin_to_srgb_byte ((sb * saf + db * daf * iaf) / oaf);
+                p[3] = (guint8)(oaf * 255.0f + 0.5f);
+            }
+        }
+        break;
+
+    case GRL_IMAGE_BLEND_ADD:
+        {
+            guint a = da + sa;
+
+            p[0] = grl_lin_to_srgb_byte (dr + sr * saf);
+            p[1] = grl_lin_to_srgb_byte (dg + sg * saf);
+            p[2] = grl_lin_to_srgb_byte (db + sb * saf);
+            p[3] = (guint8)(a > 255u ? 255u : a);
+        }
+        break;
+
+    case GRL_IMAGE_BLEND_MULTIPLY:
+        {
+            gfloat iaf = 1.0f - saf;
+
+            p[0] = grl_lin_to_srgb_byte (dr * sr * saf + dr * iaf);
+            p[1] = grl_lin_to_srgb_byte (dg * sg * saf + dg * iaf);
+            p[2] = grl_lin_to_srgb_byte (db * sb * saf + db * iaf);
+        }
+        break;
+
+    case GRL_IMAGE_BLEND_SUBTRACT:
+        {
+            gfloat orr = dr - sr * saf;
+            gfloat og  = dg - sg * saf;
+            gfloat ob  = db - sb * saf;
+
+            p[0] = grl_lin_to_srgb_byte (orr < 0.0f ? 0.0f : orr);
+            p[1] = grl_lin_to_srgb_byte (og < 0.0f ? 0.0f : og);
+            p[2] = grl_lin_to_srgb_byte (ob < 0.0f ? 0.0f : ob);
+        }
+        break;
+
+    default:
+        break;
+    }
+}
 
 static void
 grl_image_draw_ctx_init (GrlImage   *self,
@@ -122,6 +273,12 @@ grl_image_draw_ctx_init (GrlImage   *self,
     if (!ctx->rgba && ctx->mode != GRL_IMAGE_BLEND_REPLACE)
         ctx->mode = GRL_IMAGE_BLEND_REPLACE;
     ctx->antialias = (self->antialias && ctx->rgba);
+
+    /* Linear-light blending also needs an RGBA buffer; it never affects
+     * REPLACE (the fast path overwrites without any colour math). */
+    ctx->space = ctx->rgba ? self->blend_space : GRL_IMAGE_COLOR_SPACE_GAMMA;
+    if (ctx->space == GRL_IMAGE_COLOR_SPACE_LINEAR)
+        grl_image_blend_luts_init ();
 
     ctx->cx0 = 0;
     ctx->cy0 = 0;
@@ -172,6 +329,14 @@ grl_image_plot (const GrlDrawCtx *ctx,
     /* Blended path: R8G8B8A8 guaranteed here (mode forced to REPLACE otherwise). */
     p = (guint8 *)ctx->img->data + ((gsize)y * ctx->img->width + x) * 4;
     sa = c.a;
+
+    /* Linear-light compositing: decode to linear, blend, re-encode to sRGB.
+     * Fixes AA-edge darkening and hue shift at partial coverage. */
+    if (ctx->space == GRL_IMAGE_COLOR_SPACE_LINEAR)
+    {
+        grl_image_plot_linear (ctx, p, c, sa);
+        return;
+    }
 
     switch (ctx->mode)
     {
@@ -440,6 +605,7 @@ grl_image_init (GrlImage *self)
     self->clip_w = 0;
     self->clip_h = 0;
     self->antialias = FALSE;
+    self->blend_space = GRL_IMAGE_COLOR_SPACE_GAMMA;
 }
 
 /*
@@ -2915,6 +3081,49 @@ grl_image_get_blend_mode (GrlImage *self)
     g_return_val_if_fail (GRL_IS_IMAGE (self), GRL_IMAGE_BLEND_REPLACE);
 
     return self->blend_mode;
+}
+
+/**
+ * grl_image_set_blend_color_space:
+ * @self: A #GrlImage.
+ * @space: The #GrlImageColorSpace to composite in.
+ *
+ * Sets the colour space used for blended drawing onto @self.
+ *
+ * The default is %GRL_IMAGE_COLOR_SPACE_GAMMA, which blends directly on 8-bit
+ * sRGB values and is byte-for-byte identical to the historical behaviour.
+ * %GRL_IMAGE_COLOR_SPACE_LINEAR decodes pixels to linear light before blending
+ * and re-encodes afterwards, so anti-aliased edges and
+ * %GRL_IMAGE_BLEND_OVER / _ADD / _MULTIPLY / _SUBTRACT no longer darken or
+ * shift hue at partial coverage.
+ *
+ * Linear blending requires an %GRL_PIXELFORMAT_UNCOMPRESSED_R8G8B8A8 image; on
+ * any other format the draw silently falls back to gamma blending. The colour
+ * space never affects %GRL_IMAGE_BLEND_REPLACE, which always overwrites.
+ */
+void
+grl_image_set_blend_color_space (GrlImage           *self,
+                                 GrlImageColorSpace  space)
+{
+    g_return_if_fail (GRL_IS_IMAGE (self));
+
+    self->blend_space = space;
+}
+
+/**
+ * grl_image_get_blend_color_space:
+ * @self: A #GrlImage.
+ *
+ * Gets the colour space used for blended drawing.
+ *
+ * Returns: The current #GrlImageColorSpace.
+ */
+GrlImageColorSpace
+grl_image_get_blend_color_space (GrlImage *self)
+{
+    g_return_val_if_fail (GRL_IS_IMAGE (self), GRL_IMAGE_COLOR_SPACE_GAMMA);
+
+    return self->blend_space;
 }
 
 /**

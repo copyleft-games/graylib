@@ -681,6 +681,107 @@ test_gif_frame_resize_and_count (void)
     g_unlink (path);
 }
 
+/*
+ * Linear-light blending (GrlImageColorSpace)
+ */
+
+static void
+test_color_space_default_and_roundtrip (void)
+{
+    g_autoptr(GrlColor) bg = grl_color_new (0, 0, 0, 255);
+    g_autoptr(GrlImage) img = grl_image_new_color (8, 8, bg);
+
+    /* Default is gamma (byte-compatible). */
+    g_assert_cmpint (grl_image_get_blend_color_space (img), ==,
+                     GRL_IMAGE_COLOR_SPACE_GAMMA);
+
+    grl_image_set_blend_color_space (img, GRL_IMAGE_COLOR_SPACE_LINEAR);
+    g_assert_cmpint (grl_image_get_blend_color_space (img), ==,
+                     GRL_IMAGE_COLOR_SPACE_LINEAR);
+
+    grl_image_set_blend_color_space (img, GRL_IMAGE_COLOR_SPACE_GAMMA);
+    g_assert_cmpint (grl_image_get_blend_color_space (img), ==,
+                     GRL_IMAGE_COLOR_SPACE_GAMMA);
+}
+
+static void
+test_color_space_gamma_byte_identical (void)
+{
+    g_autoptr(GrlColor) bg = grl_color_new (0, 0, 0, 255);
+    g_autoptr(GrlColor) white = grl_color_new (255, 255, 255, 128);
+    g_autoptr(GrlImage) img = grl_image_new_color (8, 8, bg);
+
+    /* Explicitly selecting GAMMA must match the historical OVER result:
+     * white(a=128) over opaque black -> straight-alpha ramp = 128. The
+     * blend-aware primitives (ellipse) route through the software raster core. */
+    grl_image_set_blend_color_space (img, GRL_IMAGE_COLOR_SPACE_GAMMA);
+    grl_image_set_blend_mode (img, GRL_IMAGE_BLEND_OVER);
+    grl_image_draw_ellipse (img, 4, 4, 4, 4, white);
+    assert_pixel (img, 4, 4, 128, 128, 128, 255, 1);
+}
+
+static void
+test_color_space_linear_fixes_darkening (void)
+{
+    g_autoptr(GrlColor) bg = grl_color_new (0, 0, 0, 255);
+    g_autoptr(GrlColor) white = grl_color_new (255, 255, 255, 128);
+    g_autoptr(GrlImage) img = grl_image_new_color (8, 8, bg);
+
+    /* The headline fix: white(a=128) OVER opaque black composited in linear
+     * light is perceptually ~50% grey (sRGB ~188), not the too-dark 128 that
+     * straight-sRGB blending produces. */
+    grl_image_set_blend_color_space (img, GRL_IMAGE_COLOR_SPACE_LINEAR);
+    grl_image_set_blend_mode (img, GRL_IMAGE_BLEND_OVER);
+    grl_image_draw_ellipse (img, 4, 4, 4, 4, white);
+    assert_pixel (img, 4, 4, 188, 188, 188, 255, 2);
+}
+
+static void
+test_color_space_linear_keeps_replace_identical (void)
+{
+    g_autoptr(GrlColor) bg = grl_color_new (255, 255, 255, 255);
+    g_autoptr(GrlColor) c = grl_color_new (10, 20, 30, 128);
+    g_autoptr(GrlImage) img = grl_image_new_color (8, 8, bg);
+
+    /* LINEAR must never touch REPLACE: the pixel is overwritten exactly even
+     * though we draw through the blend-aware primitive. */
+    grl_image_set_blend_color_space (img, GRL_IMAGE_COLOR_SPACE_LINEAR);
+    grl_image_draw_ellipse (img, 4, 4, 4, 4, c);  /* default mode REPLACE */
+    assert_pixel (img, 4, 4, 10, 20, 30, 128, 0);
+}
+
+static void
+test_color_space_linear_roundtrip_lut (void)
+{
+    g_autoptr(GrlColor) bg = grl_color_new (60, 130, 200, 255);
+    g_autoptr(GrlColor) black = grl_color_new (0, 0, 0, 255);
+    g_autoptr(GrlImage) img = grl_image_new_color (8, 8, bg);
+
+    /* ADD of opaque black adds zero, so the result exercises the
+     * sRGB->linear->sRGB round-trip and must return the original within the
+     * LUT's quantisation error. */
+    grl_image_set_blend_color_space (img, GRL_IMAGE_COLOR_SPACE_LINEAR);
+    grl_image_set_blend_mode (img, GRL_IMAGE_BLEND_ADD);
+    grl_image_draw_ellipse (img, 4, 4, 4, 4, black);
+    assert_pixel (img, 4, 4, 60, 130, 200, 255, 2);
+}
+
+static void
+test_color_space_linear_non_rgba_falls_back (void)
+{
+    g_autoptr(GrlColor) bg = grl_color_new (0, 0, 0, 255);
+    g_autoptr(GrlColor) white = grl_color_new (255, 255, 255, 128);
+    g_autoptr(GrlImage) img = grl_image_new_color (8, 8, bg);
+
+    /* Non-RGBA images cannot blend at all, so LINEAR+OVER degrades to REPLACE
+     * (no crash, no colour-space math). */
+    grl_image_set_format (img, GRL_PIXELFORMAT_UNCOMPRESSED_R8G8B8);
+    grl_image_set_blend_color_space (img, GRL_IMAGE_COLOR_SPACE_LINEAR);
+    grl_image_set_blend_mode (img, GRL_IMAGE_BLEND_OVER);
+    grl_image_draw_ellipse (img, 4, 4, 4, 4, white);
+    assert_pixel (img, 4, 4, 255, 255, 255, 255, 1);
+}
+
 int
 main (int   argc,
       char *argv[])
@@ -698,6 +799,13 @@ main (int   argc,
     g_test_add_func ("/image-draw/blend/transparent-noop", test_blend_transparent_noop);
     g_test_add_func ("/image-draw/blend/over-onto-transparent", test_blend_over_onto_transparent);
     g_test_add_func ("/image-draw/blend/requires-rgba", test_blend_requires_rgba);
+
+    g_test_add_func ("/image-draw/color-space/default-roundtrip", test_color_space_default_and_roundtrip);
+    g_test_add_func ("/image-draw/color-space/gamma-byte-identical", test_color_space_gamma_byte_identical);
+    g_test_add_func ("/image-draw/color-space/linear-fixes-darkening", test_color_space_linear_fixes_darkening);
+    g_test_add_func ("/image-draw/color-space/linear-keeps-replace", test_color_space_linear_keeps_replace_identical);
+    g_test_add_func ("/image-draw/color-space/linear-roundtrip-lut", test_color_space_linear_roundtrip_lut);
+    g_test_add_func ("/image-draw/color-space/linear-non-rgba-fallback", test_color_space_linear_non_rgba_falls_back);
 
     g_test_add_func ("/image-draw/clip-rect", test_clip_rect);
     g_test_add_func ("/image-draw/clip-cleared", test_clip_cleared);

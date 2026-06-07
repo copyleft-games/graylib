@@ -355,6 +355,33 @@ grl_image_draw_gradient_radial (img, cx, cy, r, hot, edge);
 grl_image_set_blend_mode (img, GRL_IMAGE_BLEND_REPLACE);  /* Reset to default */
 ```
 
+### GrlImageColorSpace
+
+Colour space in which `grl_image_draw_*` compositing math is performed, set per
+image with `grl_image_set_blend_color_space()`. Controls only the *blended*
+modes; `GRL_IMAGE_BLEND_REPLACE` always overwrites and is unaffected.
+
+```c
+typedef enum
+{
+    GRL_IMAGE_COLOR_SPACE_GAMMA = 0,
+    GRL_IMAGE_COLOR_SPACE_LINEAR
+} GrlImageColorSpace;
+```
+
+| Value | Description |
+|-------|-------------|
+| `GRL_IMAGE_COLOR_SPACE_GAMMA` | Blend directly on 8-bit sRGB values (default; byte-for-byte identical to legacy behaviour) |
+| `GRL_IMAGE_COLOR_SPACE_LINEAR` | Decode sRGB→linear, blend, re-encode; physically-correct edges that do not darken or shift hue at partial coverage. Requires an `R8G8B8A8` image (falls back to gamma otherwise) |
+
+**Usage:**
+```c
+grl_image_set_blend_color_space (img, GRL_IMAGE_COLOR_SPACE_LINEAR);
+grl_image_set_blend_mode (img, GRL_IMAGE_BLEND_OVER);
+/* ...anti-aliased / alpha-blended draws now composite in linear light... */
+grl_image_set_blend_color_space (img, GRL_IMAGE_COLOR_SPACE_GAMMA);  /* default */
+```
+
 ### GrlGradientAxis
 
 Interpolation axis for `grl_image_draw_gradient_rect()`.

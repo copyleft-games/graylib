@@ -566,6 +566,36 @@ GType grl_image_blend_mode_get_type (void) G_GNUC_CONST;
 #define GRL_TYPE_IMAGE_BLEND_MODE (grl_image_blend_mode_get_type ())
 
 /**
+ * GrlImageColorSpace:
+ * @GRL_IMAGE_COLOR_SPACE_GAMMA: Blend directly on 8-bit sRGB values (default;
+ *   byte-for-byte identical to legacy behaviour).
+ * @GRL_IMAGE_COLOR_SPACE_LINEAR: Decode sRGB to linear light, blend, then
+ *   re-encode to sRGB. Produces physically-correct anti-aliased edges and
+ *   %GRL_IMAGE_BLEND_OVER / _ADD / _MULTIPLY / _SUBTRACT results that do not
+ *   darken or shift hue at partial coverage.
+ *
+ * Selects the colour space in which #GrlImage compositing math is performed for
+ * the blended drawing primitives. This is set per-image with
+ * grl_image_set_blend_color_space().
+ *
+ * The default, %GRL_IMAGE_COLOR_SPACE_GAMMA, matches the historical behaviour
+ * exactly. %GRL_IMAGE_COLOR_SPACE_LINEAR requires an
+ * %GRL_PIXELFORMAT_UNCOMPRESSED_R8G8B8A8 image (it needs to read the
+ * destination back); on any other format the draw silently falls back to gamma
+ * blending. It never affects %GRL_IMAGE_BLEND_REPLACE, which always overwrites
+ * and is unconditionally byte-identical.
+ */
+typedef enum
+{
+    GRL_IMAGE_COLOR_SPACE_GAMMA = 0,
+    GRL_IMAGE_COLOR_SPACE_LINEAR
+} GrlImageColorSpace;
+
+GRL_AVAILABLE_IN_ALL
+GType grl_image_color_space_get_type (void) G_GNUC_CONST;
+#define GRL_TYPE_IMAGE_COLOR_SPACE (grl_image_color_space_get_type ())
+
+/**
  * GrlGradientAxis:
  * @GRL_GRADIENT_AXIS_HORIZONTAL: Interpolate left-to-right (along X)
  * @GRL_GRADIENT_AXIS_VERTICAL: Interpolate top-to-bottom (along Y)

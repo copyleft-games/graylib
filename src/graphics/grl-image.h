@@ -393,6 +393,13 @@ GRL_AVAILABLE_IN_ALL
 GrlImageBlendMode   grl_image_get_blend_mode    (GrlImage           *self);
 
 GRL_AVAILABLE_IN_ALL
+void                grl_image_set_blend_color_space (GrlImage           *self,
+                                                     GrlImageColorSpace  space);
+
+GRL_AVAILABLE_IN_ALL
+GrlImageColorSpace  grl_image_get_blend_color_space (GrlImage           *self);
+
+GRL_AVAILABLE_IN_ALL
 void                grl_image_set_clip_rect     (GrlImage           *self,
                                                  const GrlRectangle *clip);
 

@@ -379,6 +379,28 @@ grl_image_blend_mode_get_type (void)
 }
 
 /*
+ * GrlImageColorSpace
+ */
+GType
+grl_image_color_space_get_type (void)
+{
+    static volatile gsize g_define_type_id__volatile = 0;
+
+    if (g_once_init_enter (&g_define_type_id__volatile))
+    {
+        static const GEnumValue values[] = {
+            { GRL_IMAGE_COLOR_SPACE_GAMMA, "GRL_IMAGE_COLOR_SPACE_GAMMA", "gamma" },
+            { GRL_IMAGE_COLOR_SPACE_LINEAR, "GRL_IMAGE_COLOR_SPACE_LINEAR", "linear" },
+            { 0, NULL, NULL }
+        };
+        GType g_define_type_id = g_enum_register_static ("GrlImageColorSpace", values);
+        g_once_init_leave (&g_define_type_id__volatile, g_define_type_id);
+    }
+
+    return g_define_type_id__volatile;
+}
+
+/*
  * GrlGradientAxis
  */
 GType

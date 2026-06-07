@@ -195,6 +195,38 @@ grl_image_draw_gradient_radial (img, cx, cy, radius, hot, edge);
 grl_image_set_blend_mode (img, GRL_IMAGE_BLEND_REPLACE);
 ```
 
+#### Linear-light (sRGB-correct) blending
+
+By default, blending math runs directly on 8-bit sRGB values
+(`GRL_IMAGE_COLOR_SPACE_GAMMA`). That is fast and historically compatible, but
+it is not physically correct: blending and anti-aliased coverage in gamma space
+makes edges look too dark and shifts hues at partial coverage (a 50%-covered
+white edge over black comes out at sRGB 128, perceptually much darker than true
+half-brightness).
+
+Switch to `GRL_IMAGE_COLOR_SPACE_LINEAR` to composite in linear light — pixels
+are decoded sRGB→linear, blended, then re-encoded — so `OVER` / `ADD` /
+`MULTIPLY` / `SUBTRACT` and anti-aliased edges look correct:
+
+```c
+/* Correct, non-darkening anti-aliased compositing. */
+grl_image_set_blend_color_space (img, GRL_IMAGE_COLOR_SPACE_LINEAR);
+grl_image_set_antialias (img, TRUE);
+grl_image_set_blend_mode (img, GRL_IMAGE_BLEND_OVER);
+grl_image_draw_text_bitmap (img, "Crisp", 8, 8, 16, white);
+
+grl_image_set_blend_color_space (img, GRL_IMAGE_COLOR_SPACE_GAMMA); /* restore */
+```
+
+That same white(α=128)-over-black draw now resolves to sRGB ≈ 188 — perceptual
+half-brightness — instead of 128.
+
+Linear blending requires an `R8G8B8A8` image (it reads the destination back); on
+any other format the draw silently falls back to gamma blending. It never
+affects `GRL_IMAGE_BLEND_REPLACE`, which always overwrites and is unconditionally
+byte-identical. The conversion uses lookup tables, so there is no per-pixel
+`pow()` cost; only the slow (non-REPLACE, non-opaque) path pays for it at all.
+
 ### Drawing Text on Images
 
 ```c
