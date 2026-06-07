@@ -67,6 +67,12 @@ Run Python examples with:
 GI_TYPELIB_PATH=../build/gir LD_LIBRARY_PATH=../build/lib python3 basic-window.py
 ```
 
+## Tools
+
+- [Live-Reload Preview Host](tools/preview.md) - Hot-reload sketch development
+  tool; edit a C sketch and watch the canvas update without restarting. Built
+  opt-in with `make BUILD_PREVIEW=1 preview-tools` (Linux).
+
 ## License
 
 Graylib is licensed under the GNU Affero General Public License v3.0 or later.

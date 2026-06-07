@@ -61,6 +61,9 @@ BUILD_EXAMPLES ?= 1
 # Build documentation (requires gi-docgen)
 BUILD_DOCS ?= 0
 
+# Build live-reload preview tools (Linux-only; requires a display to run)
+BUILD_PREVIEW ?= 0
+
 # =============================================================================
 # Raylib Configuration
 # =============================================================================

@@ -379,6 +379,19 @@ else
 endif
 
 # =============================================================================
+# Preview Tools (live-reload host; Linux-only, opt-in)
+# =============================================================================
+
+.PHONY: preview-tools
+preview-tools: lib
+ifeq ($(BUILD_PREVIEW),1)
+	$(call print_status,"Building preview tools...")
+	$(MAKE) -C tools/preview
+else
+	$(call print_warning,"Preview tools disabled (BUILD_PREVIEW=0)")
+endif
+
+# =============================================================================
 # Documentation
 # =============================================================================
 
