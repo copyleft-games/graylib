@@ -170,6 +170,13 @@ grl_mesh_from_raylib (Mesh mesh)
 
     priv->mesh = mesh;
     priv->valid = (mesh.vertexCount > 0);
+    /* raylib's GenMesh* (and OBJ/GLTF loaders) upload the mesh to the GPU on
+     * creation, so the wrapped mesh already has a vaoId.  Record that here so a
+     * later grl_mesh_upload() becomes a no-op instead of calling UploadMesh()
+     * on an already-loaded mesh -- which makes raylib log, every time, "VAO:
+     * [ID n] Trying to re-load an already loaded mesh" (seen continuously from
+     * the icosphere/torus shapes used as editor light/camera gizmos). */
+    priv->uploaded = (mesh.vaoId > 0);
 
     return self;
 }
@@ -628,6 +635,16 @@ grl_mesh_upload (GrlMesh  *self,
 
     if (!priv->valid || priv->uploaded)
         return;
+
+    /* Defensive: never call UploadMesh() on a mesh that already has a GPU vaoId
+     * (e.g. one created by a raylib generator/loader, which uploads on create).
+     * raylib would log "Trying to re-load an already loaded mesh"; just mark it
+     * uploaded and return. */
+    if (priv->mesh.vaoId > 0)
+    {
+        priv->uploaded = TRUE;
+        return;
+    }
 
     UploadMesh (&priv->mesh, dynamic);
     priv->uploaded = TRUE;
