@@ -541,6 +541,45 @@ With `n_samples == 1` the output is identical to a single render (no blur).
 Sub-frames whose dimensions differ from the canvas are resampled
 (nearest-neighbour). `resolve()` returns `NULL` if no samples were added.
 
+## Onion-skinning & temporal AA
+
+Two higher-level helpers in `grl-image-temporal.h` sit on top of the drawing
+and accumulation primitives.
+
+### Onion-skinning (`grl_image_onion_skin`)
+
+Composites semi-transparent "ghost" frames of the previous and/or next
+animation frame onto a **current** frame in-place (OVER blending) — the standard
+visualisation in frame-by-frame animation tools.
+
+```c
+g_autoptr(GrlColor) red  = grl_color_new (255, 0,   0, 255);
+g_autoptr(GrlColor) blue = grl_color_new (0,   0, 255, 255);
+
+/* 50% red ghost of the previous frame, 30% blue ghost of the next frame. */
+grl_image_onion_skin (current, prev_frame, next_frame,
+                      0.5f, 0.3f, red, blue);
+```
+
+`@prev`/`@next` and the tints are nullable; opacity ≤ 0 skips that ghost. The
+tint's alpha is overridden by the opacity, so you can pass a pure hue. The
+function saves and restores `@current`'s blend mode. `@current` must be
+`R8G8B8A8`; on other formats it logs a debug message and returns unchanged.
+
+### Temporal AA (`grl_image_temporal_aa`)
+
+A thin helper over `GrlImageAccumulator` for jittered super-sampling: render N
+samples each with a small sub-pixel offset, then average them.
+
+```c
+/* Jitter recommendation: Halton(2,3) or a rotated grid in [-0.5, +0.5] px. */
+GrlImage *out = grl_image_temporal_aa (acc, samples, n_samples);
+```
+
+The accumulator is reset on each call (reuse it across frames). With
+`n_samples == 1` the result equals the single sample; `n_samples == 0` or a
+`NULL` accumulator returns `NULL`.
+
 ## GrlTexture
 
 GPU texture for efficient rendering. Textures are created from images or loaded directly.

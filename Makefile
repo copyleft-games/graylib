@@ -45,6 +45,7 @@ PUBLIC_HEADERS := \
 	src/graphics/grl-image.h \
 	src/graphics/grl-gif-writer.h \
 	src/graphics/grl-image-accumulator.h \
+	src/graphics/grl-image-temporal.h \
 	src/graphics/grl-texture.h \
 	src/graphics/grl-font.h \
 	src/graphics/grl-camera2d.h \
@@ -116,6 +117,7 @@ SOURCES := \
 	src/graphics/grl-gif-writer.c \
 	src/graphics/grl-gif-quantize.c \
 	src/graphics/grl-image-accumulator.c \
+	src/graphics/grl-image-temporal.c \
 	src/graphics/grl-texture.c \
 	src/graphics/grl-font.c \
 	src/graphics/grl-camera2d.c \
@@ -441,6 +443,7 @@ endif
 	$(INSTALL_DATA) src/graphics/grl-image.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
 	$(INSTALL_DATA) src/graphics/grl-gif-writer.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
 	$(INSTALL_DATA) src/graphics/grl-image-accumulator.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
+	$(INSTALL_DATA) src/graphics/grl-image-temporal.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
 	$(INSTALL_DATA) src/graphics/grl-texture.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
 	$(INSTALL_DATA) src/graphics/grl-font.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
 	$(INSTALL_DATA) src/graphics/grl-camera2d.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
@@ -618,6 +621,10 @@ $(OBJDIR)/src/graphics/grl-gif-quantize.o: src/graphics/grl-gif-quantize.c
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
 $(OBJDIR)/src/graphics/grl-image-accumulator.o: src/graphics/grl-image-accumulator.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(LIB_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/graphics/grl-image-temporal.o: src/graphics/grl-image-temporal.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
