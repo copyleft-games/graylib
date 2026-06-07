@@ -19,6 +19,10 @@
 #include <stdlib.h>
 #include <math.h>
 #include "grl-image-font-data.h"
+/* grl-path.h included after its own forward declaration; grl-types.h already
+ * declares GrlPath so we can use it as a pointer type in the signatures below
+ * before including the full header at the implementation site. */
+#include "grl-path.h"
 
 /**
  * SECTION:grl-image
@@ -2370,9 +2374,9 @@ grl_image_fill_poly (const GrlDrawCtx *ctx,
     }
 }
 
-/* Connected polyline of thick segments. */
+/* Connected polyline of thick segments (internal helper). */
 static void
-grl_image_stroke_path (const GrlDrawCtx *ctx,
+grl_image_stroke_runs (const GrlDrawCtx *ctx,
                        const gfloat     *xs,
                        const gfloat     *ys,
                        gint              n,
@@ -2801,7 +2805,7 @@ grl_image_draw_triangle_lines (GrlImage         *self,
         grl_image_mat_apply_array (&self->ctm, xs, ys, 3);
         half *= grl_image_mat_scale (&self->ctm);
     }
-    grl_image_stroke_path (&ctx, xs, ys, 3, TRUE, half,
+    grl_image_stroke_runs (&ctx, xs, ys, 3, TRUE, half,
                            GRL_TO_RAYLIB_COLOR (color));
 }
 
@@ -2895,7 +2899,7 @@ grl_image_draw_polyline (GrlImage         *self,
         grl_image_mat_apply_array (&self->ctm, xs, ys, point_count);
         half *= grl_image_mat_scale (&self->ctm);
     }
-    grl_image_stroke_path (&ctx, xs, ys, point_count, closed, half,
+    grl_image_stroke_runs (&ctx, xs, ys, point_count, closed, half,
                            GRL_TO_RAYLIB_COLOR (color));
 
     g_free (xs);
@@ -2967,7 +2971,7 @@ grl_image_draw_bezier (GrlImage         *self,
         grl_image_mat_apply_array (&self->ctm, xs, ys, segments + 1);
         half *= grl_image_mat_scale (&self->ctm);
     }
-    grl_image_stroke_path (&ctx, xs, ys, segments + 1, FALSE, half,
+    grl_image_stroke_runs (&ctx, xs, ys, segments + 1, FALSE, half,
                            GRL_TO_RAYLIB_COLOR (color));
 
     g_free (xs);
@@ -4440,4 +4444,502 @@ grl_image_get_handle (GrlImage *self)
     g_return_val_if_fail (GRL_IS_IMAGE (self), NULL);
 
     return &self->handle;
+}
+
+/*
+ * =============================================================================
+ * Winding-aware scanline fill (grl_image_fill_edges) — internal
+ * =============================================================================
+ *
+ * Fills a multi-subpath polygon (all subpaths implicitly closed for fill)
+ * using the specified winding rule.
+ *
+ * Edge table:
+ *   - Each non-horizontal edge contributes one record: ymin, ymax,
+ *     x-at-ymin, slope (dx/dy), winding sign (+1 upward / -1 downward).
+ *   - For each scanline row within [clip.cy0, clip.cy1), edges active at
+ *     that row are collected, sorted by x, and spans are emitted according
+ *     to the fill rule.
+ *
+ * Anti-aliasing:
+ *   When ctx->antialias, we supersample with 4 vertical sub-rows per pixel
+ *   (at y + 1/8, 3/8, 5/8, 7/8). Each sub-row emits fractional spans whose
+ *   partial-pixel coverage at the edges is computed from the sub-pixel x
+ *   positions of the edge crossings. Coverage is accumulated per pixel and
+ *   one grl_image_plot() call is made per covered pixel.
+ *
+ *   When antialias is off, whole-pixel spans are emitted via grl_image_span().
+ * =============================================================================
+ */
+
+typedef struct
+{
+    gfloat ymin;
+    gfloat ymax;
+    gfloat x;       /* current x (starts at x-at-ymin) */
+    gfloat dxdy;    /* x increment per unit y */
+    gint   wind;    /* +1 or -1 */
+} GrlEdge;
+
+static gint
+grl_edge_compare_x (const void *pa, const void *pb)
+{
+    const GrlEdge *a = (const GrlEdge *)pa;
+    const GrlEdge *b = (const GrlEdge *)pb;
+
+    if (a->x < b->x) return -1;
+    if (a->x > b->x) return  1;
+    return 0;
+}
+
+static void
+grl_image_fill_edges (const GrlDrawCtx *ctx,
+                      const gfloat     *xs,
+                      const gfloat     *ys,
+                      const guint      *subpath_lengths,
+                      guint             n_subpaths,
+                      GrlFillRule       rule,
+                      Color             c)
+{
+    GArray *edges;
+    gfloat  miny, maxy;
+    gint    iy0, iy1, py;
+    guint   sp, off;
+
+    if (n_subpaths == 0 || xs == NULL)
+        return;
+
+    /* Build edge table */
+    edges = g_array_new (FALSE, FALSE, sizeof (GrlEdge));
+
+    miny =  1e30f;
+    maxy = -1e30f;
+
+    off = 0;
+    for (sp = 0; sp < n_subpaths; sp++)
+    {
+        guint n = subpath_lengths[sp];
+        guint i;
+
+        if (n < 2)
+        {
+            off += n;
+            continue;
+        }
+
+        for (i = 0; i < n; i++)
+        {
+            gfloat x0 = xs[off + i];
+            gfloat y0 = ys[off + i];
+            gfloat x1 = xs[off + (i + 1) % n];
+            gfloat y1 = ys[off + (i + 1) % n];
+            GrlEdge e;
+
+            if (y0 < miny) miny = y0;
+            if (y0 > maxy) maxy = y0;
+
+            /* Skip horizontal edges */
+            if (fabsf (y1 - y0) < 1e-6f)
+                continue;
+
+            if (y0 < y1)
+            {
+                e.ymin = y0;
+                e.ymax = y1;
+                e.x    = x0;
+                e.wind = 1;
+            }
+            else
+            {
+                e.ymin = y1;
+                e.ymax = y0;
+                e.x    = x1;
+                e.wind = -1;
+            }
+
+            e.dxdy = (y0 < y1) ? ((x1 - x0) / (y1 - y0)) : ((x0 - x1) / (y0 - y1));
+
+            g_array_append_val (edges, e);
+        }
+
+        off += n;
+    }
+
+    if (edges->len == 0)
+    {
+        g_array_free (edges, TRUE);
+        return;
+    }
+
+    /* Clip scanline range */
+    iy0 = (gint)floorf (miny);
+    iy1 = (gint)ceilf  (maxy);
+    if (iy0 < ctx->cy0) iy0 = ctx->cy0;
+    if (iy1 > ctx->cy1) iy1 = ctx->cy1;
+
+    if (!ctx->antialias)
+    {
+        /* Non-AA: integer scanlines, full-coverage spans. */
+        GrlEdge *active;
+        gint     n_active;
+        guint    ei;
+
+        active   = g_new (GrlEdge, edges->len);
+        n_active = 0;
+
+        for (py = iy0; py < iy1; py++)
+        {
+            gfloat fy = (gfloat)py + 0.5f;
+            gint   i;
+            gfloat prev_x;
+            gint   winding;
+            gboolean inside;
+
+            /* Add edges whose ymin <= fy < ymax */
+            for (ei = 0; ei < edges->len; ei++)
+            {
+                GrlEdge *e = &g_array_index (edges, GrlEdge, ei);
+
+                if (e->ymin <= fy && fy < e->ymax)
+                {
+                    gfloat span = fy - e->ymin;
+                    GrlEdge ae;
+                    ae = *e;
+                    ae.x = e->x + span * e->dxdy;
+                    active[n_active++] = ae;
+                }
+            }
+
+            if (n_active == 0)
+                continue;
+
+            /* Sort by x */
+            qsort (active, (gsize)n_active, sizeof (GrlEdge), grl_edge_compare_x);
+
+            /* Walk spans */
+            prev_x  = 0.0f;
+            winding = 0;
+            inside  = FALSE;
+
+            for (i = 0; i < n_active; i++)
+            {
+                gfloat cur_x = active[i].x;
+
+                if (inside)
+                    grl_image_span (ctx, py, (gint)floorf (prev_x), (gint)ceilf (cur_x), c);
+
+                winding += active[i].wind;
+
+                if (rule == GRL_FILL_RULE_NONZERO)
+                    inside = (winding != 0);
+                else
+                    inside = ((winding & 1) != 0);
+
+                prev_x = cur_x;
+            }
+
+            n_active = 0;
+        }
+
+        g_free (active);
+    }
+    else
+    {
+        /* AA: 4 sub-rows per pixel, accumulate per-pixel coverage. */
+        GrlEdge *active;
+        gint     max_width;
+        guint8  *coverage;
+        gint     n_active;
+        guint    ei;
+        gint     sub;
+
+        max_width = ctx->cx1 - ctx->cx0;
+        if (max_width <= 0)
+        {
+            g_array_free (edges, TRUE);
+            return;
+        }
+
+        active   = g_new  (GrlEdge, edges->len);
+        coverage = g_new0 (guint8, (gsize)max_width);
+        n_active = 0;
+
+        for (py = iy0; py < iy1; py++)
+        {
+            memset (coverage, 0, (gsize)max_width * sizeof (guint8));
+
+            for (sub = 0; sub < 4; sub++)
+            {
+                gfloat fy = (gfloat)py + (2.0f * (gfloat)sub + 1.0f) / 8.0f;
+                gint   winding;
+                gboolean inside;
+                gint   i;
+
+                /* Collect active edges for this sub-row */
+                n_active = 0;
+                for (ei = 0; ei < edges->len; ei++)
+                {
+                    GrlEdge *e = &g_array_index (edges, GrlEdge, ei);
+
+                    if (e->ymin <= fy && fy < e->ymax)
+                    {
+                        gfloat span = fy - e->ymin;
+                        GrlEdge ae;
+                        ae = *e;
+                        ae.x = e->x + span * e->dxdy;
+                        active[n_active++] = ae;
+                    }
+                }
+
+                if (n_active == 0)
+                    continue;
+
+                qsort (active, (gsize)n_active, sizeof (GrlEdge), grl_edge_compare_x);
+
+                winding = 0;
+                inside  = FALSE;
+
+                for (i = 0; i < n_active; i++)
+                {
+                    gfloat cur_x = active[i].x;
+
+                    if (inside)
+                    {
+                        /* Span starts at prev edge crossing, ends at cur_x.
+                         * Emit fractional coverage: 64 units per sub-row (4 sub-rows => 256 max). */
+                        gfloat prev_x = (i > 0) ? active[i - 1].x : cur_x;
+                        gint x0i = (gint)floorf (prev_x);
+                        gint x1i = (gint)ceilf  (cur_x);
+                        gint px;
+
+                        for (px = x0i; px < x1i; px++)
+                        {
+                            gfloat left  = (gfloat)px;
+                            gfloat right = (gfloat)px + 1.0f;
+                            gfloat span_left  = (prev_x > left)  ? prev_x : left;
+                            gfloat span_right = (cur_x  < right) ? cur_x  : right;
+                            gfloat frac;
+                            guint  cov;
+                            gint   cidx;
+
+                            if (span_right <= span_left)
+                                continue;
+
+                            frac = span_right - span_left;
+                            cov  = (guint)(frac * 64.0f + 0.5f);
+                            cidx = px - ctx->cx0;
+                            if (cidx >= 0 && cidx < max_width)
+                            {
+                                guint old = coverage[cidx];
+                                guint nw  = old + cov;
+                                coverage[cidx] = (guint8)(nw > 255u ? 255u : nw);
+                            }
+                        }
+                    }
+
+                    winding += active[i].wind;
+
+                    if (rule == GRL_FILL_RULE_NONZERO)
+                        inside = (winding != 0);
+                    else
+                        inside = ((winding & 1) != 0);
+                }
+            }
+
+            /* Flush coverage row */
+            {
+                gint px;
+
+                for (px = ctx->cx0; px < ctx->cx1; px++)
+                {
+                    guint cov = coverage[px - ctx->cx0];
+
+                    if (cov > 0)
+                        grl_image_plot (ctx, px, py, c, cov);
+                }
+            }
+        }
+
+        g_free (active);
+        g_free (coverage);
+    }
+
+    g_array_free (edges, TRUE);
+}
+
+/* =============================================================================
+ * Public API — GrlPath fill and stroke
+ * =============================================================================
+ */
+
+/**
+ * grl_image_fill_path:
+ * @self: A #GrlImage.
+ * @path: The #GrlPath to fill.
+ * @rule: The winding rule controlling which regions are "inside".
+ * @color: Fill color.
+ *
+ * Fills @path onto @self using the specified winding @rule. Curves are
+ * flattened to polylines before rasterization. The image's current transform,
+ * blend mode, clip rectangle, and anti-alias state are all honoured.
+ *
+ * %GRL_FILL_RULE_NONZERO fills regions where the signed winding count is
+ * non-zero; %GRL_FILL_RULE_EVEN_ODD fills regions that are crossed an odd
+ * number of times by a ray from the test point.
+ */
+void
+grl_image_fill_path (GrlImage       *self,
+                     GrlPath        *path,
+                     GrlFillRule     rule,
+                     const GrlColor *color)
+{
+    GrlDrawCtx  ctx;
+    GrlVector2 *pts;
+    guint      *lengths;
+    guint       n_subpaths, total_points;
+    gfloat     *xs, *ys;
+    guint       i;
+    gboolean    identity;
+
+    g_return_if_fail (GRL_IS_IMAGE (self));
+    g_return_if_fail (GRL_IS_PATH (path));
+    g_return_if_fail (color != NULL);
+
+    if (grl_path_is_empty (path))
+        return;
+
+    pts = grl_path_get_flattened (path, 0.25f, &lengths, &n_subpaths, &total_points);
+    if (pts == NULL || total_points == 0)
+    {
+        g_free (pts);
+        g_free (lengths);
+        return;
+    }
+
+    /* Build separate xs/ys arrays (fill_edges takes separate arrays) */
+    xs = g_new (gfloat, total_points);
+    ys = g_new (gfloat, total_points);
+
+    for (i = 0; i < total_points; i++)
+    {
+        xs[i] = pts[i].x;
+        ys[i] = pts[i].y;
+    }
+
+    g_free (pts);
+
+    /* Apply CTM */
+    grl_image_draw_ctx_init (self, &ctx);
+    identity = grl_image_mat_is_identity (&self->ctm);
+    if (!identity)
+        grl_image_mat_apply_array (&self->ctm, xs, ys, (gint)total_points);
+
+    grl_image_fill_edges (&ctx, xs, ys, lengths, n_subpaths,
+                          rule, GRL_TO_RAYLIB_COLOR (color));
+
+    g_free (xs);
+    g_free (ys);
+    g_free (lengths);
+}
+
+/**
+ * grl_image_stroke_path:
+ * @self: A #GrlImage.
+ * @path: The #GrlPath to stroke.
+ * @thickness: Stroke thickness in pixels (minimum 1).
+ * @color: Stroke color.
+ *
+ * Strokes @path onto @self with round end-caps. Each subpath is stroked
+ * independently according to its closed flag. Curves are flattened before
+ * rasterization. The image's current transform (thickness is scaled by the
+ * matrix's area-preserving scale), blend mode, clip rectangle, and anti-alias
+ * state are all honoured.
+ */
+void
+grl_image_stroke_path (GrlImage       *self,
+                       GrlPath        *path,
+                       gint            thickness,
+                       const GrlColor *color)
+{
+    GrlDrawCtx  ctx;
+    GrlVector2 *pts;
+    guint      *lengths;
+    guint       n_subpaths, total_points;
+    gfloat      half;
+    gboolean    identity;
+    guint       sp;
+    guint       off;
+
+    g_return_if_fail (GRL_IS_IMAGE (self));
+    g_return_if_fail (GRL_IS_PATH (path));
+    g_return_if_fail (color != NULL);
+
+    if (grl_path_is_empty (path))
+        return;
+
+    if (thickness < 1)
+        thickness = 1;
+
+    pts = grl_path_get_flattened (path, 0.25f, &lengths, &n_subpaths, &total_points);
+    if (pts == NULL || total_points == 0)
+    {
+        g_free (pts);
+        g_free (lengths);
+        return;
+    }
+
+    grl_image_draw_ctx_init (self, &ctx);
+    half = (gfloat)thickness * 0.5f;
+    identity = grl_image_mat_is_identity (&self->ctm);
+
+    if (!identity)
+    {
+        guint i;
+
+        for (i = 0; i < total_points; i++)
+            grl_image_mat_apply (&self->ctm, &pts[i].x, &pts[i].y);
+
+        half *= grl_image_mat_scale (&self->ctm);
+    }
+
+    off = 0;
+    for (sp = 0; sp < n_subpaths; sp++)
+    {
+        guint n = lengths[sp];
+
+        if (n >= 2)
+        {
+            gfloat *xs;
+            gfloat *ys;
+            guint   k;
+            gboolean closed;
+
+            xs = g_new (gfloat, n);
+            ys = g_new (gfloat, n);
+
+            for (k = 0; k < n; k++)
+            {
+                xs[k] = pts[off + k].x;
+                ys[k] = pts[off + k].y;
+            }
+
+            /* Determine if this subpath was closed. We check by comparing
+             * the first and last flattened points (flatten adds a closing
+             * point for closed subpaths). */
+            closed = (n >= 3 &&
+                      fabsf (xs[0] - xs[n - 1]) < 1e-4f &&
+                      fabsf (ys[0] - ys[n - 1]) < 1e-4f);
+
+            grl_image_stroke_runs (&ctx, xs, ys, (gint)n, closed, half,
+                                   GRL_TO_RAYLIB_COLOR (color));
+
+            g_free (xs);
+            g_free (ys);
+        }
+
+        off += n;
+    }
+
+    g_free (pts);
+    g_free (lengths);
 }

@@ -196,6 +196,19 @@ typedef struct _GrlGifWriter GrlGifWriter;
 /* Note: GrlGifWriterClass is defined by G_DECLARE_FINAL_TYPE in grl-gif-writer.h */
 
 /**
+ * GrlPath:
+ *
+ * A retained 2D vector path for building, transforming, filling, stroking, and
+ * combining shapes. Paths are composed of one or more subpaths; each subpath
+ * is a sequence of move-to, line-to, cubic, and quadratic bezier verbs that
+ * are lazily flattened to polylines for rasterization.
+ *
+ * This is a final GObject type.
+ */
+typedef struct _GrlPath GrlPath;
+/* Note: GrlPathClass is defined by G_DECLARE_FINAL_TYPE in grl-path.h */
+
+/**
  * GrlImageAccumulator:
  *
  * A float-precision RGBA accumulation buffer for frame averaging.

@@ -1088,4 +1088,39 @@ GRL_AVAILABLE_IN_ALL
 GType grl_gif_palette_scope_get_type (void) G_GNUC_CONST;
 #define GRL_TYPE_GIF_PALETTE_SCOPE (grl_gif_palette_scope_get_type ())
 
+/*
+ * =============================================================================
+ * Vector Path Enums
+ * =============================================================================
+ */
+
+/**
+ * GrlFillRule:
+ * @GRL_FILL_RULE_NONZERO: The non-zero winding rule. A point is considered
+ *   inside the path if a ray cast from it crosses the path boundary in such a
+ *   way that the total signed winding count is non-zero. This rule fills the
+ *   interior of simple closed subpaths and, when subpaths wind in opposite
+ *   directions, leaves holes — for example, a CCW inner square inside a CW
+ *   outer square produces a donut under this rule.
+ * @GRL_FILL_RULE_EVEN_ODD: The even-odd (alternating) rule. A point is
+ *   considered inside if a ray from it crosses the path boundary an odd number
+ *   of times, regardless of crossing direction. Every other enclosed region is
+ *   treated as a hole, so self-intersecting paths produce a checkerboard-like
+ *   fill pattern.
+ *
+ * Controls which areas of a #GrlPath are considered "inside" for the purposes
+ * of filling with grl_image_fill_path(). The two rules produce identical
+ * results for simple (non-self-intersecting) paths with a single subpath, but
+ * differ on paths with holes, multiple subpaths, or self-intersections.
+ */
+typedef enum
+{
+    GRL_FILL_RULE_NONZERO  = 0,
+    GRL_FILL_RULE_EVEN_ODD
+} GrlFillRule;
+
+GRL_AVAILABLE_IN_ALL
+GType grl_fill_rule_get_type (void) G_GNUC_CONST;
+#define GRL_TYPE_FILL_RULE (grl_fill_rule_get_type ())
+
 G_END_DECLS

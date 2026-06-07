@@ -878,3 +878,25 @@ grl_gif_palette_scope_get_type (void)
 
     return g_define_type_id__volatile;
 }
+
+/*
+ * GrlFillRule
+ */
+GType
+grl_fill_rule_get_type (void)
+{
+    static volatile gsize g_define_type_id__volatile = 0;
+
+    if (g_once_init_enter (&g_define_type_id__volatile))
+    {
+        static const GEnumValue values[] = {
+            { GRL_FILL_RULE_NONZERO,  "GRL_FILL_RULE_NONZERO",  "nonzero"  },
+            { GRL_FILL_RULE_EVEN_ODD, "GRL_FILL_RULE_EVEN_ODD", "even-odd" },
+            { 0, NULL, NULL }
+        };
+        GType g_define_type_id = g_enum_register_static ("GrlFillRule", values);
+        g_once_init_leave (&g_define_type_id__volatile, g_define_type_id);
+    }
+
+    return g_define_type_id__volatile;
+}

@@ -286,6 +286,26 @@ typedef enum
 
 ## Graphics
 
+### GrlFillRule
+
+Fill rule for `grl_image_fill_path`.  Controls how self-intersecting or
+nested subpaths determine the filled region.
+
+```c
+typedef enum
+{
+    GRL_FILL_RULE_NONZERO  = 0,  /* nick: "nonzero"  */
+    GRL_FILL_RULE_EVEN_ODD       /* nick: "even-odd" */
+} GrlFillRule;
+```
+
+| Value | GType nick | Description |
+|-------|------------|-------------|
+| `GRL_FILL_RULE_NONZERO` | `"nonzero"` | Fill a region if its winding count is non-zero.  Standard SVG/PDF behaviour.  A CCW inner contour inside a CW outer contour creates a hole. |
+| `GRL_FILL_RULE_EVEN_ODD` | `"even-odd"` | Fill a region if the ray-crossing count is odd (alternating inside/outside). |
+
+Used with `grl_image_fill_path (image, path, GRL_FILL_RULE_NONZERO, color)`.
+
 ### GrlBlendMode
 
 Color blending modes for rendering.

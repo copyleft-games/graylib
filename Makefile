@@ -43,6 +43,7 @@ PUBLIC_HEADERS := \
 	src/core/grl-window.h \
 	src/core/grl-input.h \
 	src/graphics/grl-image.h \
+	src/graphics/grl-path.h \
 	src/graphics/grl-gif-writer.h \
 	src/graphics/grl-image-accumulator.h \
 	src/graphics/grl-image-temporal.h \
@@ -114,6 +115,7 @@ SOURCES := \
 	src/core/grl-window.c \
 	src/core/grl-input.c \
 	src/graphics/grl-image.c \
+	src/graphics/grl-path.c \
 	src/graphics/grl-gif-writer.c \
 	src/graphics/grl-gif-quantize.c \
 	src/graphics/grl-image-accumulator.c \
@@ -454,6 +456,7 @@ endif
 	$(INSTALL_DATA) src/core/grl-window.h $(DESTDIR)$(INCLUDEDIR)/graylib/core/
 	$(INSTALL_DATA) src/core/grl-input.h $(DESTDIR)$(INCLUDEDIR)/graylib/core/
 	$(INSTALL_DATA) src/graphics/grl-image.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
+	$(INSTALL_DATA) src/graphics/grl-path.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
 	$(INSTALL_DATA) src/graphics/grl-gif-writer.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
 	$(INSTALL_DATA) src/graphics/grl-image-accumulator.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
 	$(INSTALL_DATA) src/graphics/grl-image-temporal.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
@@ -777,6 +780,11 @@ $(OBJDIR)/src/graphics/grl-png.o: src/graphics/grl-png.c
 
 # grl-image.c also uses rpng for indexed PNG functions
 $(OBJDIR)/src/graphics/grl-image.o: src/graphics/grl-image.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(RPNG_CFLAGS) -c -o $@ $<
+
+# grl-path.c includes grl-image.h which pulls in rpng path; needs C99 as well
+$(OBJDIR)/src/graphics/grl-path.o: src/graphics/grl-path.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(RPNG_CFLAGS) -c -o $@ $<
 

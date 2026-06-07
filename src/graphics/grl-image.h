@@ -618,6 +618,52 @@ void                grl_image_blur_box          (GrlImage           *self,
                                                  gint                radius);
 
 /*
+ * Vector path fill and stroke
+ */
+
+/**
+ * grl_image_fill_path:
+ * @self: A #GrlImage.
+ * @path: The #GrlPath to fill.
+ * @rule: Winding rule controlling which regions are considered "inside".
+ * @color: Fill color.
+ *
+ * Fills @path onto @self using the specified winding @rule. Curves are
+ * flattened to polylines with a tolerance of ~0.25 px before rasterization.
+ * The image's current transform, blend mode, clip rectangle, and anti-alias
+ * state are all honoured.
+ *
+ * Under %GRL_FILL_RULE_NONZERO, a region is filled if the signed winding
+ * count of any ray through it is non-zero; this correctly leaves holes in
+ * paths with oppositely-wound subpaths. Under %GRL_FILL_RULE_EVEN_ODD, a
+ * region is filled if a ray crosses the path boundary an odd number of times.
+ */
+GRL_AVAILABLE_IN_ALL
+void                grl_image_fill_path         (GrlImage           *self,
+                                                 GrlPath            *path,
+                                                 GrlFillRule         rule,
+                                                 const GrlColor     *color);
+
+/**
+ * grl_image_stroke_path:
+ * @self: A #GrlImage.
+ * @path: The #GrlPath to stroke.
+ * @thickness: Stroke thickness in pixels (minimum 1).
+ * @color: Stroke color.
+ *
+ * Strokes @path onto @self with round end-caps. Each subpath is stroked
+ * independently according to its closed flag. Curves are flattened before
+ * rasterization. The image's current transform (thickness is scaled by the
+ * matrix's area-preserving scale factor), blend mode, clip rectangle, and
+ * anti-alias state are all honoured.
+ */
+GRL_AVAILABLE_IN_ALL
+void                grl_image_stroke_path       (GrlImage           *self,
+                                                 GrlPath            *path,
+                                                 gint                thickness,
+                                                 const GrlColor     *color);
+
+/*
  * Internal - get raylib Image handle
  */
 

@@ -580,6 +580,142 @@ The accumulator is reset on each call (reuse it across frames). With
 `n_samples == 1` the result equals the single sample; `n_samples == 0` or a
 `NULL` accumulator returns `NULL`.
 
+## Vector paths (`GrlPath`)
+
+`GrlPath` is a retained 2D vector path type.  A path is built from subpaths
+using SVG-like builder verbs, then rasterized onto a `GrlImage` using
+`grl_image_fill_path` or `grl_image_stroke_path`.
+
+### Building a path
+
+```c
+g_autoptr(GrlPath) path = grl_path_new ();
+
+/* Move / line */
+grl_path_move_to (path, 10.0f, 10.0f);
+grl_path_line_to (path, 90.0f, 10.0f);
+grl_path_line_to (path, 90.0f, 90.0f);
+grl_path_line_to (path, 10.0f, 90.0f);
+grl_path_close (path);
+
+/* Cubic Bézier (two control points) */
+grl_path_move_to  (path,   0.0f,  50.0f);
+grl_path_cubic_to (path,  25.0f,   0.0f,   /* CP1 */
+                           75.0f, 100.0f,   /* CP2 */
+                          100.0f,  50.0f);  /* end */
+
+/* Quadratic Bézier (one control point) */
+grl_path_move_to (path,   0.0f, 50.0f);
+grl_path_quad_to (path,  50.0f,  0.0f,   /* CP */
+                         100.0f, 50.0f);  /* end */
+```
+
+### Shape helpers
+
+```c
+GrlRectangle rect = { 10.0f, 10.0f, 80.0f, 50.0f };
+grl_path_add_rect    (path, &rect);
+
+grl_path_add_circle  (path, cx, cy, radius);
+grl_path_add_ellipse (path, cx, cy, rx, ry);
+```
+
+### Introspection
+
+```c
+if (grl_path_is_empty (path))
+    return;
+
+guint n = grl_path_get_subpath_count (path);
+
+GrlRectangle bounds;
+if (grl_path_get_bounds (path, &bounds))
+    g_print ("%.1f × %.1f\n", bounds.width, bounds.height);
+```
+
+### Transforms
+
+All transforms are applied **in-place** to the path's control points.
+
+```c
+grl_path_translate (path, dx, dy);
+grl_path_scale     (path, sx, sy);
+grl_path_rotate    (path, degrees);   /* clockwise */
+
+/* Arbitrary affine matrix */
+GrlMatrix *m = grl_matrix_new_rotate_z (G_PI / 6.0f);
+grl_path_transform (path, m);
+grl_matrix_free (m);
+```
+
+### Flattening (to polylines)
+
+```c
+guint       n_sub, total;
+guint      *lengths;
+GrlVector2 *pts = grl_path_get_flattened (path, 0.5f /* tolerance */,
+                                           &lengths, &n_sub, &total);
+/* pts[0..lengths[0]-1]  = subpath 0 */
+/* pts[lengths[0].....]  = subpath 1, etc. */
+g_free (pts);
+g_free (lengths);
+```
+
+### Copy
+
+```c
+g_autoptr(GrlPath) copy = grl_path_copy (path);
+grl_path_translate (copy, 100.0f, 0.0f);   /* original unaffected */
+```
+
+### Filling and stroking onto `GrlImage`
+
+```c
+g_autoptr(GrlColor) red  = grl_color_new (220, 50, 50, 255);
+g_autoptr(GrlColor) blue = grl_color_new (50, 100, 220, 255);
+
+/* Fill — winding rules control how self-intersecting paths are filled */
+grl_image_fill_path (img, path, GRL_FILL_RULE_NONZERO,  red);
+grl_image_fill_path (img, path, GRL_FILL_RULE_EVEN_ODD, blue);
+
+/* Stroke — thickness in image pixels (scaled by the current CTM) */
+grl_image_stroke_path (img, path, 3, blue);
+```
+
+The image's current **blend mode**, **clip rectangle**, **anti-alias flag**, and
+**transform matrix** are all honoured by both calls.
+
+### Winding rules
+
+| Rule | Fills when… |
+|------|-------------|
+| `GRL_FILL_RULE_NONZERO` | winding count ≠ 0 (default SVG / PDF behaviour) |
+| `GRL_FILL_RULE_EVEN_ODD` | crossing count is odd (alternate fill) |
+
+A CCW inner contour inside a CW outer contour produces a "donut" hole under
+`NONZERO`; under `EVEN_ODD` any enclosed region toggles in/out.
+
+### Raster-approximate boolean operations
+
+Boolean ops rasterize both operands to a coverage mask, combine them
+pixel-by-pixel, and convert the result back to a scanline-rectangle path.
+They are approximate (precision controlled by the 4× internal raster
+resolution) but always produce a valid, fillable `GrlPath`.
+
+```c
+g_autoptr(GrlPath) a = build_shape_a ();
+g_autoptr(GrlPath) b = build_shape_b ();
+
+g_autoptr(GrlPath) u   = grl_path_union     (a, b);
+g_autoptr(GrlPath) ix  = grl_path_intersect (a, b);
+g_autoptr(GrlPath) sub = grl_path_subtract  (a, b);  /* a minus b */
+g_autoptr(GrlPath) xr  = grl_path_xor       (a, b);  /* symmetric difference */
+
+grl_image_fill_path (img, u, GRL_FILL_RULE_NONZERO, fill_color);
+```
+
+Passing an empty path as an operand is safe; e.g. `union(∅, b) ≡ b`.
+
 ## GrlTexture
 
 GPU texture for efficient rendering. Textures are created from images or loaded directly.
