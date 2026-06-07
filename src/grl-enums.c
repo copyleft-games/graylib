@@ -806,3 +806,75 @@ grl_porter_duff_op_get_type (void)
 
     return g_define_type_id__volatile;
 }
+
+/*
+ * =============================================================================
+ * GIF Writer Enums
+ * =============================================================================
+ */
+
+/*
+ * GrlGifQuantizer
+ */
+GType
+grl_gif_quantizer_get_type (void)
+{
+    static volatile gsize g_define_type_id__volatile = 0;
+
+    if (g_once_init_enter (&g_define_type_id__volatile))
+    {
+        static const GEnumValue values[] = {
+            { GRL_GIF_QUANTIZER_WEB_SAFE,   "GRL_GIF_QUANTIZER_WEB_SAFE",   "web-safe"   },
+            { GRL_GIF_QUANTIZER_MEDIAN_CUT, "GRL_GIF_QUANTIZER_MEDIAN_CUT", "median-cut" },
+            { 0, NULL, NULL }
+        };
+        GType g_define_type_id = g_enum_register_static ("GrlGifQuantizer", values);
+        g_once_init_leave (&g_define_type_id__volatile, g_define_type_id);
+    }
+
+    return g_define_type_id__volatile;
+}
+
+/*
+ * GrlGifDither
+ */
+GType
+grl_gif_dither_get_type (void)
+{
+    static volatile gsize g_define_type_id__volatile = 0;
+
+    if (g_once_init_enter (&g_define_type_id__volatile))
+    {
+        static const GEnumValue values[] = {
+            { GRL_GIF_DITHER_NONE,            "GRL_GIF_DITHER_NONE",            "none"            },
+            { GRL_GIF_DITHER_FLOYD_STEINBERG, "GRL_GIF_DITHER_FLOYD_STEINBERG", "floyd-steinberg" },
+            { 0, NULL, NULL }
+        };
+        GType g_define_type_id = g_enum_register_static ("GrlGifDither", values);
+        g_once_init_leave (&g_define_type_id__volatile, g_define_type_id);
+    }
+
+    return g_define_type_id__volatile;
+}
+
+/*
+ * GrlGifPaletteScope
+ */
+GType
+grl_gif_palette_scope_get_type (void)
+{
+    static volatile gsize g_define_type_id__volatile = 0;
+
+    if (g_once_init_enter (&g_define_type_id__volatile))
+    {
+        static const GEnumValue values[] = {
+            { GRL_GIF_PALETTE_SCOPE_GLOBAL,    "GRL_GIF_PALETTE_SCOPE_GLOBAL",    "global"    },
+            { GRL_GIF_PALETTE_SCOPE_PER_FRAME, "GRL_GIF_PALETTE_SCOPE_PER_FRAME", "per-frame" },
+            { 0, NULL, NULL }
+        };
+        GType g_define_type_id = g_enum_register_static ("GrlGifPaletteScope", values);
+        g_once_init_leave (&g_define_type_id__volatile, g_define_type_id);
+    }
+
+    return g_define_type_id__volatile;
+}

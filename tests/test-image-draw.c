@@ -1333,6 +1333,86 @@ test_composite_linear_over (void)
     assert_pixel (dst, 4, 4, 188, 188, 188, 255, 2);
 }
 
+/*
+ * Sub-pixel thin strokes (grl_image_draw_line_thin)
+ */
+
+static void
+test_line_thin_zero_noop (void)
+{
+    g_autoptr(GrlColor) black = grl_color_new (0, 0, 0, 255);
+    g_autoptr(GrlColor) white = grl_color_new (255, 255, 255, 255);
+    g_autoptr(GrlImage) img   = grl_image_new_color (8, 8, black);
+    g_autoptr(GrlVector2) a    = grl_vector2_new (0.0f, 4.0f);
+    g_autoptr(GrlVector2) b    = grl_vector2_new (8.0f, 4.0f);
+
+    /* Zero / negative thickness draws nothing. */
+    grl_image_draw_line_thin (img, a, b, 0.0f, white);
+    assert_pixel (img, 4, 4, 0, 0, 0, 255, 0);
+}
+
+static void
+test_line_thin_subpixel_attenuated (void)
+{
+    g_autoptr(GrlColor) black = grl_color_new (0, 0, 0, 255);
+    g_autoptr(GrlColor) white = grl_color_new (255, 255, 255, 255);
+    g_autoptr(GrlImage) thick = grl_image_new_color (9, 9, black);
+    g_autoptr(GrlImage) thin  = grl_image_new_color (9, 9, black);
+    g_autoptr(GrlVector2) a    = grl_vector2_new (0.0f, 4.0f);
+    g_autoptr(GrlVector2) b    = grl_vector2_new (9.0f, 4.0f);
+    g_autoptr(GrlColor) tc = NULL;
+    g_autoptr(GrlColor) nc = NULL;
+
+    /* Same horizontal line at two widths, anti-aliased, over opaque black so
+     * coverage shows up in the RGB value. A sub-1px line must be FAINTER than a
+     * 1px line at the same pixel (peak coverage scaled by the width fraction). */
+    grl_image_set_antialias (thick, TRUE);
+    grl_image_set_blend_mode (thick, GRL_IMAGE_BLEND_OVER);
+    grl_image_draw_line_thin (thick, a, b, 1.0f, white);
+
+    grl_image_set_antialias (thin, TRUE);
+    grl_image_set_blend_mode (thin, GRL_IMAGE_BLEND_OVER);
+    grl_image_draw_line_thin (thin, a, b, 0.5f, white);
+
+    tc = grl_image_get_pixel (thick, 4, 4);
+    nc = grl_image_get_pixel (thin, 4, 4);
+
+    g_assert_cmpint (tc->r, >, 0);          /* something drawn */
+    g_assert_cmpint (nc->r, >, 0);          /* sub-1px still visible */
+    g_assert_cmpint (nc->r, <, tc->r);      /* but fainter than 1px */
+}
+
+static void
+test_line_thin_subpixel_position (void)
+{
+    g_autoptr(GrlColor) black = grl_color_new (0, 0, 0, 255);
+    g_autoptr(GrlColor) white = grl_color_new (255, 255, 255, 255);
+    g_autoptr(GrlImage) lo = grl_image_new_color (9, 9, black);
+    g_autoptr(GrlImage) hi = grl_image_new_color (9, 9, black);
+    g_autoptr(GrlVector2) lo_a = grl_vector2_new (0.0f, 4.0f);
+    g_autoptr(GrlVector2) lo_b = grl_vector2_new (9.0f, 4.0f);
+    g_autoptr(GrlVector2) hi_a = grl_vector2_new (0.0f, 4.3f);
+    g_autoptr(GrlVector2) hi_b = grl_vector2_new (9.0f, 4.3f);
+    g_autoptr(GrlColor) lc = NULL;
+    g_autoptr(GrlColor) hc = NULL;
+
+    /* Two 1px AA lines whose endpoints differ by a fractional 0.3px must
+     * produce different coverage at the same pixel — proving the rasterizer
+     * honours sub-pixel endpoint positions instead of snapping to the grid. */
+    grl_image_set_antialias (lo, TRUE);
+    grl_image_set_blend_mode (lo, GRL_IMAGE_BLEND_OVER);
+    grl_image_draw_line_thin (lo, lo_a, lo_b, 1.0f, white);
+
+    grl_image_set_antialias (hi, TRUE);
+    grl_image_set_blend_mode (hi, GRL_IMAGE_BLEND_OVER);
+    grl_image_draw_line_thin (hi, hi_a, hi_b, 1.0f, white);
+
+    lc = grl_image_get_pixel (lo, 4, 4);
+    hc = grl_image_get_pixel (hi, 4, 4);
+
+    g_assert_cmpint (ABS ((gint)lc->r - (gint)hc->r), >, 20);
+}
+
 int
 main (int   argc,
       char *argv[])
@@ -1442,6 +1522,13 @@ main (int   argc,
 
     g_test_add_func ("/image-draw/composite/linear-over",
                      test_composite_linear_over);
+
+    g_test_add_func ("/image-draw/line-thin/zero-noop",
+                     test_line_thin_zero_noop);
+    g_test_add_func ("/image-draw/line-thin/subpixel-attenuated",
+                     test_line_thin_subpixel_attenuated);
+    g_test_add_func ("/image-draw/line-thin/subpixel-position",
+                     test_line_thin_subpixel_position);
 
     return g_test_run ();
 }

@@ -160,6 +160,28 @@ grl_image_draw_gradient_radial (img, cx, cy, radius, inner, outer);   /* glows /
 grl_image_flood_fill (img, x, y, color, /*tolerance*/ 0);
 ```
 
+#### Sub-pixel thin strokes
+
+`grl_image_draw_line_ex()` takes an integer thickness (minimum 1px).
+`grl_image_draw_line_thin()` takes a **fractional** thickness and positions the
+stroke with sub-pixel precision, so thin diagonals stay smooth and shift
+continuously as the endpoints move by fractions of a pixel — instead of snapping
+to the integer grid and shimmering between frames. Widths below one pixel are
+rendered as faded hairlines (the peak coverage is scaled by the requested
+fraction) rather than a hard 1px line.
+
+```c
+g_autoptr(GrlVector2) a = grl_vector2_new (1.5f, 0.0f);
+g_autoptr(GrlVector2) b = grl_vector2_new (1.5f, 64.0f);
+
+grl_image_set_antialias (img, TRUE);          /* required for sub-pixel widths */
+grl_image_draw_line_thin (img, a, b, 0.75f, color);
+```
+
+Sub-pixel widths only show up on the coverage-based (anti-aliased) path; enable
+anti-aliasing first. For thickness >= 1 this behaves exactly like
+`grl_image_draw_line_ex()`.
+
 ### Drawing State (Blend Modes, Clipping, Anti-aliasing)
 
 Per-image state controls how every `grl_image_draw_*` primitive combines with the
@@ -396,9 +418,88 @@ grl_gif_writer_close (gif, &error);
 g_object_unref (gif);
 ```
 
-> **Note:** the encoder is intentionally simple (uncompressed GIF LZW with a
-> fixed web-safe palette), trading file size for broad compatibility. The output
-> decodes in every conformant GIF reader.
+> **Note:** the encoder is intentionally simple (uncompressed GIF LZW), trading
+> file size for broad compatibility. The output decodes in every conformant GIF
+> reader.
+
+### Quantization & dithering
+
+By default `GrlGifWriter` uses a fixed 6×6×6 web-safe palette (216 colours),
+producing output byte-for-byte identical to the original encoder. For better
+colour fidelity, switch to the adaptive **median-cut** quantizer:
+
+```c
+GrlGifWriter *w = grl_gif_writer_new ("out.gif", 320, 240, 0, &err);
+
+grl_image_set... /* configure before the first frame: */
+grl_gif_writer_set_quantizer     (w, GRL_GIF_QUANTIZER_MEDIAN_CUT);
+grl_gif_writer_set_max_colors    (w, 128);
+grl_gif_writer_set_dither        (w, GRL_GIF_DITHER_FLOYD_STEINBERG);
+grl_gif_writer_set_palette_scope (w, GRL_GIF_PALETTE_SCOPE_GLOBAL);
+
+grl_gif_writer_add_frame (w, frame, 4, &err);
+grl_gif_writer_close (w, &err);
+```
+
+| Setter | Default | Notes |
+|--------|---------|-------|
+| `grl_gif_writer_set_quantizer()` | `WEB_SAFE` | `MEDIAN_CUT` for an adaptive palette |
+| `grl_gif_writer_set_max_colors()` | 256 | Clamped to [2, 256] |
+| `grl_gif_writer_set_dither()` | `NONE` | `FLOYD_STEINBERG` reduces banding on gradients |
+| `grl_gif_writer_set_palette_scope()` | `GLOBAL` | `PER_FRAME` gives each frame its own local colour table |
+| `grl_gif_writer_set_transparency()` | off, 128 | Reserves one palette slot; sets the GCE transparency flag |
+
+**Palette scope:** `GLOBAL` builds the palette from the first frame and reuses it
+(smaller files); `PER_FRAME` quantises each frame independently with a GIF Local
+Color Table (larger files, best per-frame accuracy).
+
+**Backward compatibility:** with no setters called, all defaults are in effect
+and the output is byte-for-byte identical to the previous encoder.
+
+## GrlImageAccumulator
+
+`GrlImageAccumulator` sums multiple `GrlImage` sub-frames in float precision and
+resolves the weighted average back to an 8-bit RGBA image. Typical uses:
+
+- **Motion blur** — render N evenly-spaced sub-frames of an animation and average
+  them with equal weights.
+- **Temporal anti-aliasing** — accumulate a few jittered samples per output frame.
+
+Pass `linear = TRUE` to convert sRGB samples to linear light before accumulating
+and back on resolve. Linear accumulation avoids the perceptual darkening that
+straight-gamma averaging produces (the midpoint of black and white in linear
+light resolves to sRGB ≈ 188, not 128).
+
+```c
+GrlImageAccumulator *acc = grl_image_accumulator_new (320, 240, /*linear*/ TRUE);
+g_autoptr(GrlGifWriter) gif = grl_gif_writer_new ("blur.gif", 320, 240, 0, NULL);
+gint frame, n;
+
+for (frame = 0; frame < n_frames; frame++)
+  {
+    grl_image_accumulator_reset (acc);
+
+    /* Sample the animation at sub-frame times within this frame's shutter. */
+    for (n = 0; n < n_samples; n++)
+      {
+        gdouble t = (frame + (n + 0.5) / n_samples) / (gdouble) n_frames;
+        g_autoptr(GrlImage) sub = render_sub_frame (t);
+        grl_image_accumulator_add (acc, sub, 1.0f);
+      }
+
+    {
+      g_autoptr(GrlImage) avg = grl_image_accumulator_resolve (acc);
+      grl_gif_writer_add_frame (gif, avg, 4, NULL);
+    }
+  }
+
+grl_gif_writer_close (gif, NULL);
+g_object_unref (acc);
+```
+
+With `n_samples == 1` the output is identical to a single render (no blur).
+Sub-frames whose dimensions differ from the canvas are resampled
+(nearest-neighbour). `resolve()` returns `NULL` if no samples were added.
 
 ## GrlTexture
 

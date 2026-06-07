@@ -196,6 +196,16 @@ typedef struct _GrlGifWriter GrlGifWriter;
 /* Note: GrlGifWriterClass is defined by G_DECLARE_FINAL_TYPE in grl-gif-writer.h */
 
 /**
+ * GrlImageAccumulator:
+ *
+ * A float-precision RGBA accumulation buffer for frame averaging.
+ *
+ * This is a final GObject type.
+ */
+typedef struct _GrlImageAccumulator GrlImageAccumulator;
+/* Note: GrlImageAccumulatorClass is defined by G_DECLARE_FINAL_TYPE in grl-image-accumulator.h */
+
+/**
  * GrlTexture:
  *
  * A GPU texture (pixel data in VRAM).

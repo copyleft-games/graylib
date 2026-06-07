@@ -40,7 +40,9 @@ TEST_SOURCES := \
 	test-ui-button.c \
 	test-png.c \
 	test-resource-pack.c \
-	test-image-draw.c
+	test-image-draw.c \
+	test-image-accumulator.c \
+	test-gif-quantize.c
 
 # Test executables (with output directory and platform-specific extension)
 TEST_PROGRAMS := $(addprefix $(TESTOUTDIR)/,$(patsubst %.c,%$(EXE_EXT),$(TEST_SOURCES)))

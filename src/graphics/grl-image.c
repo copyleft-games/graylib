@@ -2119,9 +2119,19 @@ grl_image_thick_segment (const GrlDrawCtx *ctx,
     gint   iy0 = (gint)floorf (MIN (y0, y1) - half - 1.0f);
     gint   iy1 = (gint)ceilf (MAX (y0, y1) + half + 1.0f);
     gint   px, py;
+    gfloat width_atten = 1.0f;
 
+    /* Sub-pixel widths: a stroke thinner than one pixel cannot be rasterized as
+     * a 1px-wide hard line without snapping. Keep the SDF half-width at the 1px
+     * floor but fade the peak coverage by the requested fraction, so a 0.5px
+     * line is a faint, sub-pixel-positioned hairline instead of a snapped 1px
+     * one. For thickness >= 1 (half >= 0.5) this is a no-op (width_atten == 1),
+     * keeping existing output byte-identical. */
     if (half < 0.5f)
+    {
+        width_atten = (half <= 0.0f) ? 0.0f : (half / 0.5f);
         half = 0.5f;
+    }
 
     for (py = iy0; py <= iy1; py++)
     {
@@ -2156,6 +2166,9 @@ grl_image_thick_segment (const GrlDrawCtx *ctx,
                     continue;
                 if (cov > 1.0f)
                     cov = 1.0f;
+                cov *= width_atten;   /* fade sub-pixel-width hairlines */
+                if (cov <= 0.0f)
+                    continue;
                 grl_image_plot (ctx, px, py, c, (guint)(cov * 255.0f + 0.5f));
             }
             else if (dist <= half)
@@ -2338,6 +2351,48 @@ grl_image_draw_line_ex (GrlImage         *self,
     grl_image_draw_ctx_init (self, &ctx);
     grl_image_thick_segment (&ctx, start->x, start->y, end->x, end->y,
                              (gfloat)thickness * 0.5f, GRL_TO_RAYLIB_COLOR (color));
+}
+
+/**
+ * grl_image_draw_line_thin:
+ * @self: A #GrlImage.
+ * @start: Start point.
+ * @end: End point.
+ * @thickness: Line thickness in pixels; may be fractional (e.g. 0.5 for a
+ *   sub-pixel hairline). Values <= 0 draw nothing.
+ * @color: Line color.
+ *
+ * Like grl_image_draw_line_ex() but accepts a fractional @thickness with
+ * sub-pixel endpoint positioning. Widths below one pixel are rendered as faded,
+ * sub-pixel-positioned hairlines (the peak coverage is scaled by the requested
+ * fraction) rather than snapping to a 1px line, so thin diagonals stay smooth
+ * and shift continuously with fractional offsets.
+ *
+ * Sub-pixel hairlines require anti-aliasing; enable it with
+ * grl_image_set_antialias() (the effect is only visible on coverage-based
+ * rendering). Honours the image's blend mode, clip rectangle and anti-alias
+ * state.
+ */
+void
+grl_image_draw_line_thin (GrlImage         *self,
+                          const GrlVector2 *start,
+                          const GrlVector2 *end,
+                          gfloat            thickness,
+                          const GrlColor   *color)
+{
+    GrlDrawCtx ctx;
+
+    g_return_if_fail (GRL_IS_IMAGE (self));
+    g_return_if_fail (start != NULL);
+    g_return_if_fail (end != NULL);
+    g_return_if_fail (color != NULL);
+
+    if (thickness <= 0.0f)
+        return;
+
+    grl_image_draw_ctx_init (self, &ctx);
+    grl_image_thick_segment (&ctx, start->x, start->y, end->x, end->y,
+                             thickness * 0.5f, GRL_TO_RAYLIB_COLOR (color));
 }
 
 /**

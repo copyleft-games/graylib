@@ -439,6 +439,34 @@ grl_image_composite (canvas, sprite, GRL_PORTER_DUFF_SRC_OVER, x, y);
 grl_image_composite (canvas, shadow, GRL_PORTER_DUFF_DST_OVER, sx, sy);
 ```
 
+### GrlGifQuantizer
+
+Palette-building strategy for `GrlGifWriter` (see `grl_image_set...` setters on
+the writer). The default is byte-for-byte compatible with the original encoder.
+
+| Value | Nick | Description |
+|-------|------|-------------|
+| `GRL_GIF_QUANTIZER_WEB_SAFE` | `"web-safe"` | Fixed 6×6×6 216-colour web-safe palette (default; byte-identical output) |
+| `GRL_GIF_QUANTIZER_MEDIAN_CUT` | `"median-cut"` | Adaptive median-cut; builds the palette from image data |
+
+### GrlGifDither
+
+Dithering mode for `GrlGifWriter`.
+
+| Value | Nick | Description |
+|-------|------|-------------|
+| `GRL_GIF_DITHER_NONE` | `"none"` | No dithering; direct nearest-colour mapping (default) |
+| `GRL_GIF_DITHER_FLOYD_STEINBERG` | `"floyd-steinberg"` | Floyd–Steinberg error diffusion; only active with `MEDIAN_CUT` |
+
+### GrlGifPaletteScope
+
+Palette scope for `GrlGifWriter` in median-cut mode.
+
+| Value | Nick | Description |
+|-------|------|-------------|
+| `GRL_GIF_PALETTE_SCOPE_GLOBAL` | `"global"` | Single palette from the first frame, shared by all frames (default) |
+| `GRL_GIF_PALETTE_SCOPE_PER_FRAME` | `"per-frame"` | Per-frame Local Color Table; each frame independently quantised |
+
 ### GrlGradientAxis
 
 Interpolation axis for `grl_image_draw_gradient_rect()`.

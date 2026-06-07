@@ -1019,4 +1019,73 @@ GRL_AVAILABLE_IN_ALL
 GType grl_rlgl_shader_type_get_type (void) G_GNUC_CONST;
 #define GRL_TYPE_RLGL_SHADER_TYPE (grl_rlgl_shader_type_get_type ())
 
+/*
+ * =============================================================================
+ * GIF Writer Enums
+ * =============================================================================
+ */
+
+/**
+ * GrlGifQuantizer:
+ * @GRL_GIF_QUANTIZER_WEB_SAFE: Fixed 6x6x6 web-safe 216-colour palette (default).
+ *   Produces byte-for-byte identical output to the original encoder.
+ * @GRL_GIF_QUANTIZER_MEDIAN_CUT: Adaptive median-cut quantizer. Builds a
+ *   palette of up to #GrlGifWriter:max-colors entries from the image data.
+ *   Supports Floyd-Steinberg dithering and transparency.
+ *
+ * Palette-building strategy for #GrlGifWriter.
+ */
+typedef enum
+{
+    GRL_GIF_QUANTIZER_WEB_SAFE  = 0,
+    GRL_GIF_QUANTIZER_MEDIAN_CUT
+} GrlGifQuantizer;
+
+GRL_AVAILABLE_IN_ALL
+GType grl_gif_quantizer_get_type (void) G_GNUC_CONST;
+#define GRL_TYPE_GIF_QUANTIZER (grl_gif_quantizer_get_type ())
+
+/**
+ * GrlGifDither:
+ * @GRL_GIF_DITHER_NONE: No dithering; each pixel maps to its nearest palette
+ *   entry. Fastest, but may show banding on smooth gradients.
+ * @GRL_GIF_DITHER_FLOYD_STEINBERG: Floyd-Steinberg error-diffusion dithering.
+ *   Diffuses quantisation error to neighbouring pixels, reducing banding at the
+ *   cost of a slight file-size increase. Only active with
+ *   %GRL_GIF_QUANTIZER_MEDIAN_CUT; ignored for %GRL_GIF_QUANTIZER_WEB_SAFE.
+ *
+ * Dithering mode for #GrlGifWriter.
+ */
+typedef enum
+{
+    GRL_GIF_DITHER_NONE            = 0,
+    GRL_GIF_DITHER_FLOYD_STEINBERG
+} GrlGifDither;
+
+GRL_AVAILABLE_IN_ALL
+GType grl_gif_dither_get_type (void) G_GNUC_CONST;
+#define GRL_TYPE_GIF_DITHER (grl_gif_dither_get_type ())
+
+/**
+ * GrlGifPaletteScope:
+ * @GRL_GIF_PALETTE_SCOPE_GLOBAL: A single palette is built from the first
+ *   frame and written as the GIF Global Color Table. All subsequent frames
+ *   share it. Smaller files; palette may not suit every frame.
+ * @GRL_GIF_PALETTE_SCOPE_PER_FRAME: A separate palette is built for each
+ *   frame and stored as a GIF Local Color Table in that frame's Image
+ *   Descriptor. Larger files; each frame is optimally quantized.
+ *   Only used with %GRL_GIF_QUANTIZER_MEDIAN_CUT.
+ *
+ * Palette scope for #GrlGifWriter when using median-cut quantization.
+ */
+typedef enum
+{
+    GRL_GIF_PALETTE_SCOPE_GLOBAL    = 0,
+    GRL_GIF_PALETTE_SCOPE_PER_FRAME
+} GrlGifPaletteScope;
+
+GRL_AVAILABLE_IN_ALL
+GType grl_gif_palette_scope_get_type (void) G_GNUC_CONST;
+#define GRL_TYPE_GIF_PALETTE_SCOPE (grl_gif_palette_scope_get_type ())
+
 G_END_DECLS

@@ -426,6 +426,13 @@ void                grl_image_draw_line_ex      (GrlImage           *self,
                                                  const GrlColor     *color);
 
 GRL_AVAILABLE_IN_ALL
+void                grl_image_draw_line_thin    (GrlImage           *self,
+                                                 const GrlVector2   *start,
+                                                 const GrlVector2   *end,
+                                                 gfloat              thickness,
+                                                 const GrlColor     *color);
+
+GRL_AVAILABLE_IN_ALL
 void                grl_image_draw_circle_lines (GrlImage           *self,
                                                  gint                center_x,
                                                  gint                center_y,
