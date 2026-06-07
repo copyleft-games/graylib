@@ -774,3 +774,35 @@ grl_rlgl_shader_type_get_type (void)
 
     return g_define_type_id__volatile;
 }
+
+/*
+ * GrlPorterDuffOp
+ */
+GType
+grl_porter_duff_op_get_type (void)
+{
+    static volatile gsize g_define_type_id__volatile = 0;
+
+    if (g_once_init_enter (&g_define_type_id__volatile))
+    {
+        static const GEnumValue values[] = {
+            { GRL_PORTER_DUFF_CLEAR,    "GRL_PORTER_DUFF_CLEAR",    "clear"    },
+            { GRL_PORTER_DUFF_SRC,      "GRL_PORTER_DUFF_SRC",      "src"      },
+            { GRL_PORTER_DUFF_DST,      "GRL_PORTER_DUFF_DST",      "dst"      },
+            { GRL_PORTER_DUFF_SRC_OVER, "GRL_PORTER_DUFF_SRC_OVER", "src-over" },
+            { GRL_PORTER_DUFF_DST_OVER, "GRL_PORTER_DUFF_DST_OVER", "dst-over" },
+            { GRL_PORTER_DUFF_SRC_IN,   "GRL_PORTER_DUFF_SRC_IN",   "src-in"   },
+            { GRL_PORTER_DUFF_DST_IN,   "GRL_PORTER_DUFF_DST_IN",   "dst-in"   },
+            { GRL_PORTER_DUFF_SRC_OUT,  "GRL_PORTER_DUFF_SRC_OUT",  "src-out"  },
+            { GRL_PORTER_DUFF_DST_OUT,  "GRL_PORTER_DUFF_DST_OUT",  "dst-out"  },
+            { GRL_PORTER_DUFF_SRC_ATOP, "GRL_PORTER_DUFF_SRC_ATOP", "src-atop" },
+            { GRL_PORTER_DUFF_DST_ATOP, "GRL_PORTER_DUFF_DST_ATOP", "dst-atop" },
+            { GRL_PORTER_DUFF_XOR,      "GRL_PORTER_DUFF_XOR",      "xor"      },
+            { 0, NULL, NULL }
+        };
+        GType g_define_type_id = g_enum_register_static ("GrlPorterDuffOp", values);
+        g_once_init_leave (&g_define_type_id__volatile, g_define_type_id);
+    }
+
+    return g_define_type_id__volatile;
+}

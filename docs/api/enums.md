@@ -382,6 +382,63 @@ grl_image_set_blend_mode (img, GRL_IMAGE_BLEND_OVER);
 grl_image_set_blend_color_space (img, GRL_IMAGE_COLOR_SPACE_GAMMA);  /* default */
 ```
 
+### GrlPorterDuffOp
+
+Porter-Duff compositing operator for `grl_image_composite()`. These are the
+twelve standard operators from the 1984 paper *Compositing Digital Images* by
+Thomas Porter and Tom Duff. The operation formula for each pixel is:
+
+> `out_premul = Fa × src_premul + Fb × dst_premul`
+> `out_alpha  = Fa × sa + Fb × da`
+
+where `sa` and `da` are the source / destination alpha values in [0, 1].
+
+```c
+typedef enum
+{
+    GRL_PORTER_DUFF_CLEAR    = 0,
+    GRL_PORTER_DUFF_SRC,
+    GRL_PORTER_DUFF_DST,
+    GRL_PORTER_DUFF_SRC_OVER,
+    GRL_PORTER_DUFF_DST_OVER,
+    GRL_PORTER_DUFF_SRC_IN,
+    GRL_PORTER_DUFF_DST_IN,
+    GRL_PORTER_DUFF_SRC_OUT,
+    GRL_PORTER_DUFF_DST_OUT,
+    GRL_PORTER_DUFF_SRC_ATOP,
+    GRL_PORTER_DUFF_DST_ATOP,
+    GRL_PORTER_DUFF_XOR
+} GrlPorterDuffOp;
+```
+
+| Operator | Fa | Fb | Description |
+|----------|----|----|-------------|
+| `GRL_PORTER_DUFF_CLEAR` | 0 | 0 | Both cleared — result is transparent black |
+| `GRL_PORTER_DUFF_SRC` | 1 | 0 | Source replaces destination |
+| `GRL_PORTER_DUFF_DST` | 0 | 1 | Destination unchanged (no-op) |
+| `GRL_PORTER_DUFF_SRC_OVER` | 1 | 1−sa | Standard alpha compositing (source over destination) |
+| `GRL_PORTER_DUFF_DST_OVER` | 1−da | 1 | Source placed *behind* destination — use for drop shadows |
+| `GRL_PORTER_DUFF_SRC_IN` | da | 0 | Source trimmed to destination's shape |
+| `GRL_PORTER_DUFF_DST_IN` | 0 | sa | Destination trimmed to source's shape |
+| `GRL_PORTER_DUFF_SRC_OUT` | 1−da | 0 | Source shown only outside destination's shape |
+| `GRL_PORTER_DUFF_DST_OUT` | 0 | 1−sa | Destination shown only outside source's shape |
+| `GRL_PORTER_DUFF_SRC_ATOP` | da | 1−sa | Source atop destination; destination visible elsewhere |
+| `GRL_PORTER_DUFF_DST_ATOP` | 1−da | sa | Destination atop source; source visible elsewhere |
+| `GRL_PORTER_DUFF_XOR` | 1−da | 1−sa | Each shows only where the other is absent |
+
+> **Alias note:** `GRL_PORTER_DUFF_DST_OVER` is called `DEST_OVER` in some
+> other APIs (e.g. the HTML Canvas 2D specification); the two names refer to
+> the identical operation.
+
+**Usage:**
+```c
+/* Composite a sprite onto a canvas */
+grl_image_composite (canvas, sprite, GRL_PORTER_DUFF_SRC_OVER, x, y);
+
+/* Place a blurred shadow behind existing content */
+grl_image_composite (canvas, shadow, GRL_PORTER_DUFF_DST_OVER, sx, sy);
+```
+
 ### GrlGradientAxis
 
 Interpolation axis for `grl_image_draw_gradient_rect()`.

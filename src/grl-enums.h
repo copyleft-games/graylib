@@ -609,6 +609,51 @@ typedef enum
     GRL_GRADIENT_AXIS_VERTICAL
 } GrlGradientAxis;
 
+/**
+ * GrlPorterDuffOp:
+ * @GRL_PORTER_DUFF_CLEAR: Both source and destination cleared (result is transparent black)
+ * @GRL_PORTER_DUFF_SRC: Source replaces destination entirely
+ * @GRL_PORTER_DUFF_DST: Destination is kept, source is ignored
+ * @GRL_PORTER_DUFF_SRC_OVER: Source composited over destination (standard alpha blending)
+ * @GRL_PORTER_DUFF_DST_OVER: Destination composited over source (source placed behind)
+ * @GRL_PORTER_DUFF_SRC_IN: Source trimmed to the destination's alpha shape
+ * @GRL_PORTER_DUFF_DST_IN: Destination trimmed to the source's alpha shape
+ * @GRL_PORTER_DUFF_SRC_OUT: Source shown only outside the destination's alpha shape
+ * @GRL_PORTER_DUFF_DST_OUT: Destination shown only outside the source's alpha shape
+ * @GRL_PORTER_DUFF_SRC_ATOP: Source shown atop destination, destination visible elsewhere
+ * @GRL_PORTER_DUFF_DST_ATOP: Destination shown atop source, source visible elsewhere
+ * @GRL_PORTER_DUFF_XOR: Each shown only where the other is absent (exclusive-or of shapes)
+ *
+ * Porter-Duff compositing operators for grl_image_composite(). These are the
+ * twelve standard operators from the original 1984 paper "Compositing Digital
+ * Images" by Thomas Porter and Tom Duff. All computation is performed on
+ * premultiplied alpha; graylib images store straight alpha and the conversion
+ * is applied internally.
+ *
+ * Note: @GRL_PORTER_DUFF_DST_OVER places the source *behind* the destination
+ * and is the key operator for drop-shadows and glows (composite the blurred
+ * shadow under the original layer with DST_OVER).
+ */
+typedef enum
+{
+    GRL_PORTER_DUFF_CLEAR    = 0,
+    GRL_PORTER_DUFF_SRC,
+    GRL_PORTER_DUFF_DST,
+    GRL_PORTER_DUFF_SRC_OVER,
+    GRL_PORTER_DUFF_DST_OVER,
+    GRL_PORTER_DUFF_SRC_IN,
+    GRL_PORTER_DUFF_DST_IN,
+    GRL_PORTER_DUFF_SRC_OUT,
+    GRL_PORTER_DUFF_DST_OUT,
+    GRL_PORTER_DUFF_SRC_ATOP,
+    GRL_PORTER_DUFF_DST_ATOP,
+    GRL_PORTER_DUFF_XOR
+} GrlPorterDuffOp;
+
+GRL_AVAILABLE_IN_ALL
+GType grl_porter_duff_op_get_type (void) G_GNUC_CONST;
+#define GRL_TYPE_PORTER_DUFF_OP (grl_porter_duff_op_get_type ())
+
 GRL_AVAILABLE_IN_ALL
 GType grl_gradient_axis_get_type (void) G_GNUC_CONST;
 #define GRL_TYPE_GRADIENT_AXIS (grl_gradient_axis_get_type ())

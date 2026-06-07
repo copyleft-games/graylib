@@ -227,6 +227,117 @@ affects `GRL_IMAGE_BLEND_REPLACE`, which always overwrites and is unconditionall
 byte-identical. The conversion uses lookup tables, so there is no per-pixel
 `pow()` cost; only the slow (non-REPLACE, non-opaque) path pays for it at all.
 
+#### Compositing (Porter-Duff)
+
+`grl_image_composite()` applies one of the twelve standard Porter-Duff operators
+from the original 1984 paper to composite a source image onto a destination at a
+given pixel offset. All math is performed on **premultiplied alpha** (graylib
+images store straight alpha and the conversion is applied internally). The
+result is stored back as straight alpha.
+
+```c
+/* Composite a semi-transparent sprite over a background */
+grl_image_composite (background, sprite, GRL_PORTER_DUFF_SRC_OVER, x, y);
+```
+
+**Contract:**
+- Both images must be `R8G8B8A8`; if either is not, the call returns silently (no crash).
+- Pixels of `self` that lie outside the mapped area of `src` are left **unchanged**.
+- `self`'s clip rectangle is honoured.
+- If `self`'s blend colour space is `GRL_IMAGE_COLOR_SPACE_LINEAR`, compositing
+  is performed in linear light using the sRGB LUTs.
+
+**Operator quick reference** (`sa` = source alpha, `da` = destination alpha):
+
+| Operator | Fa | Fb | Effect |
+|----------|----|----|--------|
+| `CLEAR` | 0 | 0 | Transparent black everywhere |
+| `SRC` | 1 | 0 | Source replaces destination |
+| `DST` | 0 | 1 | Destination unchanged (no-op) |
+| `SRC_OVER` | 1 | 1−sa | Standard alpha compositing |
+| `DST_OVER` | 1−da | 1 | Source placed *behind* destination |
+| `SRC_IN` | da | 0 | Source inside destination's shape |
+| `DST_IN` | 0 | sa | Destination inside source's shape |
+| `SRC_OUT` | 1−da | 0 | Source outside destination's shape |
+| `DST_OUT` | 0 | 1−sa | Destination outside source's shape |
+| `SRC_ATOP` | da | 1−sa | Source on top, destination shows elsewhere |
+| `DST_ATOP` | 1−da | sa | Destination on top, source shows elsewhere |
+| `XOR` | 1−da | 1−sa | Exclusive OR of shapes |
+
+> **Note on naming:** `DST_OVER` is sometimes called `DEST_OVER` in other APIs
+> (e.g. Canvas 2D); they name the same operation.
+
+#### Masks
+
+`grl_image_new_mask()` creates a single-channel `GRAYSCALE` (1 byte/pixel) image
+initialised to zero (fully transparent coverage). Use the normal draw primitives
+to paint coverage into the mask — white (255) = fully opaque, black (0) = fully
+transparent.
+
+`grl_image_apply_mask()` multiplies the alpha channel of each destination pixel
+by the corresponding coverage value in the mask.
+
+**Outside-mask contract:** pixels of `self` that map *outside* the mask's
+bounds have their alpha **set to zero** (cut). The mask defines exactly which
+region survives — this is the standard stencil / clipping contract, consistent
+with raylib's `ImageAlphaMask`.
+
+```c
+/* Create a circular mask */
+g_autoptr(GrlImage) mask = grl_image_new_mask (128, 128);
+grl_image_draw_ellipse (mask, 64, 64, 60, 60,
+                        grl_color_new (255, 255, 255, 255));
+
+/* Apply mask: pixels outside the ellipse get alpha = 0 */
+grl_image_apply_mask (img, mask, 0, 0);
+```
+
+#### Drop Shadows and Glow
+
+Soft drop shadows and glow effects combine `grl_image_new_mask()`,
+`grl_image_blur_box()`, and `grl_image_composite()`:
+
+```c
+/* Step 1: Create a silhouette of the source in a new RGBA image */
+g_autoptr(GrlImage) shadow = grl_image_new_color (
+    grl_image_get_width (sprite), grl_image_get_height (sprite),
+    grl_color_new (0, 0, 0, 0));  /* fully transparent canvas */
+
+/* Draw the shadow solid black at full source alpha */
+{
+    g_autoptr(GrlImage) src_copy = grl_image_copy (sprite);
+    grl_image_color_tint (src_copy, grl_color_new (0, 0, 0, 255));
+    grl_image_composite (shadow, src_copy,
+                         GRL_PORTER_DUFF_SRC_OVER, 0, 0);
+}
+
+/* Step 2: Blur the silhouette to get a soft halo */
+grl_image_blur_box (shadow, 6);
+
+/* Step 3: Composite the blurred shadow *behind* the background:
+ *   DST_OVER puts shadow behind whatever is already in the canvas. */
+grl_image_composite (canvas, shadow, GRL_PORTER_DUFF_DST_OVER,
+                     sprite_x + 4, sprite_y + 4);  /* shadow offset */
+
+/* Step 4: Draw the sprite on top */
+grl_image_composite (canvas, sprite, GRL_PORTER_DUFF_SRC_OVER,
+                     sprite_x, sprite_y);
+```
+
+For a **glow** instead of a shadow: tint the silhouette in the glow colour
+(e.g. bright cyan), blur it, and composite it *behind* the sprite with
+`DST_OVER`. The sprite itself is always drawn last on top with `SRC_OVER`.
+
+**Box blur** (`grl_image_blur_box()`) applies a separable (horizontal then
+vertical) box blur of the given pixel radius. All four channels (R, G, B, A)
+are blurred, so shadow alphas get soft edges correctly. `radius <= 0` is a
+no-op. The image must be `R8G8B8A8`; on other formats returns silently.
+
+```c
+/* Blur a shadow silhouette with a radius of 8 pixels */
+grl_image_blur_box (shadow, 8);
+```
+
 ### Drawing Text on Images
 
 ```c

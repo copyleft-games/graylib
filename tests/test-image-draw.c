@@ -782,6 +782,557 @@ test_color_space_linear_non_rgba_falls_back (void)
     assert_pixel (img, 4, 4, 255, 255, 255, 255, 1);
 }
 
+/* ===========================================================================
+ * Porter-Duff compositing tests
+ * ===========================================================================
+ */
+
+/*
+ * SRC_OVER of a fully opaque source must equal a plain copy.
+ */
+static void
+test_composite_src_over_opaque_is_copy (void)
+{
+    g_autoptr(GrlColor) bg  = grl_color_new (0, 0, 0, 255);
+    g_autoptr(GrlColor) col = grl_color_new (100, 150, 200, 255);
+    g_autoptr(GrlImage) dst = grl_image_new_color (8, 8, bg);
+    g_autoptr(GrlImage) src = grl_image_new_color (8, 8, col);
+
+    grl_image_composite (dst, src, GRL_PORTER_DUFF_SRC_OVER, 0, 0);
+
+    /* Opaque source over opaque bg => source wins; byte-identical to source. */
+    assert_pixel (dst, 4, 4, 100, 150, 200, 255, 0);
+}
+
+/*
+ * SRC_OVER of semi-transparent over opaque should match the existing OVER
+ * blend-mode result (within rounding tolerance).
+ */
+static void
+test_composite_src_over_semitrans (void)
+{
+    g_autoptr(GrlColor) bg  = grl_color_new (255, 255, 255, 255);
+    g_autoptr(GrlColor) red = grl_color_new (255, 0, 0, 128);
+    g_autoptr(GrlImage) dst_comp = grl_image_new_color (8, 8, bg);
+    g_autoptr(GrlImage) dst_over = grl_image_new_color (8, 8, bg);
+    g_autoptr(GrlImage) src      = grl_image_new_color (8, 8, red);
+
+    /* Composite path */
+    grl_image_composite (dst_comp, src, GRL_PORTER_DUFF_SRC_OVER, 0, 0);
+
+    /* Existing OVER blend-mode path (ellipse covers center) */
+    grl_image_set_blend_mode (dst_over, GRL_IMAGE_BLEND_OVER);
+    grl_image_draw_ellipse (dst_over, 4, 4, 4, 4, red);
+
+    {
+        g_autoptr(GrlColor) c = grl_image_get_pixel (dst_comp, 4, 4);
+        assert_pixel (dst_over, 4, 4, c->r, c->g, c->b, c->a, 2);
+    }
+}
+
+/*
+ * CLEAR must zero the covered region.
+ */
+static void
+test_composite_clear (void)
+{
+    g_autoptr(GrlColor) bg  = grl_color_new (200, 100, 50, 255);
+    g_autoptr(GrlColor) any = grl_color_new (1, 2, 3, 4);
+    g_autoptr(GrlImage) dst = grl_image_new_color (8, 8, bg);
+    g_autoptr(GrlImage) src = grl_image_new_color (4, 4, any);
+
+    grl_image_composite (dst, src, GRL_PORTER_DUFF_CLEAR, 2, 2);
+
+    /* Inside the composited region: should be transparent black. */
+    assert_pixel (dst, 3, 3, 0, 0, 0, 0, 0);
+    /* Outside the region: unchanged. */
+    assert_pixel (dst, 0, 0, 200, 100, 50, 255, 0);
+}
+
+/*
+ * SRC replaces the destination completely.
+ */
+static void
+test_composite_src (void)
+{
+    g_autoptr(GrlColor) bg  = grl_color_new (10, 20, 30, 255);
+    g_autoptr(GrlColor) col = grl_color_new (80, 90, 100, 200);
+    g_autoptr(GrlImage) dst = grl_image_new_color (8, 8, bg);
+    g_autoptr(GrlImage) src = grl_image_new_color (8, 8, col);
+
+    grl_image_composite (dst, src, GRL_PORTER_DUFF_SRC, 0, 0);
+
+    assert_pixel (dst, 4, 4, 80, 90, 100, 200, 0);
+}
+
+/*
+ * DST is a no-op — the destination must be unchanged.
+ */
+static void
+test_composite_dst_is_noop (void)
+{
+    g_autoptr(GrlColor) bg  = grl_color_new (50, 60, 70, 255);
+    g_autoptr(GrlColor) src_col = grl_color_new (200, 200, 200, 200);
+    g_autoptr(GrlImage) dst = grl_image_new_color (8, 8, bg);
+    g_autoptr(GrlImage) src = grl_image_new_color (8, 8, src_col);
+
+    grl_image_composite (dst, src, GRL_PORTER_DUFF_DST, 0, 0);
+
+    /* Destination must be untouched. */
+    assert_pixel (dst, 4, 4, 50, 60, 70, 255, 0);
+}
+
+/*
+ * SRC_IN: result alpha ≈ src_alpha * dst_alpha / 255.
+ * Using a half-alpha source over a half-alpha destination.
+ */
+static void
+test_composite_src_in (void)
+{
+    g_autoptr(GrlColor) bg      = grl_color_new (0, 0, 0, 128);   /* half-alpha dst */
+    g_autoptr(GrlColor) src_col = grl_color_new (200, 0, 0, 128); /* half-alpha src */
+    g_autoptr(GrlImage) dst     = grl_image_new_color (8, 8, bg);
+    g_autoptr(GrlImage) src     = grl_image_new_color (8, 8, src_col);
+
+    grl_image_composite (dst, src, GRL_PORTER_DUFF_SRC_IN, 0, 0);
+
+    /* SRC_IN: Fa = da = 128/255, Fb = 0.
+     * out_alpha = Fa * sa + Fb * da = (128/255) * (128/255) = ~0.252 => ~64 */
+    assert_pixel (dst, 4, 4, 200, 0, 0, 64, 4);
+}
+
+/*
+ * DST_IN: result alpha ≈ dst_alpha * src_alpha / 255.
+ */
+static void
+test_composite_dst_in (void)
+{
+    g_autoptr(GrlColor) bg      = grl_color_new (0, 200, 0, 128);
+    g_autoptr(GrlColor) src_col = grl_color_new (0, 0, 0, 128);
+    g_autoptr(GrlImage) dst     = grl_image_new_color (8, 8, bg);
+    g_autoptr(GrlImage) src     = grl_image_new_color (8, 8, src_col);
+
+    grl_image_composite (dst, src, GRL_PORTER_DUFF_DST_IN, 0, 0);
+
+    /* DST_IN: Fa = 0, Fb = sa = 128/255 ~0.502.
+     * out_alpha = Fb * da = 0.502 * 0.502 = ~0.252 => ~64 */
+    assert_pixel (dst, 4, 4, 0, 200, 0, 64, 4);
+}
+
+/*
+ * SRC_OUT: source visible only outside destination's alpha shape.
+ * Full dst on left half, transparent dst on right half; SRC_OUT should show
+ * source only on the right (transparent dst) half.
+ */
+static void
+test_composite_src_out (void)
+{
+    g_autoptr(GrlColor) bg_opaque = grl_color_new (0, 0, 0, 255);
+    g_autoptr(GrlColor) bg_trans  = grl_color_new (0, 0, 0, 0);
+    g_autoptr(GrlColor) src_col   = grl_color_new (255, 100, 0, 255);
+    g_autoptr(GrlImage) dst       = grl_image_new_color (8, 8, bg_opaque);
+    g_autoptr(GrlImage) src       = grl_image_new_color (8, 8, src_col);
+    g_autoptr(GrlRectangle) r     = grl_rectangle_new (4.0f, 0.0f, 4.0f, 8.0f);
+
+    /* Right half of dst is transparent */
+    grl_image_draw_rectangle (dst, r, bg_trans);
+
+    grl_image_composite (dst, src, GRL_PORTER_DUFF_SRC_OUT, 0, 0);
+
+    /* Left half: opaque dst => SRC_OUT zeros source (1-da ≈ 0) */
+    assert_pixel (dst, 2, 4, 0, 0, 0, 0, 4);
+    /* Right half: transparent dst => SRC_OUT shows source (1-da ≈ 1) */
+    assert_pixel (dst, 6, 4, 255, 100, 0, 255, 4);
+}
+
+/*
+ * DST_OUT: destination visible only outside source's alpha shape.
+ */
+static void
+test_composite_dst_out (void)
+{
+    g_autoptr(GrlColor) bg_opaque = grl_color_new (0, 200, 0, 255);
+    g_autoptr(GrlColor) src_opaque = grl_color_new (255, 0, 0, 255);
+    g_autoptr(GrlColor) src_trans  = grl_color_new (0, 0, 0, 0);
+    g_autoptr(GrlImage) dst  = grl_image_new_color (8, 8, bg_opaque);
+    g_autoptr(GrlImage) src  = grl_image_new_color (8, 8, src_trans);
+    g_autoptr(GrlRectangle) r = grl_rectangle_new (4.0f, 0.0f, 4.0f, 8.0f);
+
+    /* Right half of src is opaque */
+    grl_image_draw_rectangle (src, r, src_opaque);
+
+    grl_image_composite (dst, src, GRL_PORTER_DUFF_DST_OUT, 0, 0);
+
+    /* Left half: transparent src => DST_OUT keeps dst (1-sa ≈ 1) */
+    assert_pixel (dst, 2, 4, 0, 200, 0, 255, 4);
+    /* Right half: opaque src => DST_OUT zeros dst (1-sa ≈ 0) */
+    assert_pixel (dst, 6, 4, 0, 0, 0, 0, 4);
+}
+
+/*
+ * XOR of two overlapping opaque regions clears the overlap.
+ */
+static void
+test_composite_xor_clears_overlap (void)
+{
+    g_autoptr(GrlColor) bg      = grl_color_new (100, 150, 200, 255);
+    g_autoptr(GrlColor) src_col = grl_color_new (50, 50, 50, 255);
+    g_autoptr(GrlImage) dst     = grl_image_new_color (8, 8, bg);
+    g_autoptr(GrlImage) src     = grl_image_new_color (8, 8, src_col);
+
+    /* XOR: Fa = 1-da, Fb = 1-sa.  Both opaque -> Fa = 0, Fb = 0 -> transparent black. */
+    grl_image_composite (dst, src, GRL_PORTER_DUFF_XOR, 0, 0);
+
+    assert_pixel (dst, 4, 4, 0, 0, 0, 0, 2);
+}
+
+/*
+ * Composite honours the destination clip rect.
+ */
+static void
+test_composite_respects_clip (void)
+{
+    g_autoptr(GrlColor) bg  = grl_color_new (0, 0, 0, 255);
+    g_autoptr(GrlColor) col = grl_color_new (255, 0, 0, 255);
+    g_autoptr(GrlImage) dst = grl_image_new_color (16, 16, bg);
+    g_autoptr(GrlImage) src = grl_image_new_color (16, 16, col);
+    g_autoptr(GrlRectangle) clip = grl_rectangle_new (4.0f, 4.0f, 4.0f, 4.0f);
+
+    grl_image_set_clip_rect (dst, clip);
+    grl_image_composite (dst, src, GRL_PORTER_DUFF_SRC, 0, 0);
+
+    /* Inside clip: replaced by src */
+    assert_pixel (dst, 5, 5, 255, 0, 0, 255, 0);
+    /* Outside clip: unchanged */
+    assert_pixel (dst, 1, 1, 0, 0, 0, 255, 0);
+    assert_pixel (dst, 12, 12, 0, 0, 0, 255, 0);
+}
+
+/*
+ * Non-RGBA src or dst is a safe no-op.
+ */
+static void
+test_composite_non_rgba_safe_noop (void)
+{
+    g_autoptr(GrlColor) bg  = grl_color_new (50, 60, 70, 255);
+    g_autoptr(GrlColor) col = grl_color_new (200, 200, 200, 255);
+    g_autoptr(GrlImage) dst_rgb = grl_image_new_color (8, 8, bg);
+    g_autoptr(GrlImage) src     = grl_image_new_color (8, 8, col);
+    g_autoptr(GrlImage) dst_ok  = grl_image_new_color (8, 8, bg);
+    g_autoptr(GrlImage) src_rgb = grl_image_new_color (8, 8, col);
+
+    grl_image_set_format (dst_rgb, GRL_PIXELFORMAT_UNCOMPRESSED_R8G8B8);
+    grl_image_composite (dst_rgb, src, GRL_PORTER_DUFF_SRC_OVER, 0, 0);
+    /* dst unchanged because it's not RGBA */
+    assert_pixel (dst_rgb, 4, 4, 50, 60, 70, 255, 2);
+
+    grl_image_set_format (src_rgb, GRL_PIXELFORMAT_UNCOMPRESSED_R8G8B8);
+    grl_image_composite (dst_ok, src_rgb, GRL_PORTER_DUFF_SRC_OVER, 0, 0);
+    /* dst unchanged because src is not RGBA */
+    assert_pixel (dst_ok, 4, 4, 50, 60, 70, 255, 2);
+}
+
+/*
+ * Offset that places src partially off-canvas must clip, not OOB.
+ */
+static void
+test_composite_offset_clipped (void)
+{
+    g_autoptr(GrlColor) bg  = grl_color_new (0, 0, 0, 255);
+    g_autoptr(GrlColor) col = grl_color_new (255, 0, 0, 255);
+    g_autoptr(GrlImage) dst = grl_image_new_color (8, 8, bg);
+    g_autoptr(GrlImage) src = grl_image_new_color (8, 8, col);
+
+    /* Place src so that its right 4 columns spill off the right edge. */
+    grl_image_composite (dst, src, GRL_PORTER_DUFF_SRC, -4, 0);
+
+    /* The visible portion (x=0..3) must have the source color. */
+    assert_pixel (dst, 0, 4, 255, 0, 0, 255, 0);
+    /* Pixels that were off-canvas to the left are not written to dst. */
+    g_assert_true (grl_image_is_valid (dst));
+}
+
+/* ===========================================================================
+ * Alpha mask tests
+ * ===========================================================================
+ */
+
+/*
+ * new_mask returns a GRAYSCALE image of the right size, all zeros.
+ */
+static void
+test_mask_new (void)
+{
+    g_autoptr(GrlImage) mask = grl_image_new_mask (16, 8);
+
+    g_assert_nonnull (mask);
+    g_assert_true (grl_image_is_valid (mask));
+    g_assert_cmpint (grl_image_get_width (mask),  ==, 16);
+    g_assert_cmpint (grl_image_get_height (mask), ==, 8);
+    g_assert_cmpint (grl_image_get_format (mask), ==,
+                     GRL_PIXELFORMAT_UNCOMPRESSED_GRAYSCALE);
+
+    /* All pixels must be 0 (fully transparent coverage) */
+    {
+        g_autoptr(GrlColor) p = grl_image_get_pixel (mask, 0, 0);
+        g_assert_nonnull (p);
+        g_assert_cmpint (p->r, ==, 0);
+    }
+    {
+        g_autoptr(GrlColor) p = grl_image_get_pixel (mask, 15, 7);
+        g_assert_nonnull (p);
+        g_assert_cmpint (p->r, ==, 0);
+    }
+}
+
+/*
+ * Draw a white filled ellipse into a mask, then apply_mask: covered area
+ * keeps full alpha, uncovered area gets cut to zero.
+ */
+static void
+test_mask_apply_punches_alpha (void)
+{
+    g_autoptr(GrlColor) bg    = grl_color_new (200, 100, 50, 255);
+    g_autoptr(GrlColor) white = grl_color_new (255, 255, 255, 255);
+    g_autoptr(GrlImage) img   = grl_image_new_color (32, 32, bg);
+    g_autoptr(GrlImage) mask  = grl_image_new_mask (32, 32);
+
+    /* Draw a filled ellipse centered at (16,16) covering the central region */
+    grl_image_draw_ellipse (mask, 16, 16, 12, 12, white);
+
+    grl_image_apply_mask (img, mask, 0, 0);
+
+    /* Center of the ellipse: alpha kept at 255 */
+    assert_pixel (img, 16, 16, 200, 100, 50, 255, 0);
+
+    /* Corner: outside the ellipse, alpha cut to 0 */
+    assert_pixel (img, 0, 0, 200, 100, 50, 0, 0);
+    assert_pixel (img, 31, 31, 200, 100, 50, 0, 0);
+}
+
+/*
+ * Offset partially off-canvas: no crash, clamped correctly.
+ */
+static void
+test_mask_apply_offset_offcanvas (void)
+{
+    g_autoptr(GrlColor) bg    = grl_color_new (100, 100, 100, 255);
+    g_autoptr(GrlColor) white = grl_color_new (255, 255, 255, 255);
+    g_autoptr(GrlImage) img   = grl_image_new_color (16, 16, bg);
+    g_autoptr(GrlImage) mask  = grl_image_new_mask (16, 16);
+
+    /* Fill the right half of the mask white */
+    {
+        g_autoptr(GrlRectangle) r = grl_rectangle_new (8.0f, 0.0f, 8.0f, 16.0f);
+        grl_image_draw_rectangle (mask, r, white);
+    }
+
+    /* Offset by (8, 0): mask covers img columns 8..15, but only the right half
+     * of the mask (columns 0..7 of mask map to img cols 8..15).
+     * Columns 0..7 of img have no mask coverage -> cut to 0.
+     * Columns 8..15 of img: map to mask cols 0..7 -> those are black -> cut to 0 too.
+     *
+     * Actually with offset_x=8: img pixel (x,y) samples mask at (x-8, y).
+     * img col 0 -> mask col -8 (outside) -> cut.
+     * img col 8 -> mask col 0 -> mask is 0 (left half) -> cut.
+     * img col 15 -> mask col 7 -> mask is 0 (left half) -> cut.
+     *
+     * Let's use offset_x = -4 instead so img x=0 maps to mask x=4, etc.
+     * Then img x=8 maps to mask x=12 (right half = white => kept).
+     */
+    grl_image_apply_mask (img, mask, -4, 0);
+
+    /* img x=8 -> mask x=12 -> white -> alpha kept */
+    assert_pixel (img, 8, 8, 100, 100, 100, 255, 0);
+    /* img x=0 -> mask x=4 -> black -> alpha cut */
+    assert_pixel (img, 0, 0, 100, 100, 100, 0, 0);
+    /* img x=3 -> mask x=7 -> black -> alpha cut */
+    assert_pixel (img, 3, 3, 100, 100, 100, 0, 0);
+
+    /* No crash is also the test. */
+    g_assert_true (grl_image_is_valid (img));
+}
+
+/*
+ * Mask larger than image: no crash.
+ */
+static void
+test_mask_larger_than_image (void)
+{
+    g_autoptr(GrlColor) bg    = grl_color_new (50, 50, 50, 255);
+    g_autoptr(GrlColor) white = grl_color_new (255, 255, 255, 255);
+    g_autoptr(GrlImage) img   = grl_image_new_color (8, 8, bg);
+    g_autoptr(GrlImage) mask  = grl_image_new_mask (32, 32);
+
+    grl_image_draw_ellipse (mask, 16, 16, 14, 14, white);
+
+    /* No crash: the mask extends beyond the image. */
+    grl_image_apply_mask (img, mask, 12, 12);
+
+    g_assert_true (grl_image_is_valid (img));
+}
+
+/*
+ * Zero-size mask must not crash.
+ * g_return_val_if_fail emits a CRITICAL which GTest intercepts; use
+ * g_test_expect_message to consume it before it becomes fatal.
+ */
+static void
+test_mask_zero_size_no_crash (void)
+{
+    GrlImage *mask;
+
+    g_test_expect_message (G_LOG_DOMAIN, G_LOG_LEVEL_CRITICAL,
+                           "*assertion*width > 0*");
+    mask = grl_image_new_mask (0, 8);
+    g_test_assert_expected_messages ();
+    g_assert_null (mask);
+
+    g_test_expect_message (G_LOG_DOMAIN, G_LOG_LEVEL_CRITICAL,
+                           "*assertion*height > 0*");
+    mask = grl_image_new_mask (8, 0);
+    g_test_assert_expected_messages ();
+    g_assert_null (mask);
+}
+
+/* ===========================================================================
+ * Box blur tests
+ * ===========================================================================
+ */
+
+/*
+ * radius <= 0 is a no-op: output must be byte-identical to input.
+ */
+static void
+test_blur_noop_radius (void)
+{
+    g_autoptr(GrlColor) bg = grl_color_new (128, 64, 32, 200);
+    g_autoptr(GrlImage) img = grl_image_new_color (16, 16, bg);
+
+    grl_image_blur_box (img, 0);
+    assert_pixel (img, 8, 8, 128, 64, 32, 200, 0);
+
+    grl_image_blur_box (img, -1);
+    assert_pixel (img, 8, 8, 128, 64, 32, 200, 0);
+}
+
+/*
+ * Blurring a single bright pixel spreads energy to neighbours and reduces peak.
+ */
+static void
+test_blur_spreads_energy (void)
+{
+    g_autoptr(GrlColor) bg    = grl_color_new (0, 0, 0, 0);
+    g_autoptr(GrlColor) white = grl_color_new (255, 255, 255, 255);
+    g_autoptr(GrlImage) img   = grl_image_new_color (16, 16, bg);
+    g_autoptr(GrlColor) peak_before = NULL;
+    g_autoptr(GrlColor) peak_after  = NULL;
+    g_autoptr(GrlColor) nbr         = NULL;
+
+    /* Single bright pixel in the center */
+    grl_image_draw_pixel (img, 8, 8, white);
+
+    peak_before = grl_image_get_pixel (img, 8, 8);
+    g_assert_cmpint (peak_before->r, ==, 255);
+
+    grl_image_blur_box (img, 2);
+
+    peak_after = grl_image_get_pixel (img, 8, 8);
+    g_assert_cmpint (peak_after->r, <, 255);    /* peak reduced */
+
+    nbr = grl_image_get_pixel (img, 9, 8);
+    g_assert_cmpint (nbr->r, >, 0);             /* energy spread to neighbour */
+}
+
+/*
+ * Blurring a flat uniform region leaves it unchanged (within rounding).
+ */
+static void
+test_blur_flat_region_unchanged (void)
+{
+    g_autoptr(GrlColor) bg  = grl_color_new (100, 150, 200, 128);
+    g_autoptr(GrlImage) img = grl_image_new_color (16, 16, bg);
+
+    grl_image_blur_box (img, 3);
+
+    /* Interior pixels must remain at the original color (rounding within 1). */
+    assert_pixel (img, 8, 8, 100, 150, 200, 128, 1);
+}
+
+/*
+ * Blur near edges must not crash and must produce valid output.
+ */
+static void
+test_blur_near_edges_no_crash (void)
+{
+    g_autoptr(GrlColor) bg    = grl_color_new (50, 100, 150, 255);
+    g_autoptr(GrlColor) white = grl_color_new (255, 255, 255, 255);
+    g_autoptr(GrlImage) img   = grl_image_new_color (8, 8, bg);
+
+    /* Bright corner pixels */
+    grl_image_draw_pixel (img, 0, 0, white);
+    grl_image_draw_pixel (img, 7, 7, white);
+
+    /* Large radius (exceeds half the image) must still not OOB. */
+    grl_image_blur_box (img, 8);
+
+    g_assert_true (grl_image_is_valid (img));
+
+    /* After blur, all pixels must be in [0, 255] range (trivially true for
+     * guint8, but the pixel read must not crash). */
+    {
+        g_autoptr(GrlColor) c = grl_image_get_pixel (img, 0, 0);
+        g_assert_nonnull (c);
+        g_assert_cmpint (c->r, >=, 0);
+        g_assert_cmpint (c->r, <=, 255);
+    }
+}
+
+/*
+ * Exact interior box-average. A single bright pixel in a 7x1 row blurred with
+ * radius 1 must spread to EXACTLY columns 2..4 (value 255/3=85) and leave the
+ * rest black. This pins down the sliding-window indices: an off-by-one in the
+ * window-advance would smear the bright region asymmetrically (e.g. light up
+ * column 5), which a flat-region test cannot detect.
+ */
+static void
+test_blur_window_exact (void)
+{
+    g_autoptr(GrlColor) black = grl_color_new (0, 0, 0, 255);
+    g_autoptr(GrlColor) white = grl_color_new (255, 255, 255, 255);
+    g_autoptr(GrlImage) img   = grl_image_new_color (7, 1, black);
+
+    grl_image_draw_pixel (img, 3, 0, white);   /* overwrite: exact value */
+    grl_image_blur_box (img, 1);               /* 3-wide box */
+
+    assert_pixel (img, 2, 0,  85,  85,  85, 255, 1);
+    assert_pixel (img, 3, 0,  85,  85,  85, 255, 1);
+    assert_pixel (img, 4, 0,  85,  85,  85, 255, 1);
+    /* The window must be symmetric: columns 1 and 5 stay black. A right-shifted
+     * window (the classic sliding-sum off-by-one) would light up column 5. */
+    assert_pixel (img, 1, 0,   0,   0,   0, 255, 1);
+    assert_pixel (img, 5, 0,   0,   0,   0, 255, 1);
+}
+
+/*
+ * Composite honours the destination's LINEAR blend colour space: SRC_OVER of a
+ * half-alpha white over opaque black resolves to perceptual mid-grey (~188),
+ * not the too-dark 128 of gamma-space compositing.
+ */
+static void
+test_composite_linear_over (void)
+{
+    g_autoptr(GrlColor) black = grl_color_new (0, 0, 0, 255);
+    g_autoptr(GrlColor) white = grl_color_new (255, 255, 255, 128);
+    g_autoptr(GrlImage) dst   = grl_image_new_color (8, 8, black);
+    g_autoptr(GrlImage) src   = grl_image_new_color (8, 8, white);
+
+    grl_image_set_blend_color_space (dst, GRL_IMAGE_COLOR_SPACE_LINEAR);
+    grl_image_composite (dst, src, GRL_PORTER_DUFF_SRC_OVER, 0, 0);
+
+    assert_pixel (dst, 4, 4, 188, 188, 188, 255, 2);
+}
+
 int
 main (int   argc,
       char *argv[])
@@ -836,6 +1387,61 @@ main (int   argc,
     g_test_add_func ("/image-draw/gif-writer", test_gif_writer);
     g_test_add_func ("/image-draw/gif/after-close-errors", test_gif_after_close_errors);
     g_test_add_func ("/image-draw/gif/frame-resize", test_gif_frame_resize_and_count);
+
+    /* Porter-Duff compositing */
+    g_test_add_func ("/image-draw/composite/src-over-opaque-is-copy",
+                     test_composite_src_over_opaque_is_copy);
+    g_test_add_func ("/image-draw/composite/src-over-semitrans",
+                     test_composite_src_over_semitrans);
+    g_test_add_func ("/image-draw/composite/clear",
+                     test_composite_clear);
+    g_test_add_func ("/image-draw/composite/src",
+                     test_composite_src);
+    g_test_add_func ("/image-draw/composite/dst-is-noop",
+                     test_composite_dst_is_noop);
+    g_test_add_func ("/image-draw/composite/src-in",
+                     test_composite_src_in);
+    g_test_add_func ("/image-draw/composite/dst-in",
+                     test_composite_dst_in);
+    g_test_add_func ("/image-draw/composite/src-out",
+                     test_composite_src_out);
+    g_test_add_func ("/image-draw/composite/dst-out",
+                     test_composite_dst_out);
+    g_test_add_func ("/image-draw/composite/xor-clears-overlap",
+                     test_composite_xor_clears_overlap);
+    g_test_add_func ("/image-draw/composite/respects-clip",
+                     test_composite_respects_clip);
+    g_test_add_func ("/image-draw/composite/non-rgba-safe-noop",
+                     test_composite_non_rgba_safe_noop);
+    g_test_add_func ("/image-draw/composite/offset-clipped",
+                     test_composite_offset_clipped);
+
+    /* Alpha mask */
+    g_test_add_func ("/image-draw/mask/new",
+                     test_mask_new);
+    g_test_add_func ("/image-draw/mask/apply-punches-alpha",
+                     test_mask_apply_punches_alpha);
+    g_test_add_func ("/image-draw/mask/apply-offset-offcanvas",
+                     test_mask_apply_offset_offcanvas);
+    g_test_add_func ("/image-draw/mask/larger-than-image",
+                     test_mask_larger_than_image);
+    g_test_add_func ("/image-draw/mask/zero-size-no-crash",
+                     test_mask_zero_size_no_crash);
+
+    /* Box blur */
+    g_test_add_func ("/image-draw/blur/noop-radius",
+                     test_blur_noop_radius);
+    g_test_add_func ("/image-draw/blur/spreads-energy",
+                     test_blur_spreads_energy);
+    g_test_add_func ("/image-draw/blur/flat-region-unchanged",
+                     test_blur_flat_region_unchanged);
+    g_test_add_func ("/image-draw/blur/near-edges-no-crash",
+                     test_blur_near_edges_no_crash);
+    g_test_add_func ("/image-draw/blur/window-exact",
+                     test_blur_window_exact);
+
+    g_test_add_func ("/image-draw/composite/linear-over",
+                     test_composite_linear_over);
 
     return g_test_run ();
 }

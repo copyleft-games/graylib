@@ -3515,6 +3515,537 @@ grl_image_save_as_png_indexed (GrlImage       *self,
 }
 
 /*
+ * =============================================================================
+ * Porter-Duff compositing
+ * =============================================================================
+ */
+
+/*
+ * Compute Porter-Duff coverage factors (Fa, Fb) from the operator and the
+ * source / destination alpha values (already in [0,1]).
+ *
+ * Standard table (Porter-Duff 1984):
+ *   CLEAR:    Fa=0,    Fb=0
+ *   SRC:      Fa=1,    Fb=0
+ *   DST:      Fa=0,    Fb=1
+ *   SRC_OVER: Fa=1,    Fb=1-sa
+ *   DST_OVER: Fa=1-da, Fb=1
+ *   SRC_IN:   Fa=da,   Fb=0
+ *   DST_IN:   Fa=0,    Fb=sa
+ *   SRC_OUT:  Fa=1-da, Fb=0
+ *   DST_OUT:  Fa=0,    Fb=1-sa
+ *   SRC_ATOP: Fa=da,   Fb=1-sa
+ *   DST_ATOP: Fa=1-da, Fb=sa
+ *   XOR:      Fa=1-da, Fb=1-sa
+ */
+static void
+grl_pd_factors (GrlPorterDuffOp op,
+                gfloat          sa,
+                gfloat          da,
+                gfloat         *fa,
+                gfloat         *fb)
+{
+    switch (op)
+    {
+    case GRL_PORTER_DUFF_CLEAR:
+        *fa = 0.0f; *fb = 0.0f; break;
+    case GRL_PORTER_DUFF_SRC:
+        *fa = 1.0f; *fb = 0.0f; break;
+    case GRL_PORTER_DUFF_DST:
+        *fa = 0.0f; *fb = 1.0f; break;
+    case GRL_PORTER_DUFF_SRC_OVER:
+        *fa = 1.0f; *fb = 1.0f - sa; break;
+    case GRL_PORTER_DUFF_DST_OVER:
+        *fa = 1.0f - da; *fb = 1.0f; break;
+    case GRL_PORTER_DUFF_SRC_IN:
+        *fa = da; *fb = 0.0f; break;
+    case GRL_PORTER_DUFF_DST_IN:
+        *fa = 0.0f; *fb = sa; break;
+    case GRL_PORTER_DUFF_SRC_OUT:
+        *fa = 1.0f - da; *fb = 0.0f; break;
+    case GRL_PORTER_DUFF_DST_OUT:
+        *fa = 0.0f; *fb = 1.0f - sa; break;
+    case GRL_PORTER_DUFF_SRC_ATOP:
+        *fa = da; *fb = 1.0f - sa; break;
+    case GRL_PORTER_DUFF_DST_ATOP:
+        *fa = 1.0f - da; *fb = sa; break;
+    case GRL_PORTER_DUFF_XOR:
+        *fa = 1.0f - da; *fb = 1.0f - sa; break;
+    default:
+        *fa = 1.0f; *fb = 1.0f - sa; break; /* default: SRC_OVER */
+    }
+}
+
+/**
+ * grl_image_composite:
+ * @self: The destination #GrlImage (must be R8G8B8A8)
+ * @src: The source #GrlImage (must be R8G8B8A8)
+ * @op: A #GrlPorterDuffOp compositing operator
+ * @dst_x: X offset in @self where the top-left of @src is placed
+ * @dst_y: Y offset in @self where the top-left of @src is placed
+ *
+ * Composites @src onto @self at pixel offset (@dst_x, @dst_y) using the
+ * standard Porter-Duff coverage algebra on premultiplied alpha. Graylib stores
+ * straight (un-premultiplied) alpha; the conversion is performed internally.
+ *
+ * Both @self and @src must be in #GRL_PIXELFORMAT_UNCOMPRESSED_R8G8B8A8 format.
+ * If either image is in a different format the function returns silently (no
+ * crash, no modification).
+ *
+ * @self's clip rectangle (if set) is honoured: only pixels within the effective
+ * clip box are written. Pixels of @self that lie outside the mapped area of @src
+ * are left completely unchanged.
+ *
+ * If @self's blend colour space is #GRL_IMAGE_COLOR_SPACE_LINEAR, the RGB
+ * compositing is performed in linear light using the sRGB lookup tables
+ * (equivalent to what the blended draw-primitives do); alpha coverage values
+ * are composited directly (they are never gamma-transformed). Otherwise
+ * compositing is in gamma (8-bit sRGB) space.
+ *
+ * Note: #GRL_PORTER_DUFF_DST_OVER places @src *behind* @self and is the key
+ * operator for drop-shadows — composite the blurred shadow image under the
+ * original with DST_OVER. This is sometimes documented as DEST_OVER in other
+ * APIs; the two names refer to the same operation.
+ */
+void
+grl_image_composite (GrlImage        *self,
+                     GrlImage        *src,
+                     GrlPorterDuffOp  op,
+                     gint             dst_x,
+                     gint             dst_y)
+{
+    GrlDrawCtx ctx;
+    gint       src_w, src_h;
+    gint       x, y;
+    gint       sx0, sy0, sx1, sy1;  /* src pixel region to composite */
+    gint       dx0, dy0;            /* corresponding dst top-left */
+    gboolean   use_linear;
+
+    g_return_if_fail (GRL_IS_IMAGE (self));
+    g_return_if_fail (GRL_IS_IMAGE (src));
+
+    /* Both images must be RGBA8 */
+    if (self->handle.format != PIXELFORMAT_UNCOMPRESSED_R8G8B8A8)
+        return;
+    if (src->handle.format != PIXELFORMAT_UNCOMPRESSED_R8G8B8A8)
+        return;
+
+    grl_image_draw_ctx_init (self, &ctx);
+
+    src_w = src->handle.width;
+    src_h = src->handle.height;
+
+    /* Compute source rectangle: the region of src that maps into self. */
+    sx0 = 0;
+    sy0 = 0;
+    sx1 = src_w;
+    sy1 = src_h;
+
+    /* Corresponding destination top-left for (sx0, sy0). */
+    dx0 = dst_x;
+    dy0 = dst_y;
+
+    /* Clip: left/top of src may be off-canvas */
+    if (dx0 < ctx.cx0)
+    {
+        sx0 += (ctx.cx0 - dx0);
+        dx0  = ctx.cx0;
+    }
+    if (dy0 < ctx.cy0)
+    {
+        sy0 += (ctx.cy0 - dy0);
+        dy0  = ctx.cy0;
+    }
+
+    /* Clip: right/bottom of src may be off-canvas */
+    if (dst_x + sx1 > ctx.cx1)
+        sx1 = ctx.cx1 - dst_x;
+    if (dst_y + sy1 > ctx.cy1)
+        sy1 = ctx.cy1 - dst_y;
+
+    /* Nothing to do? */
+    if (sx0 >= sx1 || sy0 >= sy1)
+        return;
+
+    use_linear = (self->blend_space == GRL_IMAGE_COLOR_SPACE_LINEAR);
+    if (use_linear)
+        grl_image_blend_luts_init ();
+
+    for (y = sy0; y < sy1; y++)
+    {
+        gint dy = dy0 + (y - sy0);
+
+        for (x = sx0; x < sx1; x++)
+        {
+            gint   dx = dx0 + (x - sx0);
+            guint8 *dp = (guint8 *)self->handle.data +
+                         ((gsize)dy * self->handle.width + dx) * 4;
+            const guint8 *sp = (const guint8 *)src->handle.data +
+                               ((gsize)y * src_w + x) * 4;
+
+            gfloat sr, sg, sb, dr, dg, db;
+            gfloat sa, da, fa, fb, oa;
+            gfloat out_r, out_g, out_b;
+            guint  out_a_byte;
+
+            sa = (gfloat)sp[3] / 255.0f;
+            da = (gfloat)dp[3] / 255.0f;
+
+            grl_pd_factors (op, sa, da, &fa, &fb);
+
+            oa = fa * sa + fb * da;
+
+            if (use_linear)
+            {
+                /* Decode to linear */
+                sr = grl_srgb_to_linear_lut[sp[0]];
+                sg = grl_srgb_to_linear_lut[sp[1]];
+                sb = grl_srgb_to_linear_lut[sp[2]];
+                dr = grl_srgb_to_linear_lut[dp[0]];
+                dg = grl_srgb_to_linear_lut[dp[1]];
+                db = grl_srgb_to_linear_lut[dp[2]];
+
+                /* Premultiplied compositing */
+                out_r = fa * sr * sa + fb * dr * da;
+                out_g = fa * sg * sa + fb * dg * da;
+                out_b = fa * sb * sa + fb * db * da;
+
+                if (oa > 1e-6f)
+                {
+                    out_r /= oa;
+                    out_g /= oa;
+                    out_b /= oa;
+                }
+                else
+                {
+                    out_r = out_g = out_b = 0.0f;
+                }
+
+                if (out_r > 1.0f) out_r = 1.0f;
+                if (out_g > 1.0f) out_g = 1.0f;
+                if (out_b > 1.0f) out_b = 1.0f;
+
+                out_a_byte = (guint)(oa * 255.0f + 0.5f);
+                if (out_a_byte > 255) out_a_byte = 255;
+
+                dp[0] = grl_lin_to_srgb_byte (out_r);
+                dp[1] = grl_lin_to_srgb_byte (out_g);
+                dp[2] = grl_lin_to_srgb_byte (out_b);
+                dp[3] = (guint8)out_a_byte;
+            }
+            else
+            {
+                /* Gamma (8-bit sRGB) space */
+                sr = (gfloat)sp[0];
+                sg = (gfloat)sp[1];
+                sb = (gfloat)sp[2];
+                dr = (gfloat)dp[0];
+                dg = (gfloat)dp[1];
+                db = (gfloat)dp[2];
+
+                /* Premultiplied compositing in sRGB (approximate but fast) */
+                out_r = fa * sr * sa + fb * dr * da;
+                out_g = fa * sg * sa + fb * dg * da;
+                out_b = fa * sb * sa + fb * db * da;
+
+                if (oa > 1e-6f)
+                {
+                    out_r /= oa;
+                    out_g /= oa;
+                    out_b /= oa;
+                }
+                else
+                {
+                    out_r = out_g = out_b = 0.0f;
+                }
+
+                if (out_r > 255.0f) out_r = 255.0f;
+                if (out_g > 255.0f) out_g = 255.0f;
+                if (out_b > 255.0f) out_b = 255.0f;
+
+                out_a_byte = (guint)(oa * 255.0f + 0.5f);
+                if (out_a_byte > 255) out_a_byte = 255;
+
+                dp[0] = (guint8)(out_r + 0.5f);
+                dp[1] = (guint8)(out_g + 0.5f);
+                dp[2] = (guint8)(out_b + 0.5f);
+                dp[3] = (guint8)out_a_byte;
+            }
+        }
+    }
+}
+
+/*
+ * =============================================================================
+ * First-class alpha mask
+ * =============================================================================
+ */
+
+/**
+ * grl_image_new_mask:
+ * @width: Mask width in pixels (must be > 0)
+ * @height: Mask height in pixels (must be > 0)
+ *
+ * Creates a new single-channel grayscale (1 byte/pixel,
+ * #GRL_PIXELFORMAT_UNCOMPRESSED_GRAYSCALE) image initialised to zero (fully
+ * transparent when used as a coverage mask).
+ *
+ * The mask can be drawn into with the normal grl_image_draw_* primitives. The
+ * drawn luminance becomes coverage when the mask is later applied with
+ * grl_image_apply_mask(): white (255) means keep the destination pixel at full
+ * alpha; black (0) means cut it to alpha 0.
+ *
+ * Returns: (transfer full): A new #GrlImage mask, or %NULL on invalid arguments.
+ */
+GrlImage *
+grl_image_new_mask (gint width,
+                    gint height)
+{
+    Image handle;
+    Color clear = { 0, 0, 0, 0 };
+
+    g_return_val_if_fail (width > 0, NULL);
+    g_return_val_if_fail (height > 0, NULL);
+
+    /* Allocate through raylib (GenImageColor) so the buffer is owned by the
+     * same allocator that grl_image_finalize()'s UnloadImage() frees with.
+     * Convert to single-channel grayscale; an all-zero RGBA image maps to
+     * luminance 0, i.e. a fully-transparent coverage mask. */
+    handle = GenImageColor (width, height, clear);
+    ImageFormat (&handle, PIXELFORMAT_UNCOMPRESSED_GRAYSCALE);
+
+    return grl_image_new_from_handle (handle);
+}
+
+/**
+ * grl_image_apply_mask:
+ * @self: A #GrlImage (must be R8G8B8A8)
+ * @mask: A grayscale mask image (typically created with grl_image_new_mask())
+ * @offset_x: X offset: pixel (x, y) of @self samples mask at (x - @offset_x, y - @offset_y)
+ * @offset_y: Y offset (see @offset_x)
+ *
+ * Multiplies the alpha channel of every pixel in @self by the corresponding
+ * coverage value from @mask, sampled at (x - @offset_x, y - @offset_y):
+ *
+ * - Pixels that map to a valid mask location: new_alpha = old_alpha * mask_value / 255
+ * - Pixels of @self that map **outside** the mask region: alpha is set to 0 (cut)
+ *
+ * The "cut outside" contract is the standard stencil behaviour — the mask
+ * defines exactly which region of @self survives. This is consistent with
+ * grl_image_alpha_mask() (raylib's ImageAlphaMask), which also zeros pixels
+ * outside the mask bounds.
+ *
+ * @self must be #GRL_PIXELFORMAT_UNCOMPRESSED_R8G8B8A8; if not, returns
+ * silently. The mask may be any grayscale format; GRAYSCALE (1 byte/pixel) is
+ * the native format returned by grl_image_new_mask(). For RGBA masks the red
+ * channel is used as coverage.
+ *
+ * @self's clip rectangle (if set) is honoured: only pixels within the clip box
+ * are modified.
+ */
+void
+grl_image_apply_mask (GrlImage *self,
+                      GrlImage *mask,
+                      gint      offset_x,
+                      gint      offset_y)
+{
+    GrlDrawCtx ctx;
+    gint       x, y;
+    gint       mw, mh;
+    gboolean   mask_is_gray;
+
+    g_return_if_fail (GRL_IS_IMAGE (self));
+    g_return_if_fail (GRL_IS_IMAGE (mask));
+
+    if (self->handle.format != PIXELFORMAT_UNCOMPRESSED_R8G8B8A8)
+        return;
+
+    grl_image_draw_ctx_init (self, &ctx);
+
+    mw = mask->handle.width;
+    mh = mask->handle.height;
+    mask_is_gray = (mask->handle.format == PIXELFORMAT_UNCOMPRESSED_GRAYSCALE);
+
+    for (y = ctx.cy0; y < ctx.cy1; y++)
+    {
+        for (x = ctx.cx0; x < ctx.cx1; x++)
+        {
+            gint    mx = x - offset_x;
+            gint    my = y - offset_y;
+            guint8 *dp = (guint8 *)self->handle.data +
+                         ((gsize)y * self->handle.width + x) * 4;
+            guint8  coverage;
+
+            if (mx < 0 || mx >= mw || my < 0 || my >= mh)
+            {
+                /* Outside mask: cut alpha to 0 */
+                dp[3] = 0;
+                continue;
+            }
+
+            if (mask_is_gray)
+            {
+                coverage = ((const guint8 *)mask->handle.data)[
+                               (gsize)my * mw + mx];
+            }
+            else
+            {
+                /* Fallback: use GetImageColor red channel as coverage */
+                Color mc = GetImageColor (mask->handle, mx, my);
+                coverage = mc.r;
+            }
+
+            dp[3] = (guint8)(((guint)dp[3] * (guint)coverage) / 255u);
+        }
+    }
+}
+
+/*
+ * =============================================================================
+ * Box blur
+ * =============================================================================
+ */
+
+/**
+ * grl_image_blur_box:
+ * @self: A #GrlImage (must be R8G8B8A8)
+ * @radius: Box blur radius in pixels (0 or negative is a no-op)
+ *
+ * Applies a separable box blur (horizontal pass then vertical pass) with a
+ * kernel of size (2 * @radius + 1). All four channels (R, G, B, A) are blurred
+ * so the function works correctly on shadow silhouettes (you want a soft alpha
+ * edge as well as soft colour).
+ *
+ * Sampling near the image edges is handled by clamping to the nearest valid
+ * pixel (clamp-to-edge). The result is stored back into @self in-place using
+ * a temporary buffer.
+ *
+ * @self must be #GRL_PIXELFORMAT_UNCOMPRESSED_R8G8B8A8; on other formats the
+ * function returns silently.
+ *
+ * This is a fast integer accumulator implementation (O(width * height)
+ * regardless of radius) using a sliding-window sum.
+ */
+void
+grl_image_blur_box (GrlImage *self,
+                    gint      radius)
+{
+    gint     w, h;
+    guint8  *src_data;
+    guint8  *tmp;
+    gsize    row_stride;
+    gint     x, y;
+    gint     ksize; /* kernel size = 2*radius + 1 */
+
+    g_return_if_fail (GRL_IS_IMAGE (self));
+
+    if (radius <= 0)
+        return;
+
+    if (self->handle.format != PIXELFORMAT_UNCOMPRESSED_R8G8B8A8)
+        return;
+
+    w = self->handle.width;
+    h = self->handle.height;
+    src_data = (guint8 *)self->handle.data;
+    row_stride = (gsize)w * 4;
+    ksize = 2 * radius + 1;
+
+    tmp = (guint8 *)g_malloc (row_stride * (gsize)h);
+
+    /*
+     * Horizontal pass: src_data -> tmp
+     * For each row y, blur each pixel horizontally into tmp.
+     */
+    for (y = 0; y < h; y++)
+    {
+        guint  sum[4];
+        gint   c;
+        guint8 *row = src_data + (gsize)y * row_stride;
+        guint8 *out = tmp      + (gsize)y * row_stride;
+
+        /* Prime the accumulator with the leftmost kernel [-radius .. radius]
+         * (clamped to [0, w-1]). */
+        sum[0] = sum[1] = sum[2] = sum[3] = 0;
+        for (c = -radius; c <= radius; c++)
+        {
+            gint sx = c;
+            gint i;
+
+            if (sx < 0)   sx = 0;
+            if (sx >= w)  sx = w - 1;
+
+            for (i = 0; i < 4; i++)
+                sum[i] += row[sx * 4 + i];
+        }
+
+        for (x = 0; x < w; x++)
+        {
+            gint add_x = x + radius + 1;
+            gint sub_x = x - radius;       /* element leaving the window at x+1 */
+            gint i;
+
+            /* Write the average for this pixel. */
+            for (i = 0; i < 4; i++)
+                out[x * 4 + i] = (guint8)(sum[i] / (guint)ksize);
+
+            /* Slide the window: add the incoming column, remove the outgoing. */
+            if (add_x >= w) add_x = w - 1;
+            if (sub_x <  0) sub_x = 0;
+
+            for (i = 0; i < 4; i++)
+            {
+                sum[i] += row[add_x * 4 + i];
+                sum[i] -= row[sub_x * 4 + i];
+            }
+        }
+    }
+
+    /*
+     * Vertical pass: tmp -> src_data
+     */
+    for (x = 0; x < w; x++)
+    {
+        guint  sum[4];
+        gint   c;
+        gint   i;
+
+        sum[0] = sum[1] = sum[2] = sum[3] = 0;
+        for (c = -radius; c <= radius; c++)
+        {
+            gint sy = c;
+
+            if (sy < 0)   sy = 0;
+            if (sy >= h)  sy = h - 1;
+
+            for (i = 0; i < 4; i++)
+                sum[i] += tmp[(gsize)sy * row_stride + x * 4 + i];
+        }
+
+        for (y = 0; y < h; y++)
+        {
+            gint add_y = y + radius + 1;
+            gint sub_y = y - radius;       /* element leaving the window at y+1 */
+
+            for (i = 0; i < 4; i++)
+                src_data[(gsize)y * row_stride + x * 4 + i] =
+                    (guint8)(sum[i] / (guint)ksize);
+
+            if (add_y >= h) add_y = h - 1;
+            if (sub_y <  0) sub_y = 0;
+
+            for (i = 0; i < 4; i++)
+            {
+                sum[i] += tmp[(gsize)add_y * row_stride + x * 4 + i];
+                sum[i] -= tmp[(gsize)sub_y * row_stride + x * 4 + i];
+            }
+        }
+    }
+
+    g_free (tmp);
+}
+
+/*
  * Internal API
  */
 

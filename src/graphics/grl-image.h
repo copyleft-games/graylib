@@ -520,6 +520,67 @@ GrlColor *          grl_image_get_pixel         (GrlImage           *self,
                                                  gint                y);
 
 /*
+ * Porter-Duff compositing (whole-image)
+ *
+ * grl_image_composite() composites @src onto @self at offset (@dst_x, @dst_y)
+ * using standard Porter-Duff coverage algebra on premultiplied alpha. Both
+ * images must be R8G8B8A8; if either is not R8G8B8A8 the call returns silently.
+ * @self's clip rectangle is honoured. If @self's blend colour space is LINEAR,
+ * RGB compositing is performed in linear light using the sRGB LUTs; otherwise
+ * compositing is in gamma (8-bit sRGB) space.
+ *
+ * Outside-mask / outside-src pixels: pixels of @self that lie outside the
+ * mapped region of @src are left completely unchanged.
+ */
+
+GRL_AVAILABLE_IN_ALL
+void                grl_image_composite         (GrlImage           *self,
+                                                 GrlImage           *src,
+                                                 GrlPorterDuffOp     op,
+                                                 gint                dst_x,
+                                                 gint                dst_y);
+
+/*
+ * First-class alpha mask
+ *
+ * grl_image_new_mask() returns a single-channel GRAYSCALE (1 byte/pixel) image
+ * initialised to zero (fully transparent when used as a mask). Drawing
+ * primitives may be used on the mask — the drawn luminance becomes coverage.
+ *
+ * grl_image_apply_mask() multiplies the alpha channel of @self (must be
+ * R8G8B8A8) by the corresponding mask value at (x - @offset_x, y - @offset_y).
+ * Pixels of @self that map outside the mask region are set to alpha 0 (cut).
+ * @self's clip rectangle is honoured.
+ *
+ * Contract: pixels of @self outside the mask's mapped area have their alpha
+ * zeroed (fully cut), not left unchanged. This is the standard stencil
+ * contract: the mask defines exactly which pixels survive.
+ */
+
+GRL_AVAILABLE_IN_ALL
+GrlImage *          grl_image_new_mask          (gint                width,
+                                                 gint                height);
+
+GRL_AVAILABLE_IN_ALL
+void                grl_image_apply_mask        (GrlImage           *self,
+                                                 GrlImage           *mask,
+                                                 gint                offset_x,
+                                                 gint                offset_y);
+
+/*
+ * Box blur
+ *
+ * Separable (horizontal then vertical) box blur with clamped-edge sampling.
+ * Blurs all four channels (R, G, B, A) so it works on shadow silhouettes.
+ * @radius <= 0 is a no-op. @self must be R8G8B8A8; on other formats returns
+ * silently. Uses a temporary buffer; the original is replaced in-place.
+ */
+
+GRL_AVAILABLE_IN_ALL
+void                grl_image_blur_box          (GrlImage           *self,
+                                                 gint                radius);
+
+/*
  * Internal - get raylib Image handle
  */
 
