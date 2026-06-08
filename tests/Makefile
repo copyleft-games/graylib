@@ -45,7 +45,8 @@ TEST_SOURCES := \
 	test-gif-quantize.c \
 	test-image-temporal.c \
 	test-path.c \
-	test-image-font.c
+	test-image-font.c \
+	test-svg.c
 
 # Test executables (with output directory and platform-specific extension)
 TEST_PROGRAMS := $(addprefix $(TESTOUTDIR)/,$(patsubst %.c,%$(EXE_EXT),$(TEST_SOURCES)))

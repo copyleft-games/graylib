@@ -74,6 +74,15 @@ typedef struct _GrlColor GrlColor;
 typedef struct _GrlRectangle GrlRectangle;
 
 /**
+ * GrlVectorShape:
+ *
+ * A vector shape: a #GrlPath plus fill/stroke paint (used by the SVG API).
+ *
+ * This is a GBoxed type.
+ */
+typedef struct _GrlVectorShape GrlVectorShape;
+
+/**
  * GrlMatrix:
  *
  * A 4x4 transformation matrix in column-major order.

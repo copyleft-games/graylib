@@ -44,6 +44,7 @@ PUBLIC_HEADERS := \
 	src/core/grl-input.h \
 	src/graphics/grl-image.h \
 	src/graphics/grl-path.h \
+	src/graphics/grl-svg.h \
 	src/graphics/grl-gif-writer.h \
 	src/graphics/grl-image-accumulator.h \
 	src/graphics/grl-image-temporal.h \
@@ -117,6 +118,7 @@ SOURCES := \
 	src/core/grl-input.c \
 	src/graphics/grl-image.c \
 	src/graphics/grl-path.c \
+	src/graphics/grl-svg.c \
 	src/graphics/grl-gif-writer.c \
 	src/graphics/grl-gif-quantize.c \
 	src/graphics/grl-image-accumulator.c \
@@ -459,6 +461,7 @@ endif
 	$(INSTALL_DATA) src/core/grl-input.h $(DESTDIR)$(INCLUDEDIR)/graylib/core/
 	$(INSTALL_DATA) src/graphics/grl-image.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
 	$(INSTALL_DATA) src/graphics/grl-path.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
+	$(INSTALL_DATA) src/graphics/grl-svg.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
 	$(INSTALL_DATA) src/graphics/grl-gif-writer.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
 	$(INSTALL_DATA) src/graphics/grl-image-accumulator.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
 	$(INSTALL_DATA) src/graphics/grl-image-temporal.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
@@ -644,6 +647,10 @@ $(OBJDIR)/src/graphics/grl-image-accumulator.o: src/graphics/grl-image-accumulat
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
 $(OBJDIR)/src/graphics/grl-image-temporal.o: src/graphics/grl-image-temporal.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(LIB_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/graphics/grl-svg.o: src/graphics/grl-svg.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 

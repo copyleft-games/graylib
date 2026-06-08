@@ -34,6 +34,7 @@ See [Best Practices](best_practices.md) for common pitfalls and solutions when w
 - [Core](api/core.md) - Application, Window
 - [Input](api/input.md) - Keyboard, mouse, and gamepad input
 - [Graphics](api/graphics.md) - Images, textures, fonts, shaders, and render textures
+- [SVG](api/svg.md) - SVG import/export over a documented geometry+paint subset
 - [Drawing](api/drawing.md) - Shape, texture, and text drawing functions
 - [Audio](api/audio.md) - Sound effects and music
 - [Scene](api/scene.md) - Entity system, sprites, and animations

@@ -70,6 +70,7 @@
 /* Graphics module */
 #include "graphics/grl-image.h"
 #include "graphics/grl-path.h"
+#include "graphics/grl-svg.h"
 #include "graphics/grl-gif-writer.h"
 #include "graphics/grl-image-accumulator.h"
 #include "graphics/grl-image-temporal.h"
