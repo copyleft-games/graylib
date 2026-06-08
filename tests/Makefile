@@ -47,7 +47,11 @@ TEST_SOURCES := \
 	test-path.c \
 	test-image-font.c \
 	test-svg.c \
-	test-color-oklab.c
+	test-color-oklab.c \
+	test-image-noise-overlay.c \
+	test-image-bloom.c \
+	test-image-stamp-path.c \
+	test-image-layer.c
 
 # Test executables (with output directory and platform-specific extension)
 TEST_PROGRAMS := $(addprefix $(TESTOUTDIR)/,$(patsubst %.c,%$(EXE_EXT),$(TEST_SOURCES)))

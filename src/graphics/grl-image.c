@@ -4943,3 +4943,542 @@ grl_image_stroke_path (GrlImage       *self,
     g_free (pts);
     g_free (lengths);
 }
+
+/* ============================================================
+ * Noise overlay, bloom, stamp-along-path, and layers
+ * ============================================================
+ */
+
+/* xorshift32: small deterministic PRNG, enough for noise overlay */
+static guint32
+xorshift32 (guint32 *state)
+{
+    guint32 x = *state;
+    if (x == 0) x = 0x9E3779B9u;
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    *state = x;
+    return x;
+}
+
+static gint
+clamp_i (gint v, gint lo, gint hi)
+{
+    return v < lo ? lo : (v > hi ? hi : v);
+}
+
+static guint8
+apply_overlay_chan (guint8 base, guint8 over)
+{
+    /* Photoshop "Overlay": base < 0.5 → 2*base*over else 1-2*(1-base)*(1-over) */
+    gfloat b = base / 255.0f;
+    gfloat o = over / 255.0f;
+    gfloat r = (b < 0.5f) ? (2.0f * b * o)
+                          : (1.0f - 2.0f * (1.0f - b) * (1.0f - o));
+    gint v = (gint) (r * 255.0f + 0.5f);
+    return (guint8) clamp_i (v, 0, 255);
+}
+
+/**
+ * grl_image_apply_noise:
+ * @self: A #GrlImage.
+ * @blend: How the noise blends with the existing image.
+ * @amplitude: Strength of the noise effect, typically 0–255 for additive.
+ * @frequency: Spatial frequency of the noise (0..1 controls smoothness;
+ *             higher = noisier per-pixel).
+ * @seed: PRNG seed; identical seeds produce identical output.
+ *
+ * Applies value noise across the image with the specified blend mode.
+ * Deterministic for a given seed.
+ */
+void
+grl_image_apply_noise (GrlImage      *self,
+                       GrlNoiseBlend  blend,
+                       gfloat         amplitude,
+                       gfloat         frequency,
+                       guint32        seed)
+{
+    gint w, h, x, y;
+    guint32 state;
+
+    g_return_if_fail (GRL_IS_IMAGE (self));
+
+    if (amplitude == 0.0f)
+        return;
+
+    w = self->handle.width;
+    h = self->handle.height;
+    state = seed ? seed : 1u;
+
+    /* Frequency is a perceptual knob: higher freq = more variation per pixel.
+     * Implementation: scale PRNG output by amplitude * frequency clamp. */
+    if (frequency < 0.0f) frequency = 0.0f;
+    if (frequency > 1.0f) frequency = 1.0f;
+
+    for (y = 0; y < h; y++) {
+        for (x = 0; x < w; x++) {
+            guint32 rnd;
+            gfloat n;
+            gint dn;
+            Color src;
+            Color out;
+
+            rnd = xorshift32 (&state);
+            /* Center on 0: range -1..+1 */
+            n = ((rnd & 0xFFFF) / 65535.0f) * 2.0f - 1.0f;
+            /* Scale by frequency (bias) and amplitude */
+            n *= frequency;
+            dn = (gint) (n * amplitude);
+
+            src = GetImageColor (self->handle, x, y);
+
+            switch (blend) {
+            case GRL_NOISE_BLEND_ADDITIVE:
+                out.r = (guint8) clamp_i ((gint) src.r + dn, 0, 255);
+                out.g = (guint8) clamp_i ((gint) src.g + dn, 0, 255);
+                out.b = (guint8) clamp_i ((gint) src.b + dn, 0, 255);
+                out.a = src.a;
+                break;
+            case GRL_NOISE_BLEND_MULTIPLY:
+                {
+                    /* For multiply, treat noise as [0..1] factor:
+                     *   factor = 1 - (frequency * amplitude * |rnd_unit|)
+                     * never brightens. */
+                    gfloat u = (rnd & 0xFFFF) / 65535.0f;
+                    gfloat f = 1.0f - (frequency * amplitude * u);
+                    if (f < 0.0f) f = 0.0f;
+                    out.r = (guint8) clamp_i ((gint) (src.r * f + 0.5f), 0, 255);
+                    out.g = (guint8) clamp_i ((gint) (src.g * f + 0.5f), 0, 255);
+                    out.b = (guint8) clamp_i ((gint) (src.b * f + 0.5f), 0, 255);
+                    out.a = src.a;
+                }
+                break;
+            case GRL_NOISE_BLEND_OVERLAY:
+                {
+                    guint8 nv = (guint8) clamp_i (128 + dn, 0, 255);
+                    out.r = apply_overlay_chan (src.r, nv);
+                    out.g = apply_overlay_chan (src.g, nv);
+                    out.b = apply_overlay_chan (src.b, nv);
+                    out.a = src.a;
+                }
+                break;
+            default:
+                out = src;
+                break;
+            }
+
+            ImageDrawPixel (&self->handle, x, y, out);
+        }
+    }
+}
+
+/**
+ * grl_image_apply_bloom:
+ * @self: A #GrlImage.
+ * @threshold: Only pixels with min(r,g,b) >= threshold contribute to bloom.
+ * @blur_radius: Gaussian blur radius applied to the threshold-extracted
+ *               highlights before they're added back.
+ * @intensity: Multiplier on the bloom contribution when added back to the
+ *             source. 0 disables, 1.0 = normal, higher = stronger glow.
+ *
+ * Extracts highlights brighter than @threshold, blurs them with
+ * @blur_radius, and additively composites the blurred highlights back
+ * into the source image.
+ */
+void
+grl_image_apply_bloom (GrlImage *self,
+                       guint8    threshold,
+                       gint      blur_radius,
+                       gfloat    intensity)
+{
+    Image hi;
+    gint w, h, x, y;
+    Color *src_pixels;
+    Color *hi_pixels;
+
+    g_return_if_fail (GRL_IS_IMAGE (self));
+
+    if (intensity <= 0.0f || blur_radius <= 0)
+        return;
+
+    w = self->handle.width;
+    h = self->handle.height;
+
+    /* Make a copy of the source for highlight extraction. */
+    hi = ImageCopy (self->handle);
+    /* Ensure 8-bit RGBA for direct pixel access */
+    ImageFormat (&hi, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+
+    hi_pixels = (Color *) hi.data;
+    for (y = 0; y < h; y++) {
+        for (x = 0; x < w; x++) {
+            Color *p = &hi_pixels[y * w + x];
+            guint8 m = p->r;
+            if (p->g < m) m = p->g;
+            if (p->b < m) m = p->b;
+            if (m < threshold) {
+                p->r = 0;
+                p->g = 0;
+                p->b = 0;
+                p->a = 0;
+            }
+        }
+    }
+
+    /* Blur the extracted highlights */
+    ImageBlurGaussian (&hi, blur_radius);
+
+    /* Additive composite hi back into src */
+    {
+        Image src_copy = ImageCopy (self->handle);
+        ImageFormat (&src_copy, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+        src_pixels = (Color *) src_copy.data;
+        hi_pixels = (Color *) hi.data;
+        for (y = 0; y < h; y++) {
+            for (x = 0; x < w; x++) {
+                Color *sp = &src_pixels[y * w + x];
+                Color *hp = &hi_pixels[y * w + x];
+                gint r = (gint) sp->r + (gint) (hp->r * intensity);
+                gint g = (gint) sp->g + (gint) (hp->g * intensity);
+                gint b = (gint) sp->b + (gint) (hp->b * intensity);
+                Color out;
+                out.r = (guint8) clamp_i (r, 0, 255);
+                out.g = (guint8) clamp_i (g, 0, 255);
+                out.b = (guint8) clamp_i (b, 0, 255);
+                out.a = sp->a;
+                ImageDrawPixel (&self->handle, x, y, out);
+            }
+        }
+        UnloadImage (src_copy);
+    }
+    UnloadImage (hi);
+}
+
+/* ----- Stamp brush along path ----- */
+
+/* Sample N points along a flattened path at approximately `spacing` apart.
+ * Returns a GArray of GrlVector2-compat (gfloat[2]) values. */
+typedef struct { gfloat x, y; } StampPoint;
+
+static void
+stamp_one (GrlImage *dst, GrlImage *brush, gint cx, gint cy)
+{
+    gint bw, bh, x, y;
+    bw = brush->handle.width;
+    bh = brush->handle.height;
+    for (y = 0; y < bh; y++) {
+        for (x = 0; x < bw; x++) {
+            Color bp = GetImageColor (brush->handle, x, y);
+            if (bp.a == 0)
+                continue;
+            {
+                gint dx = cx + x - bw / 2;
+                gint dy = cy + y - bh / 2;
+                if (dx < 0 || dy < 0 ||
+                    dx >= dst->handle.width || dy >= dst->handle.height)
+                    continue;
+                if (bp.a == 255) {
+                    ImageDrawPixel (&dst->handle, dx, dy, bp);
+                } else {
+                    Color dp = GetImageColor (dst->handle, dx, dy);
+                    gfloat a = bp.a / 255.0f;
+                    gfloat ia = 1.0f - a;
+                    Color out;
+                    out.r = (guint8) (bp.r * a + dp.r * ia);
+                    out.g = (guint8) (bp.g * a + dp.g * ia);
+                    out.b = (guint8) (bp.b * a + dp.b * ia);
+                    out.a = (guint8) clamp_i ((gint) (bp.a + dp.a * ia), 0, 255);
+                    ImageDrawPixel (&dst->handle, dx, dy, out);
+                }
+            }
+        }
+    }
+}
+
+/**
+ * grl_image_stamp_along_path:
+ * @self: Destination image.
+ * @brush: Brush image (alpha-blended at each stamp site, centered).
+ * @path: Path along which to stamp.
+ * @spacing: Distance in pixels between consecutive stamps.
+ * @jitter: Maximum positional jitter (pixels) per stamp.
+ * @seed: PRNG seed for jitter; identical seeds produce identical output.
+ *
+ * Walks the path's polyline approximation, emitting stamps at every
+ * @spacing pixels of arc length, with optional perpendicular jitter.
+ */
+void
+grl_image_stamp_along_path (GrlImage *self,
+                            GrlImage *brush,
+                            GrlPath  *path,
+                            gfloat    spacing,
+                            gfloat    jitter,
+                            guint32   seed)
+{
+    GArray *flat;
+    gfloat carry;
+    guint i;
+    guint32 state;
+
+    g_return_if_fail (GRL_IS_IMAGE (self));
+    g_return_if_fail (GRL_IS_IMAGE (brush));
+    g_return_if_fail (path != NULL);
+    g_return_if_fail (spacing > 0.0f);
+
+    /* Flatten the path to a polyline using the public path API. master's
+     * GrlPath is opaque, so we must not touch internal command storage. */
+    flat = g_array_new (FALSE, FALSE, sizeof (StampPoint));
+    {
+        guint      *sub_lens = NULL;
+        guint       n_sub = 0;
+        guint       total = 0;
+        GrlVector2 *pts;
+
+        pts = grl_path_get_flattened (path, 0.0f, &sub_lens, &n_sub, &total);
+        if (pts != NULL)
+        {
+            guint k;
+            for (k = 0; k < total; k++)
+            {
+                StampPoint sp = { pts[k].x, pts[k].y };
+                g_array_append_val (flat, sp);
+            }
+            g_free (pts);
+        }
+        g_free (sub_lens);
+    }
+
+    /* Walk the polyline, emitting stamps at `spacing` arc-length intervals. */
+    state = seed ? seed : 1u;
+    carry = 0.0f;
+    if (flat->len > 0) {
+        StampPoint first = g_array_index (flat, StampPoint, 0);
+        stamp_one (self, brush, (gint) first.x, (gint) first.y);
+    }
+    for (i = 1; i < flat->len; i++) {
+        StampPoint *p0 = &g_array_index (flat, StampPoint, i - 1);
+        StampPoint *p1 = &g_array_index (flat, StampPoint, i);
+        gfloat dx = p1->x - p0->x;
+        gfloat dy = p1->y - p0->y;
+        gfloat seg = sqrtf (dx*dx + dy*dy);
+        gfloat used = -carry;
+        if (seg <= 0.0f) continue;
+        while (used + spacing <= seg) {
+            gfloat tt;
+            gfloat jx = 0.0f, jy = 0.0f;
+            gint sx, sy;
+            used += spacing;
+            tt = used / seg;
+            if (jitter > 0.0f) {
+                guint32 r1 = xorshift32 (&state);
+                guint32 r2 = xorshift32 (&state);
+                jx = (((r1 & 0xFFFF) / 65535.0f) * 2.0f - 1.0f) * jitter;
+                jy = (((r2 & 0xFFFF) / 65535.0f) * 2.0f - 1.0f) * jitter;
+            }
+            sx = (gint) (p0->x + dx * tt + jx);
+            sy = (gint) (p0->y + dy * tt + jy);
+            stamp_one (self, brush, sx, sy);
+        }
+        carry = seg - used;
+    }
+
+    g_array_free (flat, TRUE);
+}
+
+/* ============================================================
+ * Layer system
+ * ============================================================ */
+
+struct _GrlLayer {
+    gint ref_count;
+    GrlImage *image;
+};
+
+G_DEFINE_BOXED_TYPE (GrlLayer, grl_layer,
+                     grl_layer_ref, grl_layer_unref)
+
+/**
+ * grl_layer_new:
+ * @width: Layer width in pixels.
+ * @height: Layer height in pixels.
+ *
+ * Creates a new off-screen layer initialised to fully-transparent
+ * black. Use grl_layer_get_image() to obtain the backing image and
+ * draw onto it like any GrlImage, then call
+ * grl_image_composite_layer() to blit the layer back to a destination.
+ *
+ * Returns: (transfer full): A new #GrlLayer with refcount 1.
+ */
+GrlLayer *
+grl_layer_new (gint width, gint height)
+{
+    GrlLayer *self;
+    g_autoptr (GrlColor) clear = grl_color_new (0, 0, 0, 0);
+
+    self = g_new0 (GrlLayer, 1);
+    self->ref_count = 1;
+    self->image = grl_image_new_color (width, height, clear);
+    return self;
+}
+
+GrlLayer *
+grl_layer_ref (GrlLayer *self)
+{
+    g_return_val_if_fail (self != NULL, NULL);
+    self->ref_count++;
+    return self;
+}
+
+void
+grl_layer_unref (GrlLayer *self)
+{
+    if (self == NULL)
+        return;
+    self->ref_count--;
+    if (self->ref_count == 0) {
+        if (self->image)
+            g_object_unref (self->image);
+        g_free (self);
+    }
+}
+
+GrlImage *
+grl_layer_get_image (GrlLayer *self)
+{
+    g_return_val_if_fail (self != NULL, NULL);
+    return self->image;
+}
+
+/* Blend math: all inputs/outputs in [0,1] linear space */
+static gfloat
+blend_chan (gfloat dst, gfloat src, GrlLayerBlendMode mode)
+{
+    switch (mode) {
+    case GRL_LAYER_BLEND_MULTIPLY:
+        return dst * src;
+    case GRL_LAYER_BLEND_SCREEN:
+        return 1.0f - (1.0f - dst) * (1.0f - src);
+    case GRL_LAYER_BLEND_OVERLAY:
+        return (dst < 0.5f) ? (2.0f * dst * src)
+                            : (1.0f - 2.0f * (1.0f - dst) * (1.0f - src));
+    case GRL_LAYER_BLEND_SOFT_LIGHT:
+        /* W3C compositing-1 soft-light */
+        if (src <= 0.5f)
+            return dst - (1.0f - 2.0f * src) * dst * (1.0f - dst);
+        else {
+            gfloat d = (dst <= 0.25f)
+                     ? ((16.0f * dst - 12.0f) * dst + 4.0f) * dst
+                     : sqrtf (dst);
+            return dst + (2.0f * src - 1.0f) * (d - dst);
+        }
+    case GRL_LAYER_BLEND_ADD:
+        {
+            gfloat v = dst + src;
+            return v > 1.0f ? 1.0f : v;
+        }
+    case GRL_LAYER_BLEND_COLOR_DODGE:
+        if (src >= 1.0f) return 1.0f;
+        return dst / (1.0f - src) > 1.0f ? 1.0f : dst / (1.0f - src);
+    case GRL_LAYER_BLEND_COLOR_BURN:
+        if (src <= 0.0f) return 0.0f;
+        {
+            gfloat v = 1.0f - (1.0f - dst) / src;
+            return v < 0.0f ? 0.0f : v;
+        }
+    case GRL_LAYER_BLEND_NORMAL:
+    default:
+        return src;
+    }
+}
+
+/**
+ * grl_image_composite_layer:
+ * @dst: Destination image.
+ * @layer: Source layer.
+ * @x: Left offset to place the layer.
+ * @y: Top offset to place the layer.
+ * @mode: Blend mode.
+ * @opacity: Global opacity for the layer (0..1).
+ *
+ * Composites @layer onto @dst at offset (@x, @y) using the chosen
+ * @mode. Source alpha and global @opacity are both honoured.
+ */
+void
+grl_image_composite_layer (GrlImage    *dst,
+                           GrlLayer    *layer,
+                           gint         x,
+                           gint         y,
+                           GrlLayerBlendMode mode,
+                           gfloat       opacity)
+{
+    gint lw, lh, dw, dh, lx, ly, dx, dy;
+    GrlImage *src;
+
+    g_return_if_fail (GRL_IS_IMAGE (dst));
+    g_return_if_fail (layer != NULL);
+
+    if (opacity <= 0.0f)
+        return;
+    if (opacity > 1.0f) opacity = 1.0f;
+
+    src = layer->image;
+    g_return_if_fail (src != NULL);
+
+    lw = src->handle.width;
+    lh = src->handle.height;
+    dw = dst->handle.width;
+    dh = dst->handle.height;
+
+    for (ly = 0; ly < lh; ly++) {
+        for (lx = 0; lx < lw; lx++) {
+            Color sp, dp;
+            gfloat sa, da, oa;
+            gfloat sr, sg, sb, dr, dg, db;
+            gfloat br_, bg, bb;
+            gfloat outR, outG, outB, outA;
+            Color out;
+
+            dx = x + lx;
+            dy = y + ly;
+            if (dx < 0 || dy < 0 || dx >= dw || dy >= dh)
+                continue;
+
+            sp = GetImageColor (src->handle, lx, ly);
+            if (sp.a == 0)
+                continue;
+
+            dp = GetImageColor (dst->handle, dx, dy);
+
+            sa = (sp.a / 255.0f) * opacity;
+            da = dp.a / 255.0f;
+            sr = sp.r / 255.0f;
+            sg = sp.g / 255.0f;
+            sb = sp.b / 255.0f;
+            dr = dp.r / 255.0f;
+            dg = dp.g / 255.0f;
+            db = dp.b / 255.0f;
+
+            /* Per-channel blend math (excluding alpha) */
+            br_ = blend_chan (dr, sr, mode);
+            bg  = blend_chan (dg, sg, mode);
+            bb  = blend_chan (db, sb, mode);
+
+            /* Standard SVG Porter-Duff source-over with blended colour */
+            oa = sa + da * (1.0f - sa);
+            if (oa <= 0.0f) {
+                out.r = 0; out.g = 0; out.b = 0; out.a = 0;
+            } else {
+                outR = (sa * br_ + (1.0f - sa) * da * dr) / oa;
+                outG = (sa * bg  + (1.0f - sa) * da * dg) / oa;
+                outB = (sa * bb  + (1.0f - sa) * da * db) / oa;
+                outA = oa;
+                out.r = (guint8) clamp_i ((gint) (outR * 255.0f + 0.5f), 0, 255);
+                out.g = (guint8) clamp_i ((gint) (outG * 255.0f + 0.5f), 0, 255);
+                out.b = (guint8) clamp_i ((gint) (outB * 255.0f + 0.5f), 0, 255);
+                out.a = (guint8) clamp_i ((gint) (outA * 255.0f + 0.5f), 0, 255);
+            }
+            ImageDrawPixel (&dst->handle, dx, dy, out);
+        }
+    }
+}

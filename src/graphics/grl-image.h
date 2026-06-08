@@ -669,4 +669,93 @@ void                grl_image_stroke_path       (GrlImage           *self,
 
 gpointer            grl_image_get_handle        (GrlImage           *self);
 
+/* ==========================================================================
+ * Paint engine — noise, bloom, stamp-along-path, and layer compositing
+ * (salvaged from MR !2 feat/paint-engine-pro)
+ * ========================================================================== */
+
+/*
+ * Noise overlay — applies pseudo-random per-pixel noise blended into
+ * the image. Deterministic for a given seed.
+ */
+typedef enum {
+    GRL_NOISE_BLEND_ADDITIVE = 0,
+    GRL_NOISE_BLEND_MULTIPLY,
+    GRL_NOISE_BLEND_OVERLAY
+} GrlNoiseBlend;
+
+GRL_AVAILABLE_IN_ALL
+void                grl_image_apply_noise       (GrlImage           *self,
+                                                 GrlNoiseBlend       blend,
+                                                 gfloat              amplitude,
+                                                 gfloat              frequency,
+                                                 guint32             seed);
+
+/*
+ * Bloom — threshold + blur + additive composite back. Brightens
+ * highlights with a soft halo, simulating HDR overexposure.
+ */
+GRL_AVAILABLE_IN_ALL
+void                grl_image_apply_bloom       (GrlImage           *self,
+                                                 guint8              threshold,
+                                                 gint                blur_radius,
+                                                 gfloat              intensity);
+
+/*
+ * Stamp brush along path — samples points along the path at `spacing`
+ * pixel intervals and stamps the brush image (centered) at each point.
+ * Brush is alpha-blended; transparent brush pixels don't overwrite dst.
+ */
+GRL_AVAILABLE_IN_ALL
+void                grl_image_stamp_along_path  (GrlImage           *self,
+                                                 GrlImage           *brush,
+                                                 GrlPath            *path,
+                                                 gfloat              spacing,
+                                                 gfloat              jitter,
+                                                 guint32             seed);
+
+/*
+ * Layer + blend modes — off-screen drawing buffers composited back
+ * into a destination image with selectable blend math.
+ */
+typedef enum {
+    GRL_LAYER_BLEND_NORMAL = 0,
+    GRL_LAYER_BLEND_MULTIPLY,
+    GRL_LAYER_BLEND_SCREEN,
+    GRL_LAYER_BLEND_OVERLAY,
+    GRL_LAYER_BLEND_SOFT_LIGHT,
+    GRL_LAYER_BLEND_ADD,
+    GRL_LAYER_BLEND_COLOR_DODGE,
+    GRL_LAYER_BLEND_COLOR_BURN
+} GrlLayerBlendMode;
+
+#define GRL_TYPE_LAYER (grl_layer_get_type ())
+typedef struct _GrlLayer GrlLayer;
+
+GRL_AVAILABLE_IN_ALL
+GType               grl_layer_get_type          (void) G_GNUC_CONST;
+
+GRL_AVAILABLE_IN_ALL
+GrlLayer *          grl_layer_new               (gint                width,
+                                                 gint                height);
+
+GRL_AVAILABLE_IN_ALL
+GrlLayer *          grl_layer_ref               (GrlLayer           *self);
+
+GRL_AVAILABLE_IN_ALL
+void                grl_layer_unref             (GrlLayer           *self);
+
+GRL_AVAILABLE_IN_ALL
+GrlImage *          grl_layer_get_image         (GrlLayer           *self);
+
+GRL_AVAILABLE_IN_ALL
+void                grl_image_composite_layer   (GrlImage           *dst,
+                                                 GrlLayer           *layer,
+                                                 gint                x,
+                                                 gint                y,
+                                                 GrlLayerBlendMode   mode,
+                                                 gfloat              opacity);
+
+G_DEFINE_AUTOPTR_CLEANUP_FUNC (GrlLayer, grl_layer_unref)
+
 G_END_DECLS
