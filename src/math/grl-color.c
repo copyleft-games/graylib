@@ -684,6 +684,127 @@ grl_color_lerp (const GrlColor *a,
 }
 
 /*
+ * OKLab perceptual-space color interpolation.
+ * Pipeline: sRGB byte → linear sRGB → OKLab → lerp → linear sRGB → sRGB byte.
+ * Reference: Björn Ottosson, https://bottosson.github.io/posts/oklab/
+ */
+
+static gfloat
+srgb_to_linear (gfloat c)
+{
+    if (c <= 0.04045f)
+        return c / 12.92f;
+    return powf ((c + 0.055f) / 1.055f, 2.4f);
+}
+
+static gfloat
+linear_to_srgb (gfloat c)
+{
+    if (c <= 0.0031308f)
+        return 12.92f * c;
+    return 1.055f * powf (c, 1.0f / 2.4f) - 0.055f;
+}
+
+static void
+linear_rgb_to_oklab (gfloat r, gfloat g, gfloat b,
+                     gfloat *L, gfloat *A, gfloat *B)
+{
+    gfloat l = 0.4122214708f * r + 0.5363325363f * g + 0.0514459929f * b;
+    gfloat m = 0.2119034982f * r + 0.6806995451f * g + 0.1073969566f * b;
+    gfloat s = 0.0883024619f * r + 0.2817188376f * g + 0.6299787005f * b;
+
+    gfloat l_ = cbrtf (l);
+    gfloat m_ = cbrtf (m);
+    gfloat s_ = cbrtf (s);
+
+    *L = 0.2104542553f * l_ + 0.7936177850f * m_ - 0.0040720468f * s_;
+    *A = 1.9779984951f * l_ - 2.4285922050f * m_ + 0.4505937099f * s_;
+    *B = 0.0259040371f * l_ + 0.7827717662f * m_ - 0.8086757660f * s_;
+}
+
+static void
+oklab_to_linear_rgb (gfloat L, gfloat A, gfloat B,
+                     gfloat *r, gfloat *g, gfloat *b)
+{
+    gfloat l_ = L + 0.3963377774f * A + 0.2158037573f * B;
+    gfloat m_ = L - 0.1055613458f * A - 0.0638541728f * B;
+    gfloat s_ = L - 0.0894841775f * A - 1.2914855480f * B;
+
+    gfloat l = l_ * l_ * l_;
+    gfloat m = m_ * m_ * m_;
+    gfloat s = s_ * s_ * s_;
+
+    *r = +4.0767416621f * l - 3.3077115913f * m + 0.2309699292f * s;
+    *g = -1.2684380046f * l + 2.6097574011f * m - 0.3413193965f * s;
+    *b = -0.0041960863f * l - 0.7034186147f * m + 1.7076147010f * s;
+}
+
+/**
+ * grl_color_lerp_oklab:
+ * @a: Start color
+ * @b: End color
+ * @t: Interpolation factor (0.0 to 1.0)
+ *
+ * Interpolates between two colors in OKLab perceptual color space, which
+ * produces hue transitions that look natural to the eye (no muddy midpoints
+ * between complementary colors). Alpha is interpolated linearly.
+ *
+ * Returns: (transfer full): A new interpolated color
+ */
+GrlColor *
+grl_color_lerp_oklab (const GrlColor *a,
+                      const GrlColor *b,
+                      gfloat          t)
+{
+    gfloat ar, ag, ab_, br, bg, bb;
+    gfloat aL, aA, aB, bL, bA, bB;
+    gfloat mL, mA, mB;
+    gfloat rL, rG, rB;
+    gfloat sR, sG, sB;
+    gfloat alpha;
+    gint ri, gi, bi, ai;
+
+    g_return_val_if_fail (a != NULL, NULL);
+    g_return_val_if_fail (b != NULL, NULL);
+
+    t = CLAMP (t, 0.0f, 1.0f);
+
+    ar = srgb_to_linear (a->r / 255.0f);
+    ag = srgb_to_linear (a->g / 255.0f);
+    ab_ = srgb_to_linear (a->b / 255.0f);
+    br = srgb_to_linear (b->r / 255.0f);
+    bg = srgb_to_linear (b->g / 255.0f);
+    bb = srgb_to_linear (b->b / 255.0f);
+
+    linear_rgb_to_oklab (ar, ag, ab_, &aL, &aA, &aB);
+    linear_rgb_to_oklab (br, bg, bb, &bL, &bA, &bB);
+
+    mL = aL + t * (bL - aL);
+    mA = aA + t * (bA - aA);
+    mB = aB + t * (bB - aB);
+
+    oklab_to_linear_rgb (mL, mA, mB, &rL, &rG, &rB);
+
+    sR = linear_to_srgb (CLAMP (rL, 0.0f, 1.0f));
+    sG = linear_to_srgb (CLAMP (rG, 0.0f, 1.0f));
+    sB = linear_to_srgb (CLAMP (rB, 0.0f, 1.0f));
+
+    alpha = a->a + t * (b->a - a->a);
+
+    ri = (gint) (sR * 255.0f + 0.5f);
+    gi = (gint) (sG * 255.0f + 0.5f);
+    bi = (gint) (sB * 255.0f + 0.5f);
+    ai = (gint) (alpha + 0.5f);
+
+    return grl_color_new (
+        (guint8) CLAMP (ri, 0, 255),
+        (guint8) CLAMP (gi, 0, 255),
+        (guint8) CLAMP (bi, 0, 255),
+        (guint8) CLAMP (ai, 0, 255)
+    );
+}
+
+/*
  * Conversions
  */
 

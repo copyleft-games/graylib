@@ -203,6 +203,11 @@ GrlColor *      grl_color_lerp              (const GrlColor     *a,
                                              const GrlColor     *b,
                                              gfloat              t);
 
+GRL_AVAILABLE_IN_ALL
+GrlColor *      grl_color_lerp_oklab        (const GrlColor     *a,
+                                             const GrlColor     *b,
+                                             gfloat              t);
+
 /*
  * Conversions
  */
