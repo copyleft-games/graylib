@@ -716,6 +716,45 @@ grl_image_fill_path (img, u, GRL_FILL_RULE_NONZERO, fill_color);
 
 Passing an empty path as an operand is safe; e.g. `union(∅, b) ≡ b`.
 
+## Headless TTF/OTF text
+
+`GrlImageFont` (`src/graphics/grl-image-font.h`) wraps
+[stb_truetype](https://github.com/nothings/stb) to render scalable TrueType and
+OpenType fonts onto `GrlImage` buffers without a GL context — ideal for
+asset baking and CLI tools. (The 8×8 bitmap API, `grl_image_draw_text_bitmap()`,
+remains the zero-dependency fallback for pixel-art aesthetics.)
+
+```c
+g_autoptr(GError) error = NULL;
+g_autoptr(GrlImageFont) font =
+    grl_image_font_new_from_file ("/usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf",
+                                  &error);
+if (font == NULL)
+  {
+    g_warning ("font load failed: %s", error->message);
+    return;
+  }
+
+g_autoptr(GrlColor) black = grl_color_new (0, 0, 0, 255);
+grl_image_draw_text_ttf (image, font, "Hello, world!", 10, 10, 32.0f, black);
+
+/* Measure (advance width in .x, total height in .y) and query metrics. */
+g_autoptr(GrlVector2) size = grl_image_measure_text_ttf (font, "Hello", 32.0f);
+gfloat ascent, descent, line_gap;
+grl_image_font_get_v_metrics (font, 32.0f, &ascent, &descent, &line_gap);
+```
+
+`grl_image_font_new_from_memory()` loads from a byte buffer (copied). `(x, y)`
+is the top-left of the first line's em box; the colour's alpha is modulated by
+the per-pixel anti-aliasing coverage. The text is composited
+`GRL_PORTER_DUFF_SRC_OVER`, honouring the destination's clip rectangle and blend
+colour space (the per-image *blend mode* is not consulted for this operation).
+
+**Limitations (v1):** stb provides minimal hinting, so small sizes (< ~14 px)
+look slightly soft — prefer ≥ 14 px. Layout is left-to-right, one codepoint per
+glyph (advance + kerning); RTL/bidi, combining marks, ligatures, and vertical
+text are out of scope (HarfBuzz-class shaping is future work).
+
 ## GrlTexture
 
 GPU texture for efficient rendering. Textures are created from images or loaded directly.

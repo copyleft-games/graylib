@@ -219,6 +219,16 @@ typedef struct _GrlImageAccumulator GrlImageAccumulator;
 /* Note: GrlImageAccumulatorClass is defined by G_DECLARE_FINAL_TYPE in grl-image-accumulator.h */
 
 /**
+ * GrlImageFont:
+ *
+ * A headless TTF/OTF font rasteriser backed by stb_truetype.
+ *
+ * This is a final GObject type.
+ */
+typedef struct _GrlImageFont GrlImageFont;
+/* Note: GrlImageFontClass is defined by G_DECLARE_FINAL_TYPE in grl-image-font.h */
+
+/**
  * GrlTexture:
  *
  * A GPU texture (pixel data in VRAM).

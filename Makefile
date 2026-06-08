@@ -47,6 +47,7 @@ PUBLIC_HEADERS := \
 	src/graphics/grl-gif-writer.h \
 	src/graphics/grl-image-accumulator.h \
 	src/graphics/grl-image-temporal.h \
+	src/graphics/grl-image-font.h \
 	src/graphics/grl-texture.h \
 	src/graphics/grl-font.h \
 	src/graphics/grl-camera2d.h \
@@ -120,6 +121,7 @@ SOURCES := \
 	src/graphics/grl-gif-quantize.c \
 	src/graphics/grl-image-accumulator.c \
 	src/graphics/grl-image-temporal.c \
+	src/graphics/grl-image-font.c \
 	src/graphics/grl-texture.c \
 	src/graphics/grl-font.c \
 	src/graphics/grl-camera2d.c \
@@ -460,6 +462,7 @@ endif
 	$(INSTALL_DATA) src/graphics/grl-gif-writer.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
 	$(INSTALL_DATA) src/graphics/grl-image-accumulator.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
 	$(INSTALL_DATA) src/graphics/grl-image-temporal.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
+	$(INSTALL_DATA) src/graphics/grl-image-font.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
 	$(INSTALL_DATA) src/graphics/grl-texture.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
 	$(INSTALL_DATA) src/graphics/grl-font.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
 	$(INSTALL_DATA) src/graphics/grl-camera2d.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
@@ -787,6 +790,17 @@ $(OBJDIR)/src/graphics/grl-image.o: src/graphics/grl-image.c
 $(OBJDIR)/src/graphics/grl-path.o: src/graphics/grl-path.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(RPNG_CFLAGS) -c -o $@ $<
+
+# grl-image-font.c needs C99 (stb_truetype). It includes
+# <external/stb_truetype.h>, resolved via the -isystem $(RAYLIB_SRC) already in
+# LIB_CFLAGS — do NOT add deps/raylib/src/external to the include path, that
+# exposes raylib's Windows-only dirent.h shim and breaks the Linux build.
+# STBTT_STATIC makes stb's symbols file-local so they don't collide with raylib.
+STB_TRUETYPE_CFLAGS := $(subst -std=gnu89,-std=gnu99,$(LIB_CFLAGS))
+
+$(OBJDIR)/src/graphics/grl-image-font.o: src/graphics/grl-image-font.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(STB_TRUETYPE_CFLAGS) -c -o $@ $<
 
 # rres needs C99 and its include path
 # grl-resource-pack.c contains RRES_IMPLEMENTATION
