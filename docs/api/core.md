@@ -121,6 +121,14 @@ gboolean resized = grl_window_is_resized (window);
 ### Window Configuration
 
 ```c
+/* Creation-time config flags -- call BEFORE creating a window (raylib applies
+   them in InitWindow).  Used for hints that cannot change after creation, such
+   as GRL_FLAG_WINDOW_TRANSPARENT (transparent framebuffer) or
+   GRL_FLAG_MSAA_4X_HINT.  Unlike grl_window_set_state(), this is a free
+   function (global, like raylib's SetConfigFlags) with no GrlWindow argument. */
+grl_window_set_config_flags (GRL_FLAG_WINDOW_TRANSPARENT);
+GrlWindow *window = grl_window_new (800, 600, "Title");  /* now transparent */
+
 /* Toggle modes */
 grl_window_toggle_fullscreen (window);
 grl_window_toggle_borderless (window);

@@ -158,6 +158,9 @@ void                grl_window_clear_state      (GrlWindow          *self,
                                                  GrlConfigFlags      flags);
 
 GRL_AVAILABLE_IN_ALL
+void                grl_window_set_config_flags (GrlConfigFlags      flags);
+
+GRL_AVAILABLE_IN_ALL
 void                grl_window_toggle_fullscreen (GrlWindow         *self);
 
 GRL_AVAILABLE_IN_ALL

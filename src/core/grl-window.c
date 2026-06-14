@@ -939,6 +939,25 @@ grl_window_set_state (GrlWindow      *self,
 }
 
 /**
+ * grl_window_set_config_flags:
+ * @flags: Configuration flags to enable.
+ *
+ * Sets window configuration flags that must be in effect *before* a window is
+ * created.  raylib reads these in InitWindow(), so call this before
+ * grl_window_new() (or any GrlWindow construction).  Unlike
+ * grl_window_set_state(), which mutates an existing window, this affects only
+ * windows created afterwards -- it is the wrapper for the global raylib
+ * SetConfigFlags(), used for creation-time hints such as
+ * %GRL_FLAG_WINDOW_TRANSPARENT (transparent framebuffer) and
+ * %GRL_FLAG_MSAA_4X_HINT.
+ */
+void
+grl_window_set_config_flags (GrlConfigFlags flags)
+{
+    SetConfigFlags ((unsigned int)flags);
+}
+
+/**
  * grl_window_clear_state:
  * @self: A #GrlWindow.
  * @flags: Configuration flags to disable.
