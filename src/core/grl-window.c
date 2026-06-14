@@ -10,6 +10,7 @@
 #include "config.h"
 #include "grl-window.h"
 #include <raylib.h>
+#include <rlgl.h>		/* rlDrawRenderBatchActive (grl_window_swap_buffers) */
 #include <math.h>
 
 /* Maximum number of gamepads to poll */
@@ -1604,6 +1605,45 @@ grl_window_end_drawing (GrlWindow *self)
     g_return_if_fail (GRL_IS_WINDOW (self));
 
     EndDrawing ();
+}
+
+/**
+ * grl_window_swap_buffers:
+ * @self: A #GrlWindow.
+ *
+ * Flushes the active render batch and swaps the back and front buffers,
+ * presenting the current frame.  Unlike grl_window_end_drawing()
+ * (EndDrawing), this does NOT poll input events or apply frame-rate
+ * limiting -- use it when you drive input polling yourself (see
+ * grl_window_poll_events()) and need exactly one poll point per cycle,
+ * e.g. when embedding the window in an external event loop.
+ */
+void
+grl_window_swap_buffers (GrlWindow *self)
+{
+    g_return_if_fail (GRL_IS_WINDOW (self));
+
+    rlDrawRenderBatchActive ();   /* flush queued draws to the back buffer */
+    SwapScreenBuffer ();          /* present (no PollInputEvents, no WaitTime) */
+}
+
+/**
+ * grl_window_poll_events:
+ * @self: A #GrlWindow.
+ *
+ * Polls the windowing system for input and window events (keyboard,
+ * mouse, resize, close, focus) and updates the input state queried by the
+ * grl_input_* functions.  This is the standalone counterpart to the
+ * implicit poll inside grl_window_end_drawing(); call it exactly ONCE per
+ * input cycle when driving the window from an external event loop, so that
+ * key-press edge detection and the character queue are not consumed twice.
+ */
+void
+grl_window_poll_events (GrlWindow *self)
+{
+    g_return_if_fail (GRL_IS_WINDOW (self));
+
+    PollInputEvents ();
 }
 
 /**

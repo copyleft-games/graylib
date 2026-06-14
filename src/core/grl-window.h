@@ -321,6 +321,12 @@ GRL_AVAILABLE_IN_ALL
 void                grl_window_end_drawing      (GrlWindow          *self);
 
 GRL_AVAILABLE_IN_ALL
+void                grl_window_swap_buffers     (GrlWindow          *self);
+
+GRL_AVAILABLE_IN_ALL
+void                grl_window_poll_events      (GrlWindow          *self);
+
+GRL_AVAILABLE_IN_ALL
 void                grl_window_clear_background (GrlWindow          *self,
                                                  const GrlColor     *color);
 
