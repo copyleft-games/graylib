@@ -1143,11 +1143,27 @@ grl_image_from_region (GrlImage           *self,
                        const GrlRectangle *region)
 {
     Image handle;
+    Rectangle rec;
+    float maxw, maxh;
 
     g_return_val_if_fail (GRL_IS_IMAGE (self), NULL);
     g_return_val_if_fail (region != NULL, NULL);
 
-    handle = ImageFromImage (self->handle, GRL_TO_RAYLIB_RECTANGLE (region));
+    /* Clamp the region to the image bounds before extracting.  raylib's
+       ImageFromImage (unlike ImageCrop) performs no bounds checking and reads
+       past the source allocation for an out-of-range rectangle, so guard it
+       here.  Mirrors the security clamp in raylib's own ImageCrop. */
+    rec = GRL_TO_RAYLIB_RECTANGLE (region);
+    if (rec.x < 0.0f) { rec.width += rec.x; rec.x = 0.0f; }
+    if (rec.y < 0.0f) { rec.height += rec.y; rec.y = 0.0f; }
+    maxw = (float) self->handle.width - rec.x;
+    maxh = (float) self->handle.height - rec.y;
+    if (rec.width > maxw) rec.width = maxw;
+    if (rec.height > maxh) rec.height = maxh;
+    if (rec.width <= 0.0f || rec.height <= 0.0f)
+        return NULL;
+
+    handle = ImageFromImage (self->handle, rec);
     return grl_image_new_from_handle (handle);
 }
 

@@ -1560,12 +1560,48 @@ test_transform_scale_zero_no_crash (void)
     g_assert_true (grl_image_is_valid (img));
 }
 
+/* Regression: grl_image_from_region with a rect taller/wider than the source
+   must clamp to the image bounds and not read past the allocation.  This is the
+   exact crash the lrg 3D backend hit on window resize (a stale, too-tall panel
+   rect cropped from a freshly-shrunk screen capture); raylib's ImageFromImage
+   has no bounds check, so the clamp lives in grl_image_from_region. */
+static void
+test_from_region_out_of_bounds_clamps (void)
+{
+    g_autoptr(GrlColor) bg   = grl_color_new (10, 20, 30, 255);
+    g_autoptr(GrlImage) img  = grl_image_new_color (902, 805, bg);
+    g_autoptr(GrlRectangle) too_tall = grl_rectangle_new (0.0f, 0.0f, 816.0f, 828.0f);
+    g_autoptr(GrlRectangle) partly   = grl_rectangle_new (800.0f, 700.0f, 400.0f, 400.0f);
+    g_autoptr(GrlRectangle) outside  = grl_rectangle_new (2000.0f, 2000.0f, 10.0f, 10.0f);
+    g_autoptr(GrlImage) a = NULL;
+    g_autoptr(GrlImage) b = NULL;
+    GrlImage *c = NULL;
+
+    /* Height 828 > image height 805: clamps to 816 x 805, no crash. */
+    a = grl_image_from_region (img, too_tall);
+    g_assert_nonnull (a);
+    g_assert_cmpint (grl_image_get_width (a), ==, 816);
+    g_assert_cmpint (grl_image_get_height (a), ==, 805);
+
+    /* Rect overhangs the bottom-right corner: clamps to what remains. */
+    b = grl_image_from_region (img, partly);
+    g_assert_nonnull (b);
+    g_assert_cmpint (grl_image_get_width (b), ==, 102);   /* 902 - 800 */
+    g_assert_cmpint (grl_image_get_height (b), ==, 105);  /* 805 - 700 */
+
+    /* Wholly outside the image: nothing to extract, returns NULL (no crash). */
+    c = grl_image_from_region (img, outside);
+    g_assert_null (c);
+}
+
 int
 main (int   argc,
       char *argv[])
 {
     g_test_init (&argc, &argv, NULL);
 
+    g_test_add_func ("/image-draw/from-region/out-of-bounds-clamps",
+                     test_from_region_out_of_bounds_clamps);
     g_test_add_func ("/image-draw/state/defaults", test_state_defaults);
     g_test_add_func ("/image-draw/state/roundtrip", test_state_roundtrip);
 
