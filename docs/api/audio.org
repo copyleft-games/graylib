@@ -1,24 +1,25 @@
-# Audio System
-
+* Audio System
+:PROPERTIES:
+:CUSTOM_ID: audio-system
+:END:
 This document covers the audio types added in Phase 4: audio device, sound effects, and streaming music.
 
-> **raylib 6.0 pan behavioral change.** Sound/music/stream pan is now
-> `[-1.0 .. 1.0]` end-to-end: `-1.0` = full left, `0.0` = centered, `1.0` = full
-> right. graylib's public pan API was always `[-1.0 .. 1.0]`; previously it
-> internally converted to raylib's old `[0 .. 1]` convention before forwarding.
-> raylib 6.0 adopts the `[-1.0 .. 1.0]` convention directly, so that internal
-> conversion has been **removed**. The public API is unchanged, but if you were
-> relying on the (undocumented) old internal mapping, the raw value now passes
-> straight through. Affected setters: `grl_sound_set_pan()`,
-> `grl_music_set_pan()`, and `grl_audio_stream_set_pan()`.
+#+begin_quote
+*raylib 6.0 pan behavioral change.* Sound/music/stream pan is now =[-1.0 .. 1.0]= end-to-end: =-1.0= = full left, =0.0= = centered, =1.0= = full right. graylib's public pan API was always =[-1.0 .. 1.0]=; previously it internally converted to raylib's old =[0 .. 1]= convention before forwarding. raylib 6.0 adopts the =[-1.0 .. 1.0]= convention directly, so that internal conversion has been *removed*. The public API is unchanged, but if you were relying on the (undocumented) old internal mapping, the raw value now passes straight through. Affected setters: =grl_sound_set_pan()=, =grl_music_set_pan()=, and =grl_audio_stream_set_pan()=.
 
-## GrlAudioDevice
+#+end_quote
 
+** GrlAudioDevice
+:PROPERTIES:
+:CUSTOM_ID: grlaudiodevice
+:END:
 Singleton for managing the audio system. Must be initialized before using any audio features.
 
-### Initialization
-
-```c
+*** Initialization
+:PROPERTIES:
+:CUSTOM_ID: initialization
+:END:
+#+begin_src C
 /* Get the audio device singleton */
 GrlAudioDevice *audio = grl_audio_device_get_default ();
 
@@ -32,32 +33,40 @@ if (!grl_audio_device_init_audio (audio))
 /* Audio is ready to use */
 g_print ("Audio ready: %s\n",
          grl_audio_device_is_ready (audio) ? "yes" : "no");
-```
+#+end_src
 
-### Master Volume
-
-```c
+*** Master Volume
+:PROPERTIES:
+:CUSTOM_ID: master-volume
+:END:
+#+begin_src C
 /* Set master volume (0.0 to 1.0) */
 grl_audio_device_set_master_volume (audio, 0.8f);
 
 /* Get current master volume */
 gfloat vol = grl_audio_device_get_master_volume (audio);
-```
+#+end_src
 
-### Cleanup
-
-```c
+*** Cleanup
+:PROPERTIES:
+:CUSTOM_ID: cleanup
+:END:
+#+begin_src C
 /* Close audio device (optional - happens automatically on exit) */
 grl_audio_device_close (audio);
-```
+#+end_src
 
-## GrlSound
-
+** GrlSound
+:PROPERTIES:
+:CUSTOM_ID: grlsound
+:END:
 Sound effects that are loaded entirely into memory. Best for short sounds like button clicks, explosions, and UI feedback.
 
-### Loading Sounds
-
-```c
+*** Loading Sounds
+:PROPERTIES:
+:CUSTOM_ID: loading-sounds
+:END:
+#+begin_src C
 g_autoptr(GError) error = NULL;
 
 /* Load from file */
@@ -77,11 +86,13 @@ g_autoptr(GrlSound) beep = grl_sound_new_from_wave (
     16,             /* Sample size (bits) */
     1               /* Channels (1=mono, 2=stereo) */
 );
-```
+#+end_src
 
-### Playback Control
-
-```c
+*** Playback Control
+:PROPERTIES:
+:CUSTOM_ID: playback-control
+:END:
+#+begin_src C
 /* Play sound (restarts if already playing) */
 grl_sound_play (sfx);
 
@@ -97,11 +108,13 @@ if (grl_sound_is_playing (sfx))
 {
     g_print ("Sound is playing\n");
 }
-```
+#+end_src
 
-### Audio Properties
-
-```c
+*** Audio Properties
+:PROPERTIES:
+:CUSTOM_ID: audio-properties
+:END:
+#+begin_src C
 /* Volume (0.0 to 1.0) */
 grl_sound_set_volume (sfx, 0.8f);
 gfloat vol = grl_sound_get_volume (sfx);
@@ -113,13 +126,15 @@ gfloat pitch = grl_sound_get_pitch (sfx);
 /* Pan (-1.0=left, 0.0=center, 1.0=right) */
 grl_sound_set_pan (sfx, -0.5f);   /* Slightly left */
 gfloat pan = grl_sound_get_pan (sfx);
-```
+#+end_src
 
-### Multi-Sound Support
-
+*** Multi-Sound Support
+:PROPERTIES:
+:CUSTOM_ID: multi-sound-support
+:END:
 For sound effects that need to overlap (e.g., rapid gunfire):
 
-```c
+#+begin_src C
 /* Play overlapping instances */
 grl_sound_play_multi (sfx);
 grl_sound_play_multi (sfx);  /* Second instance starts immediately */
@@ -129,15 +144,19 @@ grl_sound_stop_multi (sfx);
 
 /* Get number of playing instances */
 gint count = grl_sound_get_sounds_playing (sfx);
-```
+#+end_src
 
-## GrlMusic
-
+** GrlMusic
+:PROPERTIES:
+:CUSTOM_ID: grlmusic
+:END:
 Streaming music that is loaded in chunks from disk. Best for background music and long audio tracks.
 
-### Loading Music
-
-```c
+*** Loading Music
+:PROPERTIES:
+:CUSTOM_ID: loading-music
+:END:
+#+begin_src C
 g_autoptr(GError) error = NULL;
 
 /* Load from file (streaming) */
@@ -148,13 +167,15 @@ if (music == NULL)
     g_printerr ("Failed to load music: %s\n", error->message);
     return;
 }
-```
+#+end_src
 
-**Supported formats:** WAV, OGG, MP3, FLAC, XM, MOD (depending on raylib build)
+*Supported formats:* WAV, OGG, MP3, FLAC, XM, MOD (depending on raylib build)
 
-### Playback Control
-
-```c
+*** Playback Control
+:PROPERTIES:
+:CUSTOM_ID: playback-control-1
+:END:
+#+begin_src C
 /* Start playback */
 grl_music_play (music);
 
@@ -170,13 +191,15 @@ if (grl_music_is_playing (music))
 {
     g_print ("Music is playing\n");
 }
-```
+#+end_src
 
-### Stream Updating (CRITICAL!)
+*** Stream Updating (CRITICAL!)
+:PROPERTIES:
+:CUSTOM_ID: stream-updating-critical
+:END:
+*You MUST call =grl_music_update()= in your main loop while music is playing:*
 
-**You MUST call `grl_music_update()` in your main loop while music is playing:**
-
-```c
+#+begin_src C
 while (!grl_window_should_close (window))
 {
     /* Update music stream buffers - REQUIRED! */
@@ -187,13 +210,15 @@ while (!grl_window_should_close (window))
     /* ... */
     grl_window_end_drawing (window);
 }
-```
+#+end_src
 
-Without calling `grl_music_update()`, music will stutter or stop.
+Without calling =grl_music_update()=, music will stutter or stop.
 
-### Looping
-
-```c
+*** Looping
+:PROPERTIES:
+:CUSTOM_ID: looping
+:END:
+#+begin_src C
 /* Enable looping */
 grl_music_set_looping (music, TRUE);
 
@@ -202,11 +227,13 @@ if (grl_music_get_looping (music))
 {
     g_print ("Music will loop\n");
 }
-```
+#+end_src
 
-### Seeking and Time
-
-```c
+*** Seeking and Time
+:PROPERTIES:
+:CUSTOM_ID: seeking-and-time
+:END:
+#+begin_src C
 /* Get total length */
 gfloat length = grl_music_get_time_length (music);
 g_print ("Music is %.1f seconds long\n", length);
@@ -217,11 +244,13 @@ g_print ("Currently at %.1f seconds\n", position);
 
 /* Seek to specific position */
 grl_music_seek (music, 30.0f);  /* Jump to 30 seconds */
-```
+#+end_src
 
-### Audio Properties
-
-```c
+*** Audio Properties
+:PROPERTIES:
+:CUSTOM_ID: audio-properties-1
+:END:
+#+begin_src C
 /* Volume (0.0 to 1.0) */
 grl_music_set_volume (music, 0.5f);
 gfloat vol = grl_music_get_volume (music);
@@ -233,11 +262,13 @@ gfloat pitch = grl_music_get_pitch (music);
 /* Pan (-1.0=left, 0.0=center, 1.0=right) */
 grl_music_set_pan (music, 0.0f);    /* Center */
 gfloat pan = grl_music_get_pan (music);
-```
+#+end_src
 
-## Complete Example
-
-```c
+** Complete Example
+:PROPERTIES:
+:CUSTOM_ID: complete-example
+:END:
+#+begin_src C
 #include <graylib.h>
 
 int
@@ -331,15 +362,19 @@ main (int argc, char *argv[])
 
     return 0;
 }
-```
+#+end_src
 
-## GrlWave
-
+** GrlWave
+:PROPERTIES:
+:CUSTOM_ID: grlwave
+:END:
 Raw audio wave data for loading, manipulating, and converting to sounds.
 
-### Loading Wave Data
-
-```c
+*** Loading Wave Data
+:PROPERTIES:
+:CUSTOM_ID: loading-wave-data
+:END:
+#+begin_src C
 g_autoptr(GError) error = NULL;
 
 /* Load from file */
@@ -367,11 +402,13 @@ g_autoptr(GrlWave) wave_raw = grl_wave_new_from_samples (
     samples,  /* Raw sample data */
     size      /* Data size in bytes */
 );
-```
+#+end_src
 
-### Wave Properties
-
-```c
+*** Wave Properties
+:PROPERTIES:
+:CUSTOM_ID: wave-properties
+:END:
+#+begin_src C
 guint frames = grl_wave_get_frame_count (wave);
 guint rate = grl_wave_get_sample_rate (wave);
 guint bits = grl_wave_get_sample_size (wave);
@@ -380,11 +417,13 @@ gfloat duration = grl_wave_get_duration (wave);
 
 g_print ("Wave: %u frames, %u Hz, %u-bit, %u channels, %.2f seconds\n",
          frames, rate, bits, channels, duration);
-```
+#+end_src
 
-### Wave Manipulation
-
-```c
+*** Wave Manipulation
+:PROPERTIES:
+:CUSTOM_ID: wave-manipulation
+:END:
+#+begin_src C
 /* Crop to specific frame range */
 g_autoptr(GrlWave) cropped = grl_wave_crop (wave, 1000, 5000);
 
@@ -394,11 +433,13 @@ g_autoptr(GrlWave) converted = grl_wave_format (wave,
     16,      /* New bit depth */
     1        /* New channel count (mono) */
 );
-```
+#+end_src
 
-### Converting to Sound
-
-```c
+*** Converting to Sound
+:PROPERTIES:
+:CUSTOM_ID: converting-to-sound
+:END:
+#+begin_src C
 /* Create playable sound from wave */
 g_autoptr(GrlSound) sound = grl_sound_new_from_grl_wave (wave);
 
@@ -409,11 +450,13 @@ g_autoptr(GrlSound) sound_mem = grl_sound_new_from_memory (
     data_size,
     &error
 );
-```
+#+end_src
 
-### Exporting Wave Data
-
-```c
+*** Exporting Wave Data
+:PROPERTIES:
+:CUSTOM_ID: exporting-wave-data
+:END:
+#+begin_src C
 /* Export to WAV file */
 grl_wave_export (wave, "output.wav", &error);
 
@@ -425,25 +468,31 @@ gsize sample_count;
 gfloat *samples = grl_wave_load_samples (wave, &sample_count);
 /* Use samples... */
 g_free (samples);
-```
+#+end_src
 
-## GrlAudioStream
-
+** GrlAudioStream
+:PROPERTIES:
+:CUSTOM_ID: grlaudiostream
+:END:
 Low-level audio stream for real-time audio generation.
 
-### Creating a Stream
-
-```c
+*** Creating a Stream
+:PROPERTIES:
+:CUSTOM_ID: creating-a-stream
+:END:
+#+begin_src C
 g_autoptr(GrlAudioStream) stream = grl_audio_stream_new (
     44100,   /* Sample rate */
     16,      /* Sample size (bits) */
     2        /* Channels */
 );
-```
+#+end_src
 
-### Stream Playback
-
-```c
+*** Stream Playback
+:PROPERTIES:
+:CUSTOM_ID: stream-playback
+:END:
+#+begin_src C
 /* Start/stop playback */
 grl_audio_stream_play (stream);
 grl_audio_stream_pause (stream);
@@ -455,11 +504,13 @@ if (grl_audio_stream_is_playing (stream))
 {
     g_print ("Stream is playing\n");
 }
-```
+#+end_src
 
-### Audio Properties
-
-```c
+*** Audio Properties
+:PROPERTIES:
+:CUSTOM_ID: audio-properties-2
+:END:
+#+begin_src C
 /* Volume, pitch, pan */
 grl_audio_stream_set_volume (stream, 0.8f);
 grl_audio_stream_set_pitch (stream, 1.0f);
@@ -469,11 +520,13 @@ grl_audio_stream_set_pan (stream, 0.0f);
 gfloat vol = grl_audio_stream_get_volume (stream);
 gfloat pitch = grl_audio_stream_get_pitch (stream);
 gfloat pan = grl_audio_stream_get_pan (stream);
-```
+#+end_src
 
-### Feeding Audio Data
-
-```c
+*** Feeding Audio Data
+:PROPERTIES:
+:CUSTOM_ID: feeding-audio-data
+:END:
+#+begin_src C
 /* Check if stream needs more data */
 if (grl_audio_stream_is_processed (stream))
 {
@@ -484,19 +537,23 @@ if (grl_audio_stream_is_processed (stream))
     /* Update stream with new data */
     grl_audio_stream_update (stream, buffer, 1024);
 }
-```
+#+end_src
 
-### Stream Properties
-
-```c
+*** Stream Properties
+:PROPERTIES:
+:CUSTOM_ID: stream-properties
+:END:
+#+begin_src C
 guint rate = grl_audio_stream_get_sample_rate (stream);
 guint size = grl_audio_stream_get_sample_size (stream);
 guint channels = grl_audio_stream_get_channels (stream);
-```
+#+end_src
 
-### Callback-Based Streaming
-
-```c
+*** Callback-Based Streaming
+:PROPERTIES:
+:CUSTOM_ID: callback-based-streaming
+:END:
+#+begin_src C
 /* Set a callback for continuous audio generation */
 void audio_callback (gpointer buffer, guint frames, gpointer user_data)
 {
@@ -505,78 +562,96 @@ void audio_callback (gpointer buffer, guint frames, gpointer user_data)
 }
 
 grl_audio_stream_set_callback (stream, audio_callback, user_data);
-```
+#+end_src
 
-## Additional Audio Device Features
-
-### Buffer Size Configuration
-
-```c
+** Additional Audio Device Features
+:PROPERTIES:
+:CUSTOM_ID: additional-audio-device-features
+:END:
+*** Buffer Size Configuration
+:PROPERTIES:
+:CUSTOM_ID: buffer-size-configuration
+:END:
+#+begin_src C
 GrlAudioDevice *audio = grl_audio_device_get_default ();
 
 /* Set default buffer size for new streams (affects latency) */
 grl_audio_device_set_default_buffer_size (audio, 2048);
-```
+#+end_src
 
-### Actual System Volume
-
-```c
+*** Actual System Volume
+:PROPERTIES:
+:CUSTOM_ID: actual-system-volume
+:END:
+#+begin_src C
 /* Get the actual volume from the audio system */
 /* (may differ from set volume if changed externally) */
 gfloat actual_volume = grl_audio_device_get_master_volume_actual (audio);
-```
+#+end_src
 
-## Sound vs Music: When to Use Each
+** Sound vs Music: When to Use Each
+:PROPERTIES:
+:CUSTOM_ID: sound-vs-music-when-to-use-each
+:END:
+| Feature         | GrlSound      | GrlMusic           |
+|-----------------+---------------+--------------------|
+| Memory          | Fully loaded  | Streamed from disk |
+| Latency         | Instant       | Slight delay       |
+| Best for        | Short effects | Long tracks        |
+| Overlapping     | Supported     | Single instance    |
+| Requires update | No            | Yes (every frame)  |
 
-| Feature | GrlSound | GrlMusic |
-|---------|----------|----------|
-| Memory | Fully loaded | Streamed from disk |
-| Latency | Instant | Slight delay |
-| Best for | Short effects | Long tracks |
-| Overlapping | Supported | Single instance |
-| Requires update | No | Yes (every frame) |
+*Use GrlSound for:*
 
-**Use GrlSound for:**
 - Button clicks
 - Explosions
 - Footsteps
 - UI feedback
 - Any sound < 5 seconds
 
-**Use GrlMusic for:**
+*Use GrlMusic for:*
+
 - Background music
 - Ambient sounds
 - Voice overs
 - Any audio > 10 seconds
 
-## Properties Summary
+** Properties Summary
+:PROPERTIES:
+:CUSTOM_ID: properties-summary
+:END:
+*** GrlAudioDevice Properties
+:PROPERTIES:
+:CUSTOM_ID: grlaudiodevice-properties
+:END:
+| Property        | Type     | Access     | Description                         |
+|-----------------+----------+------------+-------------------------------------|
+| =is-ready=      | gboolean | Read       | Whether audio device is initialized |
+| =master-volume= | gfloat   | Read/Write | Master volume (0.0-1.0)             |
 
-### GrlAudioDevice Properties
+*** GrlSound Properties
+:PROPERTIES:
+:CUSTOM_ID: grlsound-properties
+:END:
+| Property     | Type     | Access     | Description              |
+|--------------+----------+------------+--------------------------|
+| =filename=   | gchar*   | Read       | Source filename          |
+| =volume=     | gfloat   | Read/Write | Volume (0.0-1.0)         |
+| =pitch=      | gfloat   | Read/Write | Pitch multiplier         |
+| =pan=        | gfloat   | Read/Write | Stereo pan (-1.0 to 1.0) |
+| =is-playing= | gboolean | Read       | Whether sound is playing |
 
-| Property | Type | Access | Description |
-|----------|------|--------|-------------|
-| `is-ready` | gboolean | Read | Whether audio device is initialized |
-| `master-volume` | gfloat | Read/Write | Master volume (0.0-1.0) |
-
-### GrlSound Properties
-
-| Property | Type | Access | Description |
-|----------|------|--------|-------------|
-| `filename` | gchar* | Read | Source filename |
-| `volume` | gfloat | Read/Write | Volume (0.0-1.0) |
-| `pitch` | gfloat | Read/Write | Pitch multiplier |
-| `pan` | gfloat | Read/Write | Stereo pan (-1.0 to 1.0) |
-| `is-playing` | gboolean | Read | Whether sound is playing |
-
-### GrlMusic Properties
-
-| Property | Type | Access | Description |
-|----------|------|--------|-------------|
-| `filename` | gchar* | Read | Source filename |
-| `volume` | gfloat | Read/Write | Volume (0.0-1.0) |
-| `pitch` | gfloat | Read/Write | Pitch multiplier |
-| `pan` | gfloat | Read/Write | Stereo pan (-1.0 to 1.0) |
-| `looping` | gboolean | Read/Write | Whether music loops |
-| `is-playing` | gboolean | Read | Whether music is playing |
-| `time-length` | gfloat | Read | Total duration in seconds |
-| `time-played` | gfloat | Read | Current position in seconds |
+*** GrlMusic Properties
+:PROPERTIES:
+:CUSTOM_ID: grlmusic-properties
+:END:
+| Property      | Type     | Access     | Description                 |
+|---------------+----------+------------+-----------------------------|
+| =filename=    | gchar*   | Read       | Source filename             |
+| =volume=      | gfloat   | Read/Write | Volume (0.0-1.0)            |
+| =pitch=       | gfloat   | Read/Write | Pitch multiplier            |
+| =pan=         | gfloat   | Read/Write | Stereo pan (-1.0 to 1.0)    |
+| =looping=     | gboolean | Read/Write | Whether music loops         |
+| =is-playing=  | gboolean | Read       | Whether music is playing    |
+| =time-length= | gfloat   | Read       | Total duration in seconds   |
+| =time-played= | gfloat   | Read       | Current position in seconds |

@@ -1,9 +1,13 @@
-# PNG Manipulation
-
+* PNG Manipulation
+:PROPERTIES:
+:CUSTOM_ID: png-manipulation
+:END:
 This document covers PNG chunk manipulation and indexed PNG support using rpng integration.
 
-## Overview
-
+** Overview
+:PROPERTIES:
+:CUSTOM_ID: overview
+:END:
 Graylib provides low-level PNG chunk access for reading and writing metadata, as well as support for indexed (palette-based) PNG images. This is useful for:
 
 - Embedding metadata in PNG files
@@ -11,13 +15,17 @@ Graylib provides low-level PNG chunk access for reading and writing metadata, as
 - Working with indexed/paletted images for retro-style games
 - Validating PNG file integrity
 
-## GrlPngChunk
-
+** GrlPngChunk
+:PROPERTIES:
+:CUSTOM_ID: grlpngchunk
+:END:
 A PNG file consists of chunks, each with a 4-character type code, data, and CRC checksum.
 
-### Structure
-
-```c
+*** Structure
+:PROPERTIES:
+:CUSTOM_ID: structure
+:END:
+#+begin_src C
 struct _GrlPngChunk
 {
     gint      length;       /* Data length in bytes */
@@ -25,25 +33,29 @@ struct _GrlPngChunk
     guint8   *data;         /* Chunk data pointer */
     guint32   crc;          /* 32-bit CRC checksum */
 };
-```
+#+end_src
 
-### Common Chunk Types
-
-| Type | Description |
-|------|-------------|
+*** Common Chunk Types
+:PROPERTIES:
+:CUSTOM_ID: common-chunk-types
+:END:
+| Type | Description                          |
+|------+--------------------------------------|
 | IHDR | Image header (dimensions, bit depth) |
-| PLTE | Palette for indexed images |
-| IDAT | Image data |
-| IEND | End marker |
-| tEXt | Text metadata |
-| gAMA | Gamma correction |
-| sRGB | sRGB color space |
-| tIME | Last modification time |
-| bKGD | Background color |
+| PLTE | Palette for indexed images           |
+| IDAT | Image data                           |
+| IEND | End marker                           |
+| tEXt | Text metadata                        |
+| gAMA | Gamma correction                     |
+| sRGB | sRGB color space                     |
+| tIME | Last modification time               |
+| bKGD | Background color                     |
 
-### Creating Chunks
-
-```c
+*** Creating Chunks
+:PROPERTIES:
+:CUSTOM_ID: creating-chunks
+:END:
+#+begin_src C
 /* Create a custom chunk */
 const guint8 custom_data[] = { 0x01, 0x02, 0x03 };
 g_autoptr(GrlPngChunk) chunk = grl_png_chunk_new ("prIv", custom_data, 3);
@@ -51,13 +63,17 @@ g_autoptr(GrlPngChunk) chunk = grl_png_chunk_new ("prIv", custom_data, 3);
 /* Get chunk type as string */
 g_autofree gchar *type = grl_png_chunk_get_type_string (chunk);
 g_print ("Chunk type: %s\n", type);
-```
+#+end_src
 
-## Reading Chunks
-
-### Count Chunks
-
-```c
+** Reading Chunks
+:PROPERTIES:
+:CUSTOM_ID: reading-chunks
+:END:
+*** Count Chunks
+:PROPERTIES:
+:CUSTOM_ID: count-chunks
+:END:
+#+begin_src C
 GError *error = NULL;
 gint count = grl_png_chunk_count ("image.png", &error);
 if (count < 0)
@@ -69,22 +85,26 @@ else
 {
     g_print ("PNG has %d chunks\n", count);
 }
-```
+#+end_src
 
-### Read Specific Chunk
-
-```c
+*** Read Specific Chunk
+:PROPERTIES:
+:CUSTOM_ID: read-specific-chunk
+:END:
+#+begin_src C
 GError *error = NULL;
 g_autoptr(GrlPngChunk) chunk = grl_png_chunk_read ("image.png", "tEXt", &error);
 if (chunk != NULL)
 {
     g_print ("Found tEXt chunk with %d bytes\n", chunk->length);
 }
-```
+#+end_src
 
-### Read All Chunks
-
-```c
+*** Read All Chunks
+:PROPERTIES:
+:CUSTOM_ID: read-all-chunks
+:END:
+#+begin_src C
 GError *error = NULL;
 gint count;
 GrlPngChunk **chunks = grl_png_chunk_read_all ("image.png", &count, &error);
@@ -99,13 +119,17 @@ if (chunks != NULL)
     }
     g_free (chunks);
 }
-```
+#+end_src
 
-## Writing Chunks
-
-### Write Custom Chunk
-
-```c
+** Writing Chunks
+:PROPERTIES:
+:CUSTOM_ID: writing-chunks
+:END:
+*** Write Custom Chunk
+:PROPERTIES:
+:CUSTOM_ID: write-custom-chunk
+:END:
+#+begin_src C
 GError *error = NULL;
 const guint8 data[] = { 'h', 'e', 'l', 'l', 'o' };
 g_autoptr(GrlPngChunk) chunk = grl_png_chunk_new ("prIv", data, 5);
@@ -115,11 +139,13 @@ if (!grl_png_chunk_write ("image.png", chunk, &error))
     g_printerr ("Write failed: %s\n", error->message);
     g_clear_error (&error);
 }
-```
+#+end_src
 
-### Write Text Metadata
-
-```c
+*** Write Text Metadata
+:PROPERTIES:
+:CUSTOM_ID: write-text-metadata
+:END:
+#+begin_src C
 GError *error = NULL;
 
 /* Add author information */
@@ -131,18 +157,22 @@ if (!grl_png_chunk_write_text ("image.png", "Author", "John Doe", &error))
 
 /* Add description */
 grl_png_chunk_write_text ("image.png", "Description", "Game sprite sheet", NULL);
-```
+#+end_src
 
-### Write Gamma
-
-```c
+*** Write Gamma
+:PROPERTIES:
+:CUSTOM_ID: write-gamma
+:END:
+#+begin_src C
 /* Standard gamma value */
 grl_png_chunk_write_gamma ("image.png", 2.2f, NULL);
-```
+#+end_src
 
-### Write sRGB
-
-```c
+*** Write sRGB
+:PROPERTIES:
+:CUSTOM_ID: write-srgb
+:END:
+#+begin_src C
 /* Rendering intents:
  * 0 = Perceptual (photographs)
  * 1 = Relative colorimetric (logos)
@@ -150,28 +180,34 @@ grl_png_chunk_write_gamma ("image.png", 2.2f, NULL);
  * 3 = Absolute colorimetric (proofing)
  */
 grl_png_chunk_write_srgb ("image.png", 0, NULL);
-```
+#+end_src
 
-### Write Timestamp
-
-```c
+*** Write Timestamp
+:PROPERTIES:
+:CUSTOM_ID: write-timestamp
+:END:
+#+begin_src C
 /* Set modification time */
 grl_png_chunk_write_time ("image.png",
                           2025, 12, 25,  /* Year, month, day */
                           12, 30, 0,     /* Hour, minute, second */
                           NULL);
-```
+#+end_src
 
-### Remove Chunks
-
-```c
+*** Remove Chunks
+:PROPERTIES:
+:CUSTOM_ID: remove-chunks
+:END:
+#+begin_src C
 /* Remove all tEXt chunks */
 grl_png_chunk_remove ("image.png", "tEXt", NULL);
-```
+#+end_src
 
-## Validation
-
-```c
+** Validation
+:PROPERTIES:
+:CUSTOM_ID: validation
+:END:
+#+begin_src C
 GError *error = NULL;
 if (grl_png_chunk_check_valid ("image.png", &error))
 {
@@ -182,25 +218,31 @@ else
     g_printerr ("PNG validation failed: %s\n", error->message);
     g_clear_error (&error);
 }
-```
+#+end_src
 
-## GrlPngPalette
-
+** GrlPngPalette
+:PROPERTIES:
+:CUSTOM_ID: grlpngpalette
+:END:
 Color palettes for indexed PNG images. Each pixel in an indexed image is an 8-bit index into the palette.
 
-### Structure
-
-```c
+*** Structure
+:PROPERTIES:
+:CUSTOM_ID: structure-1
+:END:
+#+begin_src C
 struct _GrlPngPalette
 {
     gint       color_count;   /* Number of colors (1-256) */
     GrlColor  *colors;        /* Array of palette colors */
 };
-```
+#+end_src
 
-### Creating Palettes
-
-```c
+*** Creating Palettes
+:PROPERTIES:
+:CUSTOM_ID: creating-palettes
+:END:
+#+begin_src C
 /* Create from existing colors */
 GrlColor colors[4] = {
     { 0, 0, 0, 255 },       /* Black */
@@ -212,11 +254,13 @@ g_autoptr(GrlPngPalette) palette = grl_png_palette_new (colors, 4);
 
 /* Create empty palette */
 g_autoptr(GrlPngPalette) empty = grl_png_palette_new_empty (256);
-```
+#+end_src
 
-### Working with Colors
-
-```c
+*** Working with Colors
+:PROPERTIES:
+:CUSTOM_ID: working-with-colors
+:END:
+#+begin_src C
 /* Get a color from palette */
 g_autoptr(GrlColor) color = grl_png_palette_get_color (palette, 2);
 if (color != NULL)
@@ -227,15 +271,19 @@ if (color != NULL)
 /* Set a color in palette */
 g_autoptr(GrlColor) blue = grl_color_new (0, 0, 255, 255);
 grl_png_palette_set_color (palette, 3, blue);
-```
+#+end_src
 
-## Indexed PNG Images
-
+** Indexed PNG Images
+:PROPERTIES:
+:CUSTOM_ID: indexed-png-images
+:END:
 Load and save palette-based PNG images:
 
-### Loading Indexed PNG
-
-```c
+*** Loading Indexed PNG
+:PROPERTIES:
+:CUSTOM_ID: loading-indexed-png
+:END:
+#+begin_src C
 GError *error = NULL;
 GrlPngPalette *palette = NULL;
 
@@ -260,11 +308,13 @@ else
     /* Use the palette... */
     grl_png_palette_free (palette);
 }
-```
+#+end_src
 
-### Saving Indexed PNG
-
-```c
+*** Saving Indexed PNG
+:PROPERTIES:
+:CUSTOM_ID: saving-indexed-png
+:END:
+#+begin_src C
 GError *error = NULL;
 
 /* Create a palette */
@@ -282,11 +332,13 @@ if (!grl_image_save_as_png_indexed (image, "output.png", palette, &error))
     g_printerr ("Save failed: %s\n", error->message);
     g_clear_error (&error);
 }
-```
+#+end_src
 
-## Complete Example
-
-```c
+** Complete Example
+:PROPERTIES:
+:CUSTOM_ID: complete-example
+:END:
+#+begin_src C
 #include <graylib.h>
 
 int
@@ -336,43 +388,51 @@ main (int argc, char *argv[])
 
     return 0;
 }
-```
+#+end_src
 
-## Function Reference
+** Function Reference
+:PROPERTIES:
+:CUSTOM_ID: function-reference
+:END:
+*** GrlPngChunk Functions
+:PROPERTIES:
+:CUSTOM_ID: grlpngchunk-functions
+:END:
+| Function                          | Description              |
+|-----------------------------------+--------------------------|
+| =grl_png_chunk_new()=             | Create a new chunk       |
+| =grl_png_chunk_copy()=            | Copy a chunk             |
+| =grl_png_chunk_free()=            | Free a chunk             |
+| =grl_png_chunk_get_type_string()= | Get chunk type as string |
+| =grl_png_chunk_count()=           | Count chunks in file     |
+| =grl_png_chunk_read()=            | Read specific chunk type |
+| =grl_png_chunk_read_all()=        | Read all chunks          |
+| =grl_png_chunk_write()=           | Write chunk to file      |
+| =grl_png_chunk_remove()=          | Remove chunks by type    |
+| =grl_png_chunk_write_text()=      | Write text metadata      |
+| =grl_png_chunk_write_gamma()=     | Write gamma value        |
+| =grl_png_chunk_write_srgb()=      | Write sRGB intent        |
+| =grl_png_chunk_write_time()=      | Write timestamp          |
+| =grl_png_chunk_check_valid()=     | Validate PNG CRCs        |
 
-### GrlPngChunk Functions
+*** GrlPngPalette Functions
+:PROPERTIES:
+:CUSTOM_ID: grlpngpalette-functions
+:END:
+| Function                      | Description             |
+|-------------------------------+-------------------------|
+| =grl_png_palette_new()=       | Create from color array |
+| =grl_png_palette_new_empty()= | Create empty palette    |
+| =grl_png_palette_copy()=      | Copy a palette          |
+| =grl_png_palette_free()=      | Free a palette          |
+| =grl_png_palette_get_color()= | Get color at index      |
+| =grl_png_palette_set_color()= | Set color at index      |
 
-| Function | Description |
-|----------|-------------|
-| `grl_png_chunk_new()` | Create a new chunk |
-| `grl_png_chunk_copy()` | Copy a chunk |
-| `grl_png_chunk_free()` | Free a chunk |
-| `grl_png_chunk_get_type_string()` | Get chunk type as string |
-| `grl_png_chunk_count()` | Count chunks in file |
-| `grl_png_chunk_read()` | Read specific chunk type |
-| `grl_png_chunk_read_all()` | Read all chunks |
-| `grl_png_chunk_write()` | Write chunk to file |
-| `grl_png_chunk_remove()` | Remove chunks by type |
-| `grl_png_chunk_write_text()` | Write text metadata |
-| `grl_png_chunk_write_gamma()` | Write gamma value |
-| `grl_png_chunk_write_srgb()` | Write sRGB intent |
-| `grl_png_chunk_write_time()` | Write timestamp |
-| `grl_png_chunk_check_valid()` | Validate PNG CRCs |
-
-### GrlPngPalette Functions
-
-| Function | Description |
-|----------|-------------|
-| `grl_png_palette_new()` | Create from color array |
-| `grl_png_palette_new_empty()` | Create empty palette |
-| `grl_png_palette_copy()` | Copy a palette |
-| `grl_png_palette_free()` | Free a palette |
-| `grl_png_palette_get_color()` | Get color at index |
-| `grl_png_palette_set_color()` | Set color at index |
-
-### GrlImage Indexed PNG Functions
-
-| Function | Description |
-|----------|-------------|
-| `grl_image_new_from_png_indexed()` | Load indexed PNG with palette |
-| `grl_image_save_as_png_indexed()` | Save as indexed PNG |
+*** GrlImage Indexed PNG Functions
+:PROPERTIES:
+:CUSTOM_ID: grlimage-indexed-png-functions
+:END:
+| Function                           | Description                   |
+|------------------------------------+-------------------------------|
+| =grl_image_new_from_png_indexed()= | Load indexed PNG with palette |
+| =grl_image_save_as_png_indexed()=  | Save as indexed PNG           |

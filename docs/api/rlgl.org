@@ -1,12 +1,16 @@
-# RLGL - Low-Level OpenGL Abstraction
-
+* RLGL - Low-Level OpenGL Abstraction
+:PROPERTIES:
+:CUSTOM_ID: rlgl---low-level-opengl-abstraction
+:END:
 The RLGL module provides GObject wrappers for raylib's low-level OpenGL abstraction layer. These functions give direct access to OpenGL-like operations for advanced rendering techniques.
 
-**Warning:** Most applications should use the higher-level drawing functions. RLGL functions are for advanced users who need direct control over the rendering pipeline.
+*Warning:* Most applications should use the higher-level drawing functions. RLGL functions are for advanced users who need direct control over the rendering pipeline.
 
-## Initialization and Cleanup
-
-```c
+** Initialization and Cleanup
+:PROPERTIES:
+:CUSTOM_ID: initialization-and-cleanup
+:END:
+#+begin_src C
 /* Initialize rlgl internal buffers */
 grl_rlgl_init (width, height);
 
@@ -15,11 +19,13 @@ grl_rlgl_close ();
 
 /* Get current OpenGL version */
 GrlRlglGlVersion version = grl_rlgl_get_version ();
-```
+#+end_src
 
-## Framebuffer Configuration
-
-```c
+** Framebuffer Configuration
+:PROPERTIES:
+:CUSTOM_ID: framebuffer-configuration
+:END:
+#+begin_src C
 /* Set/get internal framebuffer dimensions */
 grl_rlgl_set_framebuffer_width (width);
 grl_rlgl_set_framebuffer_height (height);
@@ -29,13 +35,17 @@ gint height = grl_rlgl_get_framebuffer_height ();
 /* Get default resources */
 guint tex_id = grl_rlgl_get_texture_id_default ();
 guint shader_id = grl_rlgl_get_shader_id_default ();
-```
+#+end_src
 
-## Matrix Operations
-
-### Matrix Stack
-
-```c
+** Matrix Operations
+:PROPERTIES:
+:CUSTOM_ID: matrix-operations
+:END:
+*** Matrix Stack
+:PROPERTIES:
+:CUSTOM_ID: matrix-stack
+:END:
+#+begin_src C
 /* Push/pop matrix stack */
 grl_rlgl_push_matrix ();
 grl_rlgl_pop_matrix ();
@@ -47,11 +57,13 @@ grl_rlgl_load_identity ();
 grl_rlgl_matrix_mode (GRL_RLGL_MODELVIEW);
 grl_rlgl_matrix_mode (GRL_RLGL_PROJECTION);
 grl_rlgl_matrix_mode (GRL_RLGL_TEXTURE);
-```
+#+end_src
 
-### Transformations
-
-```c
+*** Transformations
+:PROPERTIES:
+:CUSTOM_ID: transformations
+:END:
+#+begin_src C
 /* Translate */
 grl_rlgl_translatef (x, y, z);
 
@@ -64,11 +76,13 @@ grl_rlgl_scalef (x, y, z);
 /* Multiply by matrix */
 g_autoptr(GrlMatrix) mat = grl_matrix_new ();
 grl_rlgl_mult_matrixf (mat);
-```
+#+end_src
 
-### Projection Setup
-
-```c
+*** Projection Setup
+:PROPERTIES:
+:CUSTOM_ID: projection-setup
+:END:
+#+begin_src C
 /* Set up perspective frustum */
 grl_rlgl_frustum (left, right, bottom, top, znear, zfar);
 
@@ -82,11 +96,13 @@ grl_rlgl_viewport (x, y, width, height);
 grl_rlgl_set_clip_planes (near, far);
 gfloat near = grl_rlgl_get_cull_distance_near ();
 gfloat far = grl_rlgl_get_cull_distance_far ();
-```
+#+end_src
 
-### Get/Set Matrices
-
-```c
+*** Get/Set Matrices
+:PROPERTIES:
+:CUSTOM_ID: getset-matrices
+:END:
+#+begin_src C
 /* Get current matrices (returns newly allocated GrlMatrix) */
 g_autoptr(GrlMatrix) modelview = grl_rlgl_get_matrix_modelview ();
 g_autoptr(GrlMatrix) projection = grl_rlgl_get_matrix_projection ();
@@ -99,13 +115,15 @@ grl_rlgl_set_matrix_modelview (mat);
 grl_rlgl_set_matrix_projection (mat);
 grl_rlgl_set_matrix_projection_stereo (right_mat, left_mat);
 grl_rlgl_set_matrix_view_offset_stereo (right_mat, left_mat);
-```
+#+end_src
 
-## Immediate Mode Vertex Operations
-
+** Immediate Mode Vertex Operations
+:PROPERTIES:
+:CUSTOM_ID: immediate-mode-vertex-operations
+:END:
 Similar to OpenGL immediate mode:
 
-```c
+#+begin_src C
 /* Begin drawing primitives */
 grl_rlgl_begin (GRL_RLGL_TRIANGLES);  /* or GRL_RLGL_LINES, GRL_RLGL_QUADS */
 
@@ -123,11 +141,13 @@ grl_rlgl_color4f (r, g, b, a);
 
 /* End drawing */
 grl_rlgl_end ();
-```
+#+end_src
 
-### Example: Drawing a Triangle
-
-```c
+*** Example: Drawing a Triangle
+:PROPERTIES:
+:CUSTOM_ID: example-drawing-a-triangle
+:END:
+#+begin_src C
 grl_rlgl_begin (GRL_RLGL_TRIANGLES);
     grl_rlgl_color4ub (255, 0, 0, 255);
     grl_rlgl_vertex2f (100.0f, 100.0f);
@@ -138,24 +158,30 @@ grl_rlgl_begin (GRL_RLGL_TRIANGLES);
     grl_rlgl_color4ub (0, 0, 255, 255);
     grl_rlgl_vertex2f (150.0f, 200.0f);
 grl_rlgl_end ();
-```
+#+end_src
 
-## Render State Management
-
-### Depth Testing
-
-```c
+** Render State Management
+:PROPERTIES:
+:CUSTOM_ID: render-state-management
+:END:
+*** Depth Testing
+:PROPERTIES:
+:CUSTOM_ID: depth-testing
+:END:
+#+begin_src C
 grl_rlgl_enable_depth_test ();
 grl_rlgl_disable_depth_test ();
 
 /* Depth buffer writing */
 grl_rlgl_enable_depth_mask ();
 grl_rlgl_disable_depth_mask ();
-```
+#+end_src
 
-### Blending
-
-```c
+*** Blending
+:PROPERTIES:
+:CUSTOM_ID: blending
+:END:
+#+begin_src C
 grl_rlgl_enable_color_blend ();
 grl_rlgl_disable_color_blend ();
 
@@ -165,63 +191,77 @@ grl_rlgl_set_blend_mode (GRL_BLEND_MODE_ALPHA);
 /* Custom blend factors */
 grl_rlgl_set_blend_factors (src_factor, dst_factor, equation);
 grl_rlgl_set_blend_factors_separate (src_rgb, dst_rgb, src_alpha, dst_alpha, eq_rgb, eq_alpha);
-```
+#+end_src
 
-### Face Culling
-
-```c
+*** Face Culling
+:PROPERTIES:
+:CUSTOM_ID: face-culling
+:END:
+#+begin_src C
 grl_rlgl_enable_backface_culling ();
 grl_rlgl_disable_backface_culling ();
 
 /* Set which face to cull */
 grl_rlgl_set_cull_face (GRL_RLGL_CULL_BACK);
 grl_rlgl_set_cull_face (GRL_RLGL_CULL_FRONT);
-```
+#+end_src
 
-### Scissor Test
-
-```c
+*** Scissor Test
+:PROPERTIES:
+:CUSTOM_ID: scissor-test
+:END:
+#+begin_src C
 grl_rlgl_enable_scissor_test ();
 grl_rlgl_scissor (x, y, width, height);
 grl_rlgl_disable_scissor_test ();
-```
+#+end_src
 
-### Wireframe and Point Mode
-
-```c
+*** Wireframe and Point Mode
+:PROPERTIES:
+:CUSTOM_ID: wireframe-and-point-mode
+:END:
+#+begin_src C
 grl_rlgl_enable_wire_mode ();   /* Wireframe rendering */
 grl_rlgl_enable_point_mode ();  /* Point cloud rendering */
 grl_rlgl_disable_wire_mode ();  /* Back to solid fill */
-```
+#+end_src
 
-### Line Drawing
-
-```c
+*** Line Drawing
+:PROPERTIES:
+:CUSTOM_ID: line-drawing
+:END:
+#+begin_src C
 grl_rlgl_set_line_width (2.0f);
 gfloat width = grl_rlgl_get_line_width ();
 
 grl_rlgl_enable_smooth_lines ();   /* Antialiased lines */
 grl_rlgl_disable_smooth_lines ();
-```
+#+end_src
 
-### Stereo Rendering
-
-```c
+*** Stereo Rendering
+:PROPERTIES:
+:CUSTOM_ID: stereo-rendering
+:END:
+#+begin_src C
 grl_rlgl_enable_stereo_render ();
 grl_rlgl_disable_stereo_render ();
 gboolean stereo = grl_rlgl_is_stereo_render_enabled ();
-```
+#+end_src
 
-### Color Mask
-
-```c
+*** Color Mask
+:PROPERTIES:
+:CUSTOM_ID: color-mask
+:END:
+#+begin_src C
 /* Control which color channels are written */
 grl_rlgl_color_mask (red, green, blue, alpha);  /* gboolean for each */
-```
+#+end_src
 
-### Clear Operations
-
-```c
+*** Clear Operations
+:PROPERTIES:
+:CUSTOM_ID: clear-operations
+:END:
+#+begin_src C
 /* Set clear color */
 grl_rlgl_clear_color (r, g, b, a);  /* guint8 values 0-255 */
 
@@ -230,11 +270,13 @@ grl_rlgl_clear_screen_buffers ();
 
 /* Check for OpenGL errors */
 grl_rlgl_check_errors ();
-```
+#+end_src
 
-## Texture Binding
-
-```c
+** Texture Binding
+:PROPERTIES:
+:CUSTOM_ID: texture-binding
+:END:
+#+begin_src C
 /* Activate texture slot (0-7) */
 grl_rlgl_active_texture_slot (slot);
 
@@ -249,13 +291,17 @@ grl_rlgl_disable_texture_cubemap ();
 /* Set texture parameters */
 grl_rlgl_texture_parameters (texture_id, param, value);
 grl_rlgl_cubemap_parameters (cubemap_id, param, value);
-```
+#+end_src
 
-## VBO/VAO Buffer Operations
-
-### Vertex Array Objects (VAO)
-
-```c
+** VBO/VAO Buffer Operations
+:PROPERTIES:
+:CUSTOM_ID: vbovao-buffer-operations
+:END:
+*** Vertex Array Objects (VAO)
+:PROPERTIES:
+:CUSTOM_ID: vertex-array-objects-vao
+:END:
+#+begin_src C
 /* Create VAO */
 guint vao_id = grl_rlgl_load_vertex_array ();
 
@@ -265,11 +311,13 @@ grl_rlgl_disable_vertex_array ();
 
 /* Delete VAO */
 grl_rlgl_unload_vertex_array (vao_id);
-```
+#+end_src
 
-### Vertex Buffer Objects (VBO)
-
-```c
+*** Vertex Buffer Objects (VBO)
+:PROPERTIES:
+:CUSTOM_ID: vertex-buffer-objects-vbo
+:END:
+#+begin_src C
 /* Create VBO */
 guint vbo_id = grl_rlgl_load_vertex_buffer (data, size, dynamic);
 
@@ -290,18 +338,22 @@ grl_rlgl_update_vertex_buffer_elements (ebo_id, data, size, offset);
 
 /* Delete buffers */
 grl_rlgl_unload_vertex_buffer (vbo_id);
-```
+#+end_src
 
-### Vertex Attributes
-
-```c
+*** Vertex Attributes
+:PROPERTIES:
+:CUSTOM_ID: vertex-attributes
+:END:
+#+begin_src C
 grl_rlgl_enable_vertex_attribute (index);
 grl_rlgl_disable_vertex_attribute (index);
-```
+#+end_src
 
-### Drawing
-
-```c
+*** Drawing
+:PROPERTIES:
+:CUSTOM_ID: drawing
+:END:
+#+begin_src C
 /* Draw from vertex array */
 grl_rlgl_draw_vertex_array (offset, count);
 grl_rlgl_draw_vertex_array_elements (offset, count, buffer);
@@ -309,11 +361,13 @@ grl_rlgl_draw_vertex_array_elements (offset, count, buffer);
 /* Instanced drawing */
 grl_rlgl_draw_vertex_array_instanced (offset, count, instances);
 grl_rlgl_draw_vertex_array_elements_instanced (offset, count, buffer, instances);
-```
+#+end_src
 
-## Framebuffer Operations
-
-```c
+** Framebuffer Operations
+:PROPERTIES:
+:CUSTOM_ID: framebuffer-operations
+:END:
+#+begin_src C
 /* Create framebuffer */
 guint fbo_id = grl_rlgl_load_framebuffer ();
 
@@ -343,26 +397,34 @@ grl_rlgl_active_draw_buffers (count);
 grl_rlgl_blit_framebuffer (src_x, src_y, src_width, src_height,
                            dst_x, dst_y, dst_width, dst_height,
                            buffer_mask);
-```
+#+end_src
 
-### Framebuffer Attachment Types
+*** Framebuffer Attachment Types
+:PROPERTIES:
+:CUSTOM_ID: framebuffer-attachment-types
+:END:
+- =GRL_RLGL_FRAMEBUFFER_ATTACH_COLOR_CHANNEL0= through =COLOR_CHANNEL7=
+- =GRL_RLGL_FRAMEBUFFER_ATTACH_DEPTH=
+- =GRL_RLGL_FRAMEBUFFER_ATTACH_STENCIL=
 
-- `GRL_RLGL_FRAMEBUFFER_ATTACH_COLOR_CHANNEL0` through `COLOR_CHANNEL7`
-- `GRL_RLGL_FRAMEBUFFER_ATTACH_DEPTH`
-- `GRL_RLGL_FRAMEBUFFER_ATTACH_STENCIL`
+*** Framebuffer Texture Types
+:PROPERTIES:
+:CUSTOM_ID: framebuffer-texture-types
+:END:
+- =GRL_RLGL_FRAMEBUFFER_TEX_CUBEMAP_POSITIVE_X/Y/Z=
+- =GRL_RLGL_FRAMEBUFFER_TEX_CUBEMAP_NEGATIVE_X/Y/Z=
+- =GRL_RLGL_FRAMEBUFFER_TEX_TEXTURE2D=
+- =GRL_RLGL_FRAMEBUFFER_TEX_RENDERBUFFER=
 
-### Framebuffer Texture Types
-
-- `GRL_RLGL_FRAMEBUFFER_TEX_CUBEMAP_POSITIVE_X/Y/Z`
-- `GRL_RLGL_FRAMEBUFFER_TEX_CUBEMAP_NEGATIVE_X/Y/Z`
-- `GRL_RLGL_FRAMEBUFFER_TEX_TEXTURE2D`
-- `GRL_RLGL_FRAMEBUFFER_TEX_RENDERBUFFER`
-
-## Low-Level Shader Operations
-
-### Shader Compilation
-
-```c
+** Low-Level Shader Operations
+:PROPERTIES:
+:CUSTOM_ID: low-level-shader-operations
+:END:
+*** Shader Compilation
+:PROPERTIES:
+:CUSTOM_ID: shader-compilation
+:END:
+#+begin_src C
 /* Compile individual shaders */
 guint vs_id = grl_rlgl_compile_shader (vs_code, GRL_RLGL_SHADER_VERTEX);
 guint fs_id = grl_rlgl_compile_shader (fs_code, GRL_RLGL_SHADER_FRAGMENT);
@@ -376,19 +438,23 @@ guint program_id = grl_rlgl_load_shader_code (vs_code, fs_code);
 
 /* Delete shader program */
 grl_rlgl_unload_shader_program (program_id);
-```
+#+end_src
 
-### Shader Usage
-
-```c
+*** Shader Usage
+:PROPERTIES:
+:CUSTOM_ID: shader-usage
+:END:
+#+begin_src C
 /* Bind/unbind shader */
 grl_rlgl_enable_shader (program_id);
 grl_rlgl_disable_shader ();
-```
+#+end_src
 
-### Uniforms
-
-```c
+*** Uniforms
+:PROPERTIES:
+:CUSTOM_ID: uniforms
+:END:
+#+begin_src C
 /* Get uniform location */
 gint loc = grl_rlgl_get_location_uniform (program_id, "uniformName");
 
@@ -401,70 +467,88 @@ grl_rlgl_set_uniform_matrix (loc, mat);
 
 /* Set sampler uniform */
 grl_rlgl_set_uniform_sampler (loc, texture_id);
-```
+#+end_src
 
-### Attributes
-
-```c
+*** Attributes
+:PROPERTIES:
+:CUSTOM_ID: attributes
+:END:
+#+begin_src C
 /* Get attribute location */
 gint attrib_loc = grl_rlgl_get_location_attrib (program_id, "attribName");
-```
+#+end_src
 
-## Primitive Shapes (for Default Batching)
-
-```c
+** Primitive Shapes (for Default Batching)
+:PROPERTIES:
+:CUSTOM_ID: primitive-shapes-for-default-batching
+:END:
+#+begin_src C
 /* Load internal rendering shapes */
 grl_rlgl_load_draw_cube ();
 grl_rlgl_load_draw_quad ();
-```
+#+end_src
 
-## Enumerations
+** Enumerations
+:PROPERTIES:
+:CUSTOM_ID: enumerations
+:END:
+*** GrlRlglDrawMode
+:PROPERTIES:
+:CUSTOM_ID: grlrlgldrawmode
+:END:
+| Value                | Description    |
+|----------------------+----------------|
+| =GRL_RLGL_LINES=     | Draw lines     |
+| =GRL_RLGL_TRIANGLES= | Draw triangles |
+| =GRL_RLGL_QUADS=     | Draw quads     |
 
-### GrlRlglDrawMode
+*** GrlRlglMatrixMode
+:PROPERTIES:
+:CUSTOM_ID: grlrlglmatrixmode
+:END:
+| Value                 | Description            |
+|-----------------------+------------------------|
+| =GRL_RLGL_MODELVIEW=  | Model-view matrix mode |
+| =GRL_RLGL_PROJECTION= | Projection matrix mode |
+| =GRL_RLGL_TEXTURE=    | Texture matrix mode    |
 
-| Value | Description |
-|-------|-------------|
-| `GRL_RLGL_LINES` | Draw lines |
-| `GRL_RLGL_TRIANGLES` | Draw triangles |
-| `GRL_RLGL_QUADS` | Draw quads |
+*** GrlRlglCullMode
+:PROPERTIES:
+:CUSTOM_ID: grlrlglcullmode
+:END:
+| Value                 | Description      |
+|-----------------------+------------------|
+| =GRL_RLGL_CULL_FRONT= | Cull front faces |
+| =GRL_RLGL_CULL_BACK=  | Cull back faces  |
 
-### GrlRlglMatrixMode
+*** GrlRlglGlVersion
+:PROPERTIES:
+:CUSTOM_ID: grlrlglglversion
+:END:
+| Value                   | Description   |
+|-------------------------+---------------|
+| =GRL_RLGL_OPENGL_11=    | OpenGL 1.1    |
+| =GRL_RLGL_OPENGL_21=    | OpenGL 2.1    |
+| =GRL_RLGL_OPENGL_33=    | OpenGL 3.3    |
+| =GRL_RLGL_OPENGL_43=    | OpenGL 4.3    |
+| =GRL_RLGL_OPENGL_ES_20= | OpenGL ES 2.0 |
+| =GRL_RLGL_OPENGL_ES_30= | OpenGL ES 3.0 |
 
-| Value | Description |
-|-------|-------------|
-| `GRL_RLGL_MODELVIEW` | Model-view matrix mode |
-| `GRL_RLGL_PROJECTION` | Projection matrix mode |
-| `GRL_RLGL_TEXTURE` | Texture matrix mode |
+*** GrlRlglShaderType
+:PROPERTIES:
+:CUSTOM_ID: grlrlglshadertype
+:END:
+| Value                      | Description     |
+|----------------------------+-----------------|
+| =GRL_RLGL_SHADER_FRAGMENT= | Fragment shader |
+| =GRL_RLGL_SHADER_VERTEX=   | Vertex shader   |
+| =GRL_RLGL_SHADER_COMPUTE=  | Compute shader  |
 
-### GrlRlglCullMode
-
-| Value | Description |
-|-------|-------------|
-| `GRL_RLGL_CULL_FRONT` | Cull front faces |
-| `GRL_RLGL_CULL_BACK` | Cull back faces |
-
-### GrlRlglGlVersion
-
-| Value | Description |
-|-------|-------------|
-| `GRL_RLGL_OPENGL_11` | OpenGL 1.1 |
-| `GRL_RLGL_OPENGL_21` | OpenGL 2.1 |
-| `GRL_RLGL_OPENGL_33` | OpenGL 3.3 |
-| `GRL_RLGL_OPENGL_43` | OpenGL 4.3 |
-| `GRL_RLGL_OPENGL_ES_20` | OpenGL ES 2.0 |
-| `GRL_RLGL_OPENGL_ES_30` | OpenGL ES 3.0 |
-
-### GrlRlglShaderType
-
-| Value | Description |
-|-------|-------------|
-| `GRL_RLGL_SHADER_FRAGMENT` | Fragment shader |
-| `GRL_RLGL_SHADER_VERTEX` | Vertex shader |
-| `GRL_RLGL_SHADER_COMPUTE` | Compute shader |
-
-## Example: Custom Rendering with RLGL
-
-```c
+** Example: Custom Rendering with RLGL
+:PROPERTIES:
+:CUSTOM_ID: example-custom-rendering-with-rlgl
+:END:
+#+begin_src C
 g_autoptr(GrlWindow) window = grl_window_new (800, 600, "RLGL Example");
 g_autoptr(GrlColor) bg = grl_color_new (40, 40, 60, 255);
 
@@ -506,4 +590,4 @@ while (!grl_window_should_close (window))
 
     grl_window_end_drawing (window);
 }
-```
+#+end_src

@@ -1,55 +1,70 @@
-# Getting Started with Graylib
-
+* Getting Started with Graylib
+:PROPERTIES:
+:CUSTOM_ID: getting-started-with-graylib
+:END:
 This guide will help you get started with Graylib, a GObject wrapper for raylib.
 
-## Prerequisites
-
+** Prerequisites
+:PROPERTIES:
+:CUSTOM_ID: prerequisites
+:END:
 Before building Graylib, ensure you have the following installed:
 
-### Required
-
+*** Required
+:PROPERTIES:
+:CUSTOM_ID: required
+:END:
 - GCC compiler
 - GNU Make
 - GLib 2.56 or later
 - GObject Introspection (for language bindings)
 - pkg-config
 
-### For raylib (when building from submodule)
-
+*** For raylib (when building from submodule)
+:PROPERTIES:
+:CUSTOM_ID: for-raylib-when-building-from-submodule
+:END:
 - OpenGL development libraries
 - X11 development libraries (Linux)
 
-### Fedora Installation
-
-```bash
+*** Fedora Installation
+:PROPERTIES:
+:CUSTOM_ID: fedora-installation
+:END:
+#+begin_src sh
 sudo dnf install gcc make glib2-devel gobject-introspection-devel \
     mesa-libGL-devel libX11-devel libXrandr-devel \
     libXi-devel libXcursor-devel libXinerama-devel
-```
+#+end_src
 
-## Building Graylib
-
+** Building Graylib
+:PROPERTIES:
+:CUSTOM_ID: building-graylib
+:END:
 1. Clone the repository with submodules:
 
-```bash
+#+begin_src sh
 git clone --recursive https://github.com/your-repo/graylib.git
 cd graylib
-```
+#+end_src
 
-2. Build the library:
+2. [@2] Build the library:
 
-```bash
+#+begin_src sh
 make
-```
+#+end_src
 
 This will:
+
 - Build raylib from the submodule (if not already built)
 - Compile the Graylib library (static and shared)
 - Generate GObject Introspection files
 
-### Build Options
-
-```bash
+*** Build Options
+:PROPERTIES:
+:CUSTOM_ID: build-options
+:END:
+#+begin_src sh
 # Debug build (for gdb debugging)
 make DEBUG=1
 
@@ -61,13 +76,15 @@ make lib-static
 
 # Build only the shared library
 make lib-shared
-```
+#+end_src
 
-## Your First Graylib Program
+** Your First Graylib Program
+:PROPERTIES:
+:CUSTOM_ID: your-first-graylib-program
+:END:
+Create a file called =hello.c=:
 
-Create a file called `hello.c`:
-
-```c
+#+begin_src C
 #include <graylib.h>
 
 int
@@ -95,74 +112,88 @@ main (int argc, char *argv[])
 
     return 0;
 }
-```
+#+end_src
 
-## Compiling Your Program
-
-```bash
+** Compiling Your Program
+:PROPERTIES:
+:CUSTOM_ID: compiling-your-program
+:END:
+#+begin_src sh
 gcc hello.c -o hello \
     $(pkg-config --cflags --libs glib-2.0 gobject-2.0) \
     -I/path/to/graylib \
     -L/path/to/graylib/build/lib -lgraylib \
     -lraylib -lm
-```
+#+end_src
 
 Or if Graylib is installed:
 
-```bash
+#+begin_src sh
 gcc hello.c -o hello $(pkg-config --cflags --libs graylib-1)
-```
+#+end_src
 
-## Running Your Program
-
-```bash
+** Running Your Program
+:PROPERTIES:
+:CUSTOM_ID: running-your-program
+:END:
+#+begin_src sh
 # If Graylib is not installed, set the library path
 export LD_LIBRARY_PATH=/path/to/graylib/build/lib:$LD_LIBRARY_PATH
 
 ./hello
-```
+#+end_src
 
-## Basic Concepts
+** Basic Concepts
+:PROPERTIES:
+:CUSTOM_ID: basic-concepts
+:END:
+*** Memory Management
+:PROPERTIES:
+:CUSTOM_ID: memory-management
+:END:
+Graylib uses GLib's automatic memory management. Use =g_autoptr()= for automatic cleanup:
 
-### Memory Management
-
-Graylib uses GLib's automatic memory management. Use `g_autoptr()` for automatic cleanup:
-
-```c
+#+begin_src C
 g_autoptr(GrlColor) color = grl_color_new_red ();
 /* color is automatically freed when it goes out of scope */
-```
+#+end_src
 
 For manual management:
 
-```c
+#+begin_src C
 GrlColor *color = grl_color_new_red ();
 /* ... use color ... */
 grl_color_free (color);
-```
+#+end_src
 
-### GBoxed vs GObject Types
-
+*** GBoxed vs GObject Types
+:PROPERTIES:
+:CUSTOM_ID: gboxed-vs-gobject-types
+:END:
 Graylib has two types of types:
 
-**GBoxed types** (simple value types):
-- `GrlVector2` - 2D vector
-- `GrlColor` - RGBA color
-- `GrlRectangle` - Axis-aligned rectangle
+*GBoxed types* (simple value types):
+
+- =GrlVector2= - 2D vector
+- =GrlColor= - RGBA color
+- =GrlRectangle= - Axis-aligned rectangle
 
 These are lightweight and use copy/free semantics.
 
-**GObject types** (reference-counted objects):
-- `GrlApplication` - Application singleton
-- `GrlWindow` - Window management
+*GObject types* (reference-counted objects):
 
-These use `g_object_ref()` and `g_object_unref()`.
+- =GrlApplication= - Application singleton
+- =GrlWindow= - Window management
 
-### The Game Loop
+These use =g_object_ref()= and =g_object_unref()=.
 
+*** The Game Loop
+:PROPERTIES:
+:CUSTOM_ID: the-game-loop
+:END:
 A typical Graylib game loop:
 
-```c
+#+begin_src C
 while (!grl_window_should_close (window))
 {
     /* Get delta time for frame-rate independent movement */
@@ -180,11 +211,13 @@ while (!grl_window_should_close (window))
 
     grl_window_end_drawing (window);
 }
-```
+#+end_src
 
-## Next Steps
-
-- Explore the [examples](../examples/) directory
-- Read the [API documentation](api/overview.md)
-- Learn about [drawing shapes](api/drawing.md)
-- Create [custom entities](guides/custom-entities.md) (coming in Phase 5)
+** Next Steps
+:PROPERTIES:
+:CUSTOM_ID: next-steps
+:END:
+- Explore the [[../examples/][examples]] directory
+- Read the [[file:api/overview.org][API documentation]]
+- Learn about [[file:api/drawing.org][drawing shapes]]
+- Create [[file:guides/custom-entities.org][custom entities]] (coming in Phase 5)

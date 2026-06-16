@@ -1,0 +1,184 @@
+* Graylib
+:PROPERTIES:
+:CUSTOM_ID: graylib
+:END:
+*Graylib* is a GObject/GLib wrapper around the [[https://www.raylib.com/][raylib]] game programming library. It provides:
+
+- *GObject types* with automatic memory management via reference counting
+- *GObject Introspection* support for language bindings (Python, Lua, Vala, JavaScript, etc.)
+- *Signal-based event handling* for input and window events
+- *Property system* for data binding
+- *Derivable types* for creating custom game entities
+
+** Features
+:PROPERTIES:
+:CUSTOM_ID: features
+:END:
+- Full wrapper around raylib 6.0 functionality
+- Both static and shared library builds
+- Debug build support for gdb
+- Comprehensive documentation
+- Unit tests for all types
+
+** Getting Started
+:PROPERTIES:
+:CUSTOM_ID: getting-started
+:END:
+See the [[file:getting-started.org][Getting Started Guide]] for installation and basic usage.
+
+** Building
+:PROPERTIES:
+:CUSTOM_ID: building
+:END:
+See the [[file:guides/building.org][Building Guide]] for build instructions.
+
+** Best Practices
+:PROPERTIES:
+:CUSTOM_ID: best-practices
+:END:
+See [[file:best_practices.org][Best Practices]] for common pitfalls and solutions when working with graylib (depth buffer clearing, z-fighting, color operations, etc.).
+
+** API Reference
+:PROPERTIES:
+:CUSTOM_ID: api-reference
+:END:
+- [[file:api/math-types.org][Math Types]] - Vector2, Vector3, Vector4, Color, Rectangle, Matrix, BoundingBox
+- [[file:api/core.org][Core]] - Application, Window
+- [[file:api/input.org][Input]] - Keyboard, mouse, and gamepad input
+- [[file:api/graphics.org][Graphics]] - Images, textures, fonts, shaders, and render textures
+- [[file:api/svg.org][SVG]] - SVG import/export over a documented geometry+paint subset
+- [[file:api/drawing.org][Drawing]] - Shape, texture, and text drawing functions
+- [[file:api/audio.org][Audio]] - Sound effects and music
+- [[file:api/scene.org][Scene]] - Entity system, sprites, and animations
+- [[file:api/cameras.org][Cameras]] - 2D and 3D camera systems
+- [[file:api/models.org][Models]] - 3D meshes, materials, models, and skeletal animation (GPU skinning, bones, transforms)
+- [[file:api/collision.org][Collision]] - 2D and 3D collision detection
+- [[file:api/rlgl.org][RLGL]] - Low-level OpenGL abstraction layer
+- [[file:api/software-renderer.org][Software Renderer]] - Headless CPU rasterizer (rlsw)
+- [[file:api/system.org][System]] - Filesystem helper functions (=grl_fs_*=)
+- [[file:api/text.org][Text]] - String utility functions (=grl_text_*=)
+- [[file:api/enums.org][Enumerations]] - Key codes, blend modes, and other constants
+
+** Examples
+:PROPERTIES:
+:CUSTOM_ID: examples
+:END:
+Example programs are in the =examples/= directory:
+
+*** C Examples
+:PROPERTIES:
+:CUSTOM_ID: c-examples
+:END:
+- =basic-window.c= - Simple window with basic drawing
+- =shapes-demo.c= - Demonstration of shape drawing functions
+- =input-demo.c= - Keyboard and mouse input handling
+- =textures-text.c= - Texture loading and text rendering
+- =audio-demo.c= - Sound effects and music playback
+- =entity-demo.c= - Entity system and collision detection
+- =scene-demo.c= - Scene management demonstration
+- =camera-demo.c= - 2D/3D camera controls
+- =model-demo.c= - 3D model rendering
+- =collision-demo.c= - 2D collision detection
+
+*** Python Examples
+:PROPERTIES:
+:CUSTOM_ID: python-examples
+:END:
+- =basic-window.py= - Python GI bindings demonstration
+
+Run Python examples with:
+
+#+begin_src sh
+GI_TYPELIB_PATH=../build/gir LD_LIBRARY_PATH=../build/lib python3 basic-window.py
+#+end_src
+
+** Tools
+:PROPERTIES:
+:CUSTOM_ID: tools
+:END:
+- [[file:tools/preview.org][Live-Reload Preview Host]] - Hot-reload sketch development tool; edit a C sketch and watch the canvas update without restarting. Built opt-in with =make BUILD_PREVIEW=1 preview-tools= (Linux).
+
+** License
+:PROPERTIES:
+:CUSTOM_ID: license
+:END:
+Graylib is licensed under the GNU Affero General Public License v3.0 or later. See =LICENSE= for the full license text.
+
+Note: raylib (bundled in deps/) is licensed under the Zlib license.
+
+** Dependencies
+:PROPERTIES:
+:CUSTOM_ID: dependencies
+:END:
+- GLib 2.56+
+- GObject Introspection
+- raylib 6.0 (included as submodule)
+
+*** Fedora
+:PROPERTIES:
+:CUSTOM_ID: fedora
+:END:
+#+begin_src sh
+sudo dnf install gcc glib2-devel gobject-introspection-devel \
+    mesa-libGL-devel libX11-devel libXrandr-devel \
+    libXi-devel libXcursor-devel libXinerama-devel
+#+end_src
+
+** Quick Example
+:PROPERTIES:
+:CUSTOM_ID: quick-example
+:END:
+#+begin_src C
+#include <graylib.h>
+
+int
+main (int argc, char *argv[])
+{
+    g_autoptr(GrlWindow) window = NULL;
+    g_autoptr(GrlColor) bg_color = NULL;
+    g_autoptr(GrlColor) circle_color = NULL;
+    g_autoptr(GrlVector2) center = NULL;
+
+    window = grl_window_new (800, 600, "My Game");
+    bg_color = grl_color_new (40, 40, 60, 255);
+    circle_color = grl_color_new_red ();
+    center = grl_vector2_new (400.0f, 300.0f);
+
+    grl_window_set_target_fps (window, 60);
+
+    while (!grl_window_should_close (window))
+    {
+        grl_window_begin_drawing (window);
+        grl_window_clear_background (window, bg_color);
+        grl_draw_circle_v (center, 50.0f, circle_color);
+        grl_window_end_drawing (window);
+    }
+
+    return 0;
+}
+#+end_src
+
+** Project Structure
+:PROPERTIES:
+:CUSTOM_ID: project-structure
+:END:
+#+begin_example
+graylib/
+├── src/                    # Library source code
+│   ├── math/              # Math types (GBoxed): Vector2, Color, Rectangle
+│   ├── core/              # Core types: Application, Window, Input
+│   ├── graphics/          # Graphics types: Image, Texture, Font
+│   ├── drawing/           # Drawing functions
+│   ├── audio/             # Audio types: AudioDevice, Sound, Music
+│   ├── scene/             # Entity system: Entity, Sprite, AnimatedTexture
+│   └── rlgl/              # Low-level OpenGL abstraction layer
+├── deps/                   # Dependencies (raylib submodule)
+├── tests/                  # Unit tests
+├── examples/               # Example source files
+├── docs/                   # Documentation
+└── build/                  # Build output
+    ├── lib/               # Libraries (libgraylib.a, libgraylib.so)
+    ├── gir/               # GObject Introspection files
+    ├── examples/          # Compiled example binaries
+    └── obj/               # Object files
+#+end_example

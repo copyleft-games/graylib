@@ -1,38 +1,48 @@
-# 3D Models
-
+* 3D Models
+:PROPERTIES:
+:CUSTOM_ID: 3d-models
+:END:
 Graylib provides a comprehensive 3D model system including procedural mesh generation, PBR materials, model loading, and skeletal animation.
 
-## GrlMesh
-
+** GrlMesh
+:PROPERTIES:
+:CUSTOM_ID: grlmesh
+:END:
 A mesh containing vertex data for 3D geometry. Meshes can be generated procedurally or extracted from models.
 
-### Mesh Generation
-
+*** Mesh Generation
+:PROPERTIES:
+:CUSTOM_ID: mesh-generation
+:END:
 Graylib provides functions to generate common 3D shapes:
 
-| Function | Description |
-|----------|-------------|
-| `grl_mesh_gen_cube(width, height, length)` | Generate a cube mesh |
-| `grl_mesh_gen_sphere(radius, rings, slices)` | Generate a UV sphere |
-| `grl_mesh_gen_hemisphere(radius, rings, slices)` | Generate a hemisphere |
-| `grl_mesh_gen_cylinder(radius, height, slices)` | Generate a cylinder |
-| `grl_mesh_gen_cone(radius, height, slices)` | Generate a cone |
-| `grl_mesh_gen_torus(radius, size, rad_seg, sides)` | Generate a torus |
-| `grl_mesh_gen_knot(radius, size, rad_seg, sides)` | Generate a trefoil knot |
-| `grl_mesh_gen_plane(width, length, res_x, res_z)` | Generate a subdivided plane |
-| `grl_mesh_gen_heightmap(heightmap, size)` | Generate terrain from heightmap |
-| `grl_mesh_gen_polygon(sides, radius)` | Generate a regular polygon |
+| Function                                           | Description                     |
+|----------------------------------------------------+---------------------------------|
+| =grl_mesh_gen_cube(width, height, length)=         | Generate a cube mesh            |
+| =grl_mesh_gen_sphere(radius, rings, slices)=       | Generate a UV sphere            |
+| =grl_mesh_gen_hemisphere(radius, rings, slices)=   | Generate a hemisphere           |
+| =grl_mesh_gen_cylinder(radius, height, slices)=    | Generate a cylinder             |
+| =grl_mesh_gen_cone(radius, height, slices)=        | Generate a cone                 |
+| =grl_mesh_gen_torus(radius, size, rad_seg, sides)= | Generate a torus                |
+| =grl_mesh_gen_knot(radius, size, rad_seg, sides)=  | Generate a trefoil knot         |
+| =grl_mesh_gen_plane(width, length, res_x, res_z)=  | Generate a subdivided plane     |
+| =grl_mesh_gen_heightmap(heightmap, size)=          | Generate terrain from heightmap |
+| =grl_mesh_gen_polygon(sides, radius)=              | Generate a regular polygon      |
 
-### Properties
+*** Properties
+:PROPERTIES:
+:CUSTOM_ID: properties
+:END:
+| Property         | Type   | Description                     |
+|------------------+--------+---------------------------------|
+| =vertex-count=   | =gint= | Number of vertices in the mesh  |
+| =triangle-count= | =gint= | Number of triangles in the mesh |
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `vertex-count` | `gint` | Number of vertices in the mesh |
-| `triangle-count` | `gint` | Number of triangles in the mesh |
-
-### Methods
-
-```c
+*** Methods
+:PROPERTIES:
+:CUSTOM_ID: methods
+:END:
+#+begin_src C
 gint             grl_mesh_get_vertex_count   (GrlMesh *mesh);
 gint             grl_mesh_get_triangle_count (GrlMesh *mesh);
 gint             grl_mesh_get_bone_count     (GrlMesh *mesh);
@@ -40,35 +50,41 @@ GrlBoundingBox * grl_mesh_get_bounding_box   (GrlMesh *mesh);
 gboolean         grl_mesh_is_valid           (GrlMesh *mesh);
 void             grl_mesh_upload             (GrlMesh *mesh,
                                               gboolean dynamic);
-```
+#+end_src
 
-| Method | Description |
-|--------|-------------|
-| `get_vertex_count()` | Get number of vertices |
-| `get_triangle_count()` | Get number of triangles |
-| `get_bone_count()` | Get number of bones influencing this mesh for GPU skinning (0 if the mesh has no skin data) |
-| `get_bounding_box()` | Calculate and return the mesh's bounding box |
-| `is_valid()` | Check if mesh data is valid |
-| `upload(dynamic)` | Upload mesh data to GPU (set `dynamic` for frequently updated meshes) |
+| Method                 | Description                                                                                 |
+|------------------------+---------------------------------------------------------------------------------------------|
+| =get_vertex_count()=   | Get number of vertices                                                                      |
+| =get_triangle_count()= | Get number of triangles                                                                     |
+| =get_bone_count()=     | Get number of bones influencing this mesh for GPU skinning (0 if the mesh has no skin data) |
+| =get_bounding_box()=   | Calculate and return the mesh's bounding box                                                |
+| =is_valid()=           | Check if mesh data is valid                                                                 |
+| =upload(dynamic)=      | Upload mesh data to GPU (set =dynamic= for frequently updated meshes)                       |
 
-### Example: Procedural Mesh
-
-```c
+*** Example: Procedural Mesh
+:PROPERTIES:
+:CUSTOM_ID: example-procedural-mesh
+:END:
+#+begin_src C
 g_autoptr(GrlMesh) sphere = grl_mesh_gen_sphere (1.0f, 16, 32);
 g_autoptr(GrlMesh) cube = grl_mesh_gen_cube (2.0f, 2.0f, 2.0f);
 g_autoptr(GrlMesh) plane = grl_mesh_gen_plane (10.0f, 10.0f, 10, 10);
 
 /* Upload to GPU for rendering */
 grl_mesh_upload (sphere, FALSE);
-```
+#+end_src
 
-## GrlMaterial
-
+** GrlMaterial
+:PROPERTIES:
+:CUSTOM_ID: grlmaterial
+:END:
 Materials define the visual appearance of 3D surfaces using texture maps and shader parameters. Graylib supports PBR (Physically Based Rendering) workflows.
 
-### Material Map Types
-
-```c
+*** Material Map Types
+:PROPERTIES:
+:CUSTOM_ID: material-map-types
+:END:
+#+begin_src C
 typedef enum
 {
     GRL_MATERIAL_MAP_ALBEDO,      /* Base color / diffuse */
@@ -83,11 +99,13 @@ typedef enum
     GRL_MATERIAL_MAP_PREFILTER,   /* Prefiltered cubemap (specular IBL) */
     GRL_MATERIAL_MAP_BRDF         /* BRDF lookup texture */
 } GrlMaterialMapType;
-```
+#+end_src
 
-### Methods
-
-```c
+*** Methods
+:PROPERTIES:
+:CUSTOM_ID: methods-1
+:END:
+#+begin_src C
 /* Shader management */
 void        grl_material_set_shader      (GrlMaterial *material,
                                           GrlShader   *shader);
@@ -113,11 +131,13 @@ void        grl_material_set_map_value   (GrlMaterial        *material,
                                           gfloat              value);
 gfloat      grl_material_get_map_value   (GrlMaterial        *material,
                                           GrlMaterialMapType  map_type);
-```
+#+end_src
 
-### Example: PBR Material Setup
-
-```c
+*** Example: PBR Material Setup
+:PROPERTIES:
+:CUSTOM_ID: example-pbr-material-setup
+:END:
+#+begin_src C
 g_autoptr(GrlMaterial) material = grl_material_new ();
 g_autoptr(GrlTexture) albedo = grl_texture_new_from_file ("albedo.png", NULL);
 g_autoptr(GrlTexture) normal = grl_texture_new_from_file ("normal.png", NULL);
@@ -130,55 +150,65 @@ grl_material_set_map_texture (material, GRL_MATERIAL_MAP_ROUGHNESS, roughness);
 
 /* Set metalness as a constant value (no texture) */
 grl_material_set_map_value (material, GRL_MATERIAL_MAP_METALNESS, 0.0f);
-```
+#+end_src
 
-## GrlModel
-
+** GrlModel
+:PROPERTIES:
+:CUSTOM_ID: grlmodel
+:END:
 A 3D model containing meshes, materials, and optionally bone data for animation.
 
-### Constructors
-
-```c
+*** Constructors
+:PROPERTIES:
+:CUSTOM_ID: constructors
+:END:
+#+begin_src C
 GrlModel * grl_model_new_from_file (const gchar  *path,
                                     GError      **error);
 GrlModel * grl_model_new_from_mesh (GrlMesh *mesh);
-```
+#+end_src
 
-| Constructor | Description |
-|-------------|-------------|
-| `new_from_file(path, error)` | Load model from file (OBJ, IQM, GLTF, GLB) |
-| `new_from_mesh(mesh)` | Create model from a single mesh. The model keeps the mesh alive. |
+| Constructor                  | Description                                                      |
+|------------------------------+------------------------------------------------------------------|
+| =new_from_file(path, error)= | Load model from file (OBJ, IQM, GLTF, GLB)                       |
+| =new_from_mesh(mesh)=        | Create model from a single mesh. The model keeps the mesh alive. |
 
-### Mesh Ownership in `grl_model_new_from_mesh()`
+*** Mesh Ownership in =grl_model_new_from_mesh()=
+:PROPERTIES:
+:CUSTOM_ID: mesh-ownership-in-grl_model_new_from_mesh
+:END:
+When creating a model from a mesh, the model takes a reference to the mesh and keeps it alive for the lifetime of the model. This is necessary because raylib performs a shallow copy of mesh data - the model's internal mesh shares vertex and GPU buffer pointers with the original =GrlMesh=.
 
-When creating a model from a mesh, the model takes a reference to the mesh and keeps it alive for the lifetime of the model. This is necessary because raylib performs a shallow copy of mesh data - the model's internal mesh shares vertex and GPU buffer pointers with the original `GrlMesh`.
+You can safely unref the =GrlMesh= after creating the model:
 
-You can safely unref the `GrlMesh` after creating the model:
-
-```c
+#+begin_src C
 g_autoptr(GrlMesh) mesh = grl_mesh_new_cube (1.0f, 1.0f, 1.0f);
 g_autoptr(GrlModel) model = grl_model_new_from_mesh (mesh);
 /* mesh can go out of scope - model keeps it alive internally */
-```
+#+end_src
 
-**Note:** Models loaded from files (`grl_model_new_from_file()`) do not have this behavior - they own their mesh data directly.
+*Note:* Models loaded from files (=grl_model_new_from_file()=) do not have this behavior - they own their mesh data directly.
 
-### Properties
+*** Properties
+:PROPERTIES:
+:CUSTOM_ID: properties-1
+:END:
+| Property         | Type   | Access | Description                                                 |
+|------------------+--------+--------+-------------------------------------------------------------|
+| =mesh-count=     | =gint= | Read   | Number of meshes in the model                               |
+| =material-count= | =gint= | Read   | Number of materials                                         |
+| =bone-count=     | =gint= | Read   | Number of bones in the model's skeleton (0 if not animated) |
 
-| Property | Type | Access | Description |
-|----------|------|--------|-------------|
-| `mesh-count` | `gint` | Read | Number of meshes in the model |
-| `material-count` | `gint` | Read | Number of materials |
-| `bone-count` | `gint` | Read | Number of bones in the model's skeleton (0 if not animated) |
+#+begin_quote
+*raylib 6.0 note:* Bone data moved into the model's skeleton. =grl_model_get_bone_count()= now reflects the skeleton bone count, and the per-bone data is reached via =grl_model_get_bone()= and =grl_model_get_bind_pose_transform()= (see [[#skeletal-animation--gpu-skinning][Skeletal Animation]] below).
 
-> **raylib 6.0 note:** Bone data moved into the model's skeleton.
-> `grl_model_get_bone_count()` now reflects the skeleton bone count, and the
-> per-bone data is reached via `grl_model_get_bone()` and
-> `grl_model_get_bind_pose_transform()` (see [Skeletal Animation](#skeletal-animation--gpu-skinning) below).
+#+end_quote
 
-### Methods
-
-```c
+*** Methods
+:PROPERTIES:
+:CUSTOM_ID: methods-2
+:END:
+#+begin_src C
 /* Property getters */
 gint             grl_model_get_mesh_count     (GrlModel *model);
 gint             grl_model_get_material_count (GrlModel *model);
@@ -226,11 +256,13 @@ void             grl_model_draw_wires_ex      (GrlModel         *model,
                                                gfloat            rotation_angle,
                                                const GrlVector3 *scale,
                                                const GrlColor   *tint);
-```
+#+end_src
 
-### Example: Loading and Drawing a Model
-
-```c
+*** Example: Loading and Drawing a Model
+:PROPERTIES:
+:CUSTOM_ID: example-loading-and-drawing-a-model
+:END:
+#+begin_src C
 g_autoptr(GError) error = NULL;
 g_autoptr(GrlModel) model = grl_model_new_from_file ("assets/character.glb", &error);
 
@@ -245,11 +277,13 @@ g_autoptr(GrlColor) white = grl_color_new_white ();
 
 /* In render loop */
 grl_model_draw (model, position, 1.0f, white);
-```
+#+end_src
 
-### Example: Model with Custom Material
-
-```c
+*** Example: Model with Custom Material
+:PROPERTIES:
+:CUSTOM_ID: example-model-with-custom-material
+:END:
+#+begin_src C
 g_autoptr(GrlModel) model = grl_model_new_from_file ("model.obj", NULL);
 g_autoptr(GrlMaterial) custom_mat = grl_material_new ();
 g_autoptr(GrlTexture) texture = grl_texture_new_from_file ("custom.png", NULL);
@@ -258,40 +292,46 @@ grl_material_set_map_texture (custom_mat, GRL_MATERIAL_MAP_ALBEDO, texture);
 
 /* Replace the first material */
 grl_model_set_material (model, 0, custom_mat);
-```
+#+end_src
 
-## GrlModelAnimation
-
+** GrlModelAnimation
+:PROPERTIES:
+:CUSTOM_ID: grlmodelanimation
+:END:
 Skeletal animation data that can be applied to models with matching bone structures.
 
-### Loading Animations
-
-```c
+*** Loading Animations
+:PROPERTIES:
+:CUSTOM_ID: loading-animations
+:END:
+#+begin_src C
 GrlModelAnimation ** grl_model_animation_load (const gchar *path,
                                                gint        *count,
                                                GError     **error);
-```
+#+end_src
 
-Returns a NULL-terminated array of animations loaded from the file. The `count` parameter receives the number of animations loaded.
+Returns a NULL-terminated array of animations loaded from the file. The =count= parameter receives the number of animations loaded.
 
-### Properties
+*** Properties
+:PROPERTIES:
+:CUSTOM_ID: properties-2
+:END:
+| Property      | Type      | Access | Description                      |
+|---------------+-----------+--------+----------------------------------|
+| =name=        | =gchar *= | Read   | Animation name                   |
+| =frame-count= | =gint=    | Read   | Total number of keyframes        |
+| =bone-count=  | =gint=    | Read   | Number of bones in the animation |
 
-| Property | Type | Access | Description |
-|----------|------|--------|-------------|
-| `name` | `gchar *` | Read | Animation name |
-| `frame-count` | `gint` | Read | Total number of keyframes |
-| `bone-count` | `gint` | Read | Number of bones in the animation |
+#+begin_quote
+*raylib 6.0 note:* raylib renamed the underlying =ModelAnimation= field semantics --- what was the per-frame array is now the /keyframe count/ and the per-keyframe bone /poses/ are decomposed =Transform=s (translation, rotation, scale). =grl_model_animation_get_frame_count()= returns the keyframe count, and =grl_model_animation_get_frame_pose()= returns the local pose (a [[#grltransform][=GrlTransform=]]) of a bone at a given keyframe.
 
-> **raylib 6.0 note:** raylib renamed the underlying `ModelAnimation` field
-> semantics — what was the per-frame array is now the *keyframe count* and the
-> per-keyframe bone *poses* are decomposed `Transform`s (translation, rotation,
-> scale). `grl_model_animation_get_frame_count()` returns the keyframe count, and
-> `grl_model_animation_get_frame_pose()` returns the local pose
-> (a [`GrlTransform`](#grltransform)) of a bone at a given keyframe.
+#+end_quote
 
-### Methods
-
-```c
+*** Methods
+:PROPERTIES:
+:CUSTOM_ID: methods-3
+:END:
+#+begin_src C
 const gchar *  grl_model_animation_get_name        (GrlModelAnimation *anim);
 gint           grl_model_animation_get_frame_count (GrlModelAnimation *anim);
 gint           grl_model_animation_get_bone_count  (GrlModelAnimation *anim);
@@ -309,40 +349,38 @@ void           grl_model_animation_blend           (GrlModel          *model,
                                                     GrlModelAnimation *anim_b,
                                                     gfloat             frame_b,
                                                     gfloat             blend);
-```
+#+end_src
 
-| Method | Description |
-|--------|-------------|
-| `get_name()` | Get the animation name |
-| `get_frame_count()` | Get total number of keyframes |
-| `get_bone_count()` | Get number of bones |
-| `get_frame_pose(frame, bone)` | Get the local pose (`GrlTransform`) of `bone` at keyframe `frame` |
-| `is_valid(model)` | Check if the animation is compatible with `model` |
-| `update(model, frame)` | Apply animation frame to model (wraps if `frame` exceeds the keyframe count) |
-| `blend(model, anim_a, frame_a, anim_b, frame_b, blend)` | Blend `model`'s pose between two animation frames (see below) |
+| Method                                                  | Description                                                                  |
+|---------------------------------------------------------+------------------------------------------------------------------------------|
+| =get_name()=                                            | Get the animation name                                                       |
+| =get_frame_count()=                                     | Get total number of keyframes                                                |
+| =get_bone_count()=                                      | Get number of bones                                                          |
+| =get_frame_pose(frame, bone)=                           | Get the local pose (=GrlTransform=) of =bone= at keyframe =frame=            |
+| =is_valid(model)=                                       | Check if the animation is compatible with =model=                            |
+| =update(model, frame)=                                  | Apply animation frame to model (wraps if =frame= exceeds the keyframe count) |
+| =blend(model, anim_a, frame_a, anim_b, frame_b, blend)= | Blend =model='s pose between two animation frames (see below)                |
 
-### Animation Blending
+*** Animation Blending
+:PROPERTIES:
+:CUSTOM_ID: animation-blending
+:END:
+=grl_model_animation_blend()= poses a model by interpolating between two animation frames, using raylib 6.0's GPU-skinning-aware blending (built on =UpdateModelAnimationEx=). It is the basis for smooth transitions between animation clips (e.g. crossfading from a /walk/ to a /run/ cycle). =blend= ranges over =[0.0, 1.0]=, where =0.0= poses purely from =anim_a=/=frame_a= and =1.0= purely from =anim_b=/=frame_b=. The frame parameters are floats, so fractional keyframe positions interpolate within each clip.
 
-`grl_model_animation_blend()` poses a model by interpolating between two
-animation frames, using raylib 6.0's GPU-skinning-aware blending (built on
-`UpdateModelAnimationEx`). It is the basis for smooth transitions between
-animation clips (e.g. crossfading from a *walk* to a *run* cycle). `blend`
-ranges over `[0.0, 1.0]`, where `0.0` poses purely from `anim_a`/`frame_a` and
-`1.0` purely from `anim_b`/`frame_b`. The frame parameters are floats, so
-fractional keyframe positions interpolate within each clip.
-
-```c
+#+begin_src C
 /* Crossfade from walk to run over 0.5 seconds */
 gfloat t = elapsed / 0.5f;  /* 0.0 .. 1.0 */
 grl_model_animation_blend (character,
                            walk_anim, walk_frame,
                            run_anim, run_frame,
                            t);
-```
+#+end_src
 
-### Example: Animated Character
-
-```c
+*** Example: Animated Character
+:PROPERTIES:
+:CUSTOM_ID: example-animated-character
+:END:
+#+begin_src C
 g_autoptr(GError) error = NULL;
 gint anim_count = 0;
 
@@ -380,21 +418,21 @@ for (gint i = 0; i < anim_count; i++)
     g_object_unref (animations[i]);
 }
 g_free (animations);
-```
+#+end_src
 
-## Skeletal Animation & GPU Skinning
+** Skeletal Animation & GPU Skinning
+:PROPERTIES:
+:CUSTOM_ID: skeletal-animation--gpu-skinning
+:END:
+raylib 6.0 adds GPU vertex skinning for skeletal animation. Two GBoxed value types describe the skeleton and its poses: =GrlBoneInfo= (the static bone hierarchy) and =GrlTransform= (a decomposed translation/rotation/scale pose).
 
-raylib 6.0 adds GPU vertex skinning for skeletal animation. Two GBoxed value
-types describe the skeleton and its poses: `GrlBoneInfo` (the static bone
-hierarchy) and `GrlTransform` (a decomposed translation/rotation/scale pose).
+*** GrlBoneInfo
+:PROPERTIES:
+:CUSTOM_ID: grlboneinfo
+:END:
+A GBoxed value type describing a single bone in a model's animation skeleton: its name and the index of its parent bone (=-1= for a root bone). It backs raylib 6.0's =BoneInfo=.
 
-### GrlBoneInfo
-
-A GBoxed value type describing a single bone in a model's animation skeleton:
-its name and the index of its parent bone (`-1` for a root bone). It backs
-raylib 6.0's `BoneInfo`.
-
-```c
+#+begin_src C
 GrlBoneInfo * grl_bone_info_new        (const gchar       *name,
                                         gint               parent);
 GrlBoneInfo * grl_bone_info_copy       (const GrlBoneInfo *self);
@@ -402,26 +440,25 @@ void          grl_bone_info_free       (GrlBoneInfo       *self);
 
 const gchar * grl_bone_info_get_name   (const GrlBoneInfo *self);
 gint          grl_bone_info_get_parent (const GrlBoneInfo *self);
-```
+#+end_src
 
-| Function | Description |
-|----------|-------------|
-| `new(name, parent)` | Create bone metadata (bone name + parent index, `-1` for root) |
-| `copy()` | Duplicate a `GrlBoneInfo` |
-| `free()` | Free a `GrlBoneInfo` (it is a GBoxed value type, **not** a GObject) |
-| `get_name()` | Get the bone name |
-| `get_parent()` | Get the parent bone index (`-1` for a root bone) |
+| Function            | Description                                                       |
+|---------------------+-------------------------------------------------------------------|
+| =new(name, parent)= | Create bone metadata (bone name + parent index, =-1= for root)    |
+| =copy()=            | Duplicate a =GrlBoneInfo=                                         |
+| =free()=            | Free a =GrlBoneInfo= (it is a GBoxed value type, *not* a GObject) |
+| =get_name()=        | Get the bone name                                                 |
+| =get_parent()=      | Get the parent bone index (=-1= for a root bone)                  |
 
-Bone metadata lives on the model's skeleton; obtain it with
-`grl_model_get_bone()`.
+Bone metadata lives on the model's skeleton; obtain it with =grl_model_get_bone()=.
 
-### GrlTransform
+*** GrlTransform
+:PROPERTIES:
+:CUSTOM_ID: grltransform
+:END:
+A GBoxed value type holding a decomposed 3D transform --- translation, rotation (as a quaternion), and per-axis scale. It backs raylib 6.0's =Transform= and is used for skeleton bind poses and per-keyframe bone poses.
 
-A GBoxed value type holding a decomposed 3D transform — translation, rotation
-(as a quaternion), and per-axis scale. It backs raylib 6.0's `Transform` and is
-used for skeleton bind poses and per-keyframe bone poses.
-
-```c
+#+begin_src C
 GrlTransform *  grl_transform_new             (const GrlVector3    *translation,
                                                const GrlQuaternion *rotation,
                                                const GrlVector3    *scale);
@@ -432,23 +469,25 @@ void            grl_transform_free            (GrlTransform        *self);
 GrlVector3 *    grl_transform_get_translation (const GrlTransform  *self);
 GrlQuaternion * grl_transform_get_rotation    (const GrlTransform  *self);
 GrlVector3 *    grl_transform_get_scale       (const GrlTransform  *self);
-```
+#+end_src
 
-| Function | Description |
-|----------|-------------|
-| `new(translation, rotation, scale)` | Create a transform from its components |
-| `new_identity()` | Create an identity transform (zero translation, identity rotation, unit scale) |
-| `copy()` | Duplicate a `GrlTransform` |
-| `free()` | Free a `GrlTransform` (GBoxed value type, **not** a GObject) |
-| `get_translation()` | Get the translation component (returns a freshly allocated `GrlVector3`) |
-| `get_rotation()` | Get the rotation component (returns a freshly allocated `GrlQuaternion`) |
-| `get_scale()` | Get the scale component (returns a freshly allocated `GrlVector3`) |
+| Function                            | Description                                                                    |
+|-------------------------------------+--------------------------------------------------------------------------------|
+| =new(translation, rotation, scale)= | Create a transform from its components                                         |
+| =new_identity()=                    | Create an identity transform (zero translation, identity rotation, unit scale) |
+| =copy()=                            | Duplicate a =GrlTransform=                                                     |
+| =free()=                            | Free a =GrlTransform= (GBoxed value type, *not* a GObject)                     |
+| =get_translation()=                 | Get the translation component (returns a freshly allocated =GrlVector3=)       |
+| =get_rotation()=                    | Get the rotation component (returns a freshly allocated =GrlQuaternion=)       |
+| =get_scale()=                       | Get the scale component (returns a freshly allocated =GrlVector3=)             |
 
 The accessors each return a newly allocated copy that the caller owns.
 
-### Example: Inspecting a Skeleton
-
-```c
+*** Example: Inspecting a Skeleton
+:PROPERTIES:
+:CUSTOM_ID: example-inspecting-a-skeleton
+:END:
+#+begin_src C
 g_autoptr(GrlModel) model = grl_model_new_from_file ("character.glb", NULL);
 gint bone_count = grl_model_get_bone_count (model);
 
@@ -464,23 +503,28 @@ for (gint i = 0; i < bone_count; i++)
              grl_bone_info_get_parent (bone),
              t->x, t->y, t->z);
 }
-```
+#+end_src
 
-> **GBoxed reminder:** `GrlBoneInfo` and `GrlTransform` are GBoxed value types.
-> Free them with `grl_bone_info_free()` / `grl_transform_free()` (or
-> `g_autoptr`), never `g_object_unref()`.
+#+begin_quote
+*GBoxed reminder:* =GrlBoneInfo= and =GrlTransform= are GBoxed value types. Free them with =grl_bone_info_free()= / =grl_transform_free()= (or =g_autoptr=), never =g_object_unref()=.
 
-## Supported File Formats
+#+end_quote
 
-| Format | Extension | Features |
-|--------|-----------|----------|
-| Wavefront OBJ | `.obj` | Static meshes, materials (MTL) |
-| Inter-Quake Model | `.iqm` | Skeletal animation, materials |
-| glTF 2.0 | `.gltf`, `.glb` | PBR materials, skeletal animation, embedded textures |
+** Supported File Formats
+:PROPERTIES:
+:CUSTOM_ID: supported-file-formats
+:END:
+| Format            | Extension       | Features                                             |
+|-------------------+-----------------+------------------------------------------------------|
+| Wavefront OBJ     | =.obj=          | Static meshes, materials (MTL)                       |
+| Inter-Quake Model | =.iqm=          | Skeletal animation, materials                        |
+| glTF 2.0          | =.gltf=, =.glb= | PBR materials, skeletal animation, embedded textures |
 
-## Complete Example: 3D Model Viewer
-
-```c
+** Complete Example: 3D Model Viewer
+:PROPERTIES:
+:CUSTOM_ID: complete-example-3d-model-viewer
+:END:
+#+begin_src C
 #include <graylib.h>
 
 int
@@ -545,4 +589,4 @@ main (int argc, char *argv[])
 
     return 0;
 }
-```
+#+end_src

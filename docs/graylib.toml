@@ -44,55 +44,11 @@ base_url = "https://gitlab.com/your-username/graylib/-/blob/master/"
   description = "GLib Input/Output library"
   docs_url = "https://docs.gtk.org/gio/"
 
-[extra]
-
-  [[extra.docs]]
-  title = "Getting Started"
-  filename = "getting-started.md"
-
-  [[extra.docs]]
-  title = "Building"
-  filename = "guides/building.md"
-
-  [[extra.docs]]
-  title = "Math Types"
-  filename = "api/math-types.md"
-
-  [[extra.docs]]
-  title = "Core API"
-  filename = "api/core.md"
-
-  [[extra.docs]]
-  title = "Drawing API"
-  filename = "api/drawing.md"
-
-  [[extra.docs]]
-  title = "Graphics API"
-  filename = "api/graphics.md"
-
-  [[extra.docs]]
-  title = "Input API"
-  filename = "api/input.md"
-
-  [[extra.docs]]
-  title = "Audio API"
-  filename = "api/audio.md"
-
-  [[extra.docs]]
-  title = "Scene API"
-  filename = "api/scene.md"
-
-  [[extra.docs]]
-  title = "Software Renderer API"
-  filename = "api/software-renderer.md"
-
-  [[extra.docs]]
-  title = "System API"
-  filename = "api/system.md"
-
-  [[extra.docs]]
-  title = "Text API"
-  filename = "api/text.md"
+# NOTE: the prose/guide/API-overview pages now live as Org files under
+# docs/ (ported from Markdown) so they ship in cmacs's Org manual via
+# tools/sync-deps-docs.sh.  gi-docgen consumes only Markdown content pages,
+# so no [[extra.docs]] entries are listed here; gi-docgen still generates
+# the API symbol reference below directly from the GIR.
 
 [object_hierarchy]
 

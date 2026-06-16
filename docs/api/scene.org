@@ -1,24 +1,32 @@
-# Scene Module
-
+* Scene Module
+:PROPERTIES:
+:CUSTOM_ID: scene-module
+:END:
 This document covers the scene and entity system: interfaces for drawable/updatable/collidable objects, base entity class, sprites, animated textures, and scene management (Phases 5 & 6).
 
-## Interfaces Overview
-
+** Interfaces Overview
+:PROPERTIES:
+:CUSTOM_ID: interfaces-overview
+:END:
 The scene module provides three interfaces that can be implemented by any GObject:
 
-| Interface | Purpose |
-|-----------|---------|
-| `GrlDrawable` | Objects that can be drawn with visibility and z-index |
-| `GrlUpdatable` | Objects that update each frame with delta time |
-| `GrlCollidable` | Objects that participate in collision detection |
+| Interface       | Purpose                                               |
+|-----------------+-------------------------------------------------------|
+| =GrlDrawable=   | Objects that can be drawn with visibility and z-index |
+| =GrlUpdatable=  | Objects that update each frame with delta time        |
+| =GrlCollidable= | Objects that participate in collision detection       |
 
-## GrlDrawable Interface
-
+** GrlDrawable Interface
+:PROPERTIES:
+:CUSTOM_ID: grldrawable-interface
+:END:
 Interface for objects that can be rendered.
 
-### Interface Methods
-
-```c
+*** Interface Methods
+:PROPERTIES:
+:CUSTOM_ID: interface-methods
+:END:
+#+begin_src C
 /* Draw the object (respects visibility) */
 void grl_drawable_draw (GrlDrawable *self);
 
@@ -29,11 +37,13 @@ void grl_drawable_set_visible (GrlDrawable *self, gboolean visible);
 /* Z-index for draw order (higher = drawn on top) */
 gint grl_drawable_get_z_index (GrlDrawable *self);
 void grl_drawable_set_z_index (GrlDrawable *self, gint z_index);
-```
+#+end_src
 
-### Implementing GrlDrawable
-
-```c
+*** Implementing GrlDrawable
+:PROPERTIES:
+:CUSTOM_ID: implementing-grldrawable
+:END:
+#+begin_src C
 static void
 my_object_draw (GrlDrawable *drawable)
 {
@@ -52,26 +62,32 @@ my_object_drawable_init (GrlDrawableInterface *iface)
 
 G_DEFINE_TYPE_WITH_CODE (MyObject, my_object, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (GRL_TYPE_DRAWABLE, my_object_drawable_init))
-```
+#+end_src
 
-## GrlUpdatable Interface
-
+** GrlUpdatable Interface
+:PROPERTIES:
+:CUSTOM_ID: grlupdatable-interface
+:END:
 Interface for objects that update each frame.
 
-### Interface Methods
-
-```c
+*** Interface Methods
+:PROPERTIES:
+:CUSTOM_ID: interface-methods-1
+:END:
+#+begin_src C
 /* Update with delta time (seconds since last frame) */
 void grl_updatable_update (GrlUpdatable *self, gfloat delta);
 
 /* Active state (inactive objects skip update) */
 gboolean grl_updatable_get_active (GrlUpdatable *self);
 void grl_updatable_set_active (GrlUpdatable *self, gboolean active);
-```
+#+end_src
 
-### Implementing GrlUpdatable
-
-```c
+*** Implementing GrlUpdatable
+:PROPERTIES:
+:CUSTOM_ID: implementing-grlupdatable
+:END:
+#+begin_src C
 static void
 my_object_update (GrlUpdatable *updatable, gfloat delta)
 {
@@ -87,15 +103,19 @@ my_object_updatable_init (GrlUpdatableInterface *iface)
 {
     iface->update = my_object_update;
 }
-```
+#+end_src
 
-## GrlCollidable Interface
-
+** GrlCollidable Interface
+:PROPERTIES:
+:CUSTOM_ID: grlcollidable-interface
+:END:
 Interface for objects that participate in collision detection.
 
-### Interface Methods
-
-```c
+*** Interface Methods
+:PROPERTIES:
+:CUSTOM_ID: interface-methods-2
+:END:
+#+begin_src C
 /* Get collision bounds (AABB) */
 GrlRectangle *grl_collidable_get_bounds (GrlCollidable *self);
 
@@ -108,11 +128,13 @@ void grl_collidable_on_collision (GrlCollidable *self, GrlCollidable *other);
 
 /* Check collision between two objects (AABB) */
 gboolean grl_collidable_check_collision (GrlCollidable *self, GrlCollidable *other);
-```
+#+end_src
 
-### Implementing GrlCollidable
-
-```c
+*** Implementing GrlCollidable
+:PROPERTIES:
+:CUSTOM_ID: implementing-grlcollidable
+:END:
+#+begin_src C
 static GrlRectangle *
 my_object_get_bounds (GrlCollidable *collidable)
 {
@@ -139,25 +161,31 @@ my_object_collidable_init (GrlCollidableInterface *iface)
     iface->get_bounds = my_object_get_bounds;
     iface->on_collision = my_object_on_collision;
 }
-```
+#+end_src
 
-## GrlEntity
-
+** GrlEntity
+:PROPERTIES:
+:CUSTOM_ID: grlentity
+:END:
 Base class for game entities. Implements all three interfaces (GrlDrawable, GrlUpdatable, GrlCollidable).
 
-### Creating Entities
-
-```c
+*** Creating Entities
+:PROPERTIES:
+:CUSTOM_ID: creating-entities
+:END:
+#+begin_src C
 /* Create at origin (0, 0) */
 g_autoptr(GrlEntity) entity = grl_entity_new ();
 
 /* Create at specific position */
 g_autoptr(GrlEntity) player = grl_entity_new_at (100.0f, 200.0f);
-```
+#+end_src
 
-### Position
-
-```c
+*** Position
+:PROPERTIES:
+:CUSTOM_ID: position
+:END:
+#+begin_src C
 /* Get position as vector */
 g_autoptr(GrlVector2) pos = grl_entity_get_position (entity);
 g_print ("Position: (%.1f, %.1f)\n",
@@ -176,11 +204,13 @@ gfloat x = grl_entity_get_x (entity);
 gfloat y = grl_entity_get_y (entity);
 grl_entity_set_x (entity, x + 10.0f);
 grl_entity_set_y (entity, y + 10.0f);
-```
+#+end_src
 
-### Size
-
-```c
+*** Size
+:PROPERTIES:
+:CUSTOM_ID: size
+:END:
+#+begin_src C
 /* Get dimensions */
 gfloat width = grl_entity_get_width (entity);
 gfloat height = grl_entity_get_height (entity);
@@ -188,11 +218,13 @@ gfloat height = grl_entity_get_height (entity);
 /* Set dimensions */
 grl_entity_set_width (entity, 64.0f);
 grl_entity_set_height (entity, 64.0f);
-```
+#+end_src
 
-### Rotation and Scale
-
-```c
+*** Rotation and Scale
+:PROPERTIES:
+:CUSTOM_ID: rotation-and-scale
+:END:
+#+begin_src C
 /* Rotation in degrees */
 grl_entity_set_rotation (entity, 45.0f);  /* 45 degrees */
 gfloat angle = grl_entity_get_rotation (entity);
@@ -200,22 +232,26 @@ gfloat angle = grl_entity_get_rotation (entity);
 /* Scale factor (1.0 = normal) */
 grl_entity_set_scale (entity, 2.0f);  /* Double size */
 gfloat scale = grl_entity_get_scale (entity);
-```
+#+end_src
 
-### Origin (Pivot Point)
-
-```c
+*** Origin (Pivot Point)
+:PROPERTIES:
+:CUSTOM_ID: origin-pivot-point
+:END:
+#+begin_src C
 /* Set origin for rotation/scaling */
 g_autoptr(GrlVector2) origin = grl_vector2_new (32.0f, 32.0f);
 grl_entity_set_origin (entity, origin);
 
 /* Center the origin automatically */
 grl_entity_center_origin (entity);  /* Sets origin to (width/2, height/2) */
-```
+#+end_src
 
-### Movement
-
-```c
+*** Movement
+:PROPERTIES:
+:CUSTOM_ID: movement
+:END:
+#+begin_src C
 gfloat delta = grl_window_get_frame_time (window);
 
 /* Move by velocity * delta (frame-rate independent) */
@@ -228,11 +264,13 @@ grl_entity_move_xy (entity, 100.0f, 50.0f, delta);
 /* Instant translation (no delta) */
 g_autoptr(GrlVector2) offset = grl_vector2_new (10.0f, 0.0f);
 grl_entity_translate (entity, offset);
-```
+#+end_src
 
-### State Properties
-
-```c
+*** State Properties
+:PROPERTIES:
+:CUSTOM_ID: state-properties
+:END:
+#+begin_src C
 /* Visibility (affects drawing) */
 grl_entity_set_visible (entity, TRUE);
 if (grl_entity_get_visible (entity)) { /* ... */ }
@@ -244,13 +282,15 @@ if (grl_entity_get_active (entity)) { /* ... */ }
 /* Z-index (draw order) */
 grl_entity_set_z_index (entity, 10);
 gint z = grl_entity_get_z_index (entity);
-```
+#+end_src
 
-### Tags
-
+*** Tags
+:PROPERTIES:
+:CUSTOM_ID: tags
+:END:
 Tags are useful for identifying entity types during collision handling.
 
-```c
+#+begin_src C
 /* Set a tag */
 grl_entity_set_tag (entity, "player");
 
@@ -262,21 +302,25 @@ if (grl_entity_has_tag (entity, "enemy"))
 {
     /* Handle enemy */
 }
-```
+#+end_src
 
-### Collision Bounds
-
-```c
+*** Collision Bounds
+:PROPERTIES:
+:CUSTOM_ID: collision-bounds
+:END:
+#+begin_src C
 /* Get the entity's collision rectangle */
 g_autoptr(GrlRectangle) bounds = grl_entity_get_bounds (entity);
 
 /* Toggle collision detection */
 grl_collidable_set_collision_enabled (GRL_COLLIDABLE (entity), TRUE);
-```
+#+end_src
 
-### Subclassing GrlEntity
-
-```c
+*** Subclassing GrlEntity
+:PROPERTIES:
+:CUSTOM_ID: subclassing-grlentity
+:END:
+#+begin_src C
 /* In my-player.h */
 #define MY_TYPE_PLAYER (my_player_get_type ())
 G_DECLARE_DERIVABLE_TYPE (MyPlayer, my_player, MY, PLAYER, GrlEntity)
@@ -324,15 +368,19 @@ my_player_class_init (MyPlayerClass *klass)
     entity_class->update = my_player_update;
     entity_class->draw = my_player_draw;
 }
-```
+#+end_src
 
-## GrlSprite
-
+** GrlSprite
+:PROPERTIES:
+:CUSTOM_ID: grlsprite
+:END:
 A 2D sprite entity that displays a texture. Extends GrlEntity.
 
-### Creating Sprites
-
-```c
+*** Creating Sprites
+:PROPERTIES:
+:CUSTOM_ID: creating-sprites
+:END:
+#+begin_src C
 /* Empty sprite */
 g_autoptr(GrlSprite) sprite = grl_sprite_new ();
 
@@ -348,11 +396,13 @@ if (sprite == NULL)
 {
     g_printerr ("Failed to load sprite: %s\n", error->message);
 }
-```
+#+end_src
 
-### Texture
-
-```c
+*** Texture
+:PROPERTIES:
+:CUSTOM_ID: texture
+:END:
+#+begin_src C
 /* Get texture */
 GrlTexture *tex = grl_sprite_get_texture (sprite);
 
@@ -361,13 +411,15 @@ grl_sprite_set_texture (sprite, new_texture);
 
 /* Clear texture */
 grl_sprite_set_texture (sprite, NULL);
-```
+#+end_src
 
-### Source Rectangle (Sprite Sheets)
-
+*** Source Rectangle (Sprite Sheets)
+:PROPERTIES:
+:CUSTOM_ID: source-rectangle-sprite-sheets
+:END:
 Extract a portion of the texture for sprite sheet animations.
 
-```c
+#+begin_src C
 /* Set source rectangle (updates sprite size to match) */
 g_autoptr(GrlRectangle) rect = grl_rectangle_new (64.0f, 0.0f, 32.0f, 32.0f);
 grl_sprite_set_source_rect (sprite, rect);
@@ -380,11 +432,13 @@ g_autoptr(GrlRectangle) src = grl_sprite_get_source_rect (sprite);
 
 /* Clear source rect (use full texture) */
 grl_sprite_set_source_rect (sprite, NULL);
-```
+#+end_src
 
-### Tint Color
-
-```c
+*** Tint Color
+:PROPERTIES:
+:CUSTOM_ID: tint-color
+:END:
+#+begin_src C
 /* Set tint (multiplied with texture colors) */
 g_autoptr(GrlColor) red_tint = grl_color_new (255, 100, 100, 255);
 grl_sprite_set_tint (sprite, red_tint);
@@ -395,11 +449,13 @@ g_autoptr(GrlColor) tint = grl_sprite_get_tint (sprite);
 /* No tint (white) */
 g_autoptr(GrlColor) white = grl_color_new (255, 255, 255, 255);
 grl_sprite_set_tint (sprite, white);
-```
+#+end_src
 
-### Flipping
-
-```c
+*** Flipping
+:PROPERTIES:
+:CUSTOM_ID: flipping
+:END:
+#+begin_src C
 /* Horizontal flip */
 grl_sprite_set_flip_h (sprite, TRUE);
 gboolean flipped_h = grl_sprite_get_flip_h (sprite);
@@ -407,15 +463,19 @@ gboolean flipped_h = grl_sprite_get_flip_h (sprite);
 /* Vertical flip */
 grl_sprite_set_flip_v (sprite, TRUE);
 gboolean flipped_v = grl_sprite_get_flip_v (sprite);
-```
+#+end_src
 
-## GrlAnimatedTexture
-
+** GrlAnimatedTexture
+:PROPERTIES:
+:CUSTOM_ID: grlanimatedtexture
+:END:
 Manages frame-based animations from a spritesheet.
 
-### Creating Animated Textures
-
-```c
+*** Creating Animated Textures
+:PROPERTIES:
+:CUSTOM_ID: creating-animated-textures
+:END:
+#+begin_src C
 /* From existing texture */
 g_autoptr(GrlTexture) sheet = grl_texture_new_from_file ("walk.png", NULL);
 g_autoptr(GrlAnimatedTexture) anim = grl_animated_texture_new (sheet, 32, 32);
@@ -428,13 +488,15 @@ g_autoptr(GrlAnimatedTexture) anim = grl_animated_texture_new_from_file (
     32,     /* frame height */
     &error
 );
-```
+#+end_src
 
 Frames are extracted left-to-right, top-to-bottom from the spritesheet.
 
-### Frame Information
-
-```c
+*** Frame Information
+:PROPERTIES:
+:CUSTOM_ID: frame-information
+:END:
+#+begin_src C
 /* Get frame dimensions */
 gint width = grl_animated_texture_get_frame_width (anim);
 gint height = grl_animated_texture_get_frame_height (anim);
@@ -444,11 +506,13 @@ gint count = grl_animated_texture_get_frame_count (anim);
 
 /* Limit frames (useful if spritesheet has unused frames) */
 grl_animated_texture_set_frame_count (anim, 8);  /* Use only first 8 frames */
-```
+#+end_src
 
-### Current Frame
-
-```c
+*** Current Frame
+:PROPERTIES:
+:CUSTOM_ID: current-frame
+:END:
+#+begin_src C
 /* Get/set current frame (0-based) */
 gint frame = grl_animated_texture_get_current_frame (anim);
 grl_animated_texture_set_current_frame (anim, 5);
@@ -458,11 +522,13 @@ g_autoptr(GrlRectangle) rect = grl_animated_texture_get_current_rect (anim);
 
 /* Get source rectangle for any frame */
 g_autoptr(GrlRectangle) rect = grl_animated_texture_get_frame_rect (anim, 3);
-```
+#+end_src
 
-### Animation Control
-
-```c
+*** Animation Control
+:PROPERTIES:
+:CUSTOM_ID: animation-control
+:END:
+#+begin_src C
 /* Set animation speed */
 grl_animated_texture_set_fps (anim, 12.0f);  /* 12 frames per second */
 gfloat fps = grl_animated_texture_get_fps (anim);
@@ -486,13 +552,15 @@ if (grl_animated_texture_is_finished (anim))
 {
     g_print ("Animation has finished (non-looping)\n");
 }
-```
+#+end_src
 
-### Updating (REQUIRED!)
+*** Updating (REQUIRED!)
+:PROPERTIES:
+:CUSTOM_ID: updating-required
+:END:
+You must call =grl_animated_texture_update()= every frame:
 
-You must call `grl_animated_texture_update()` every frame:
-
-```c
+#+begin_src C
 while (!grl_window_should_close (window))
 {
     gfloat delta = grl_window_get_frame_time (window);
@@ -509,11 +577,13 @@ while (!grl_window_should_close (window))
     /* ... */
     grl_window_end_drawing (window);
 }
-```
+#+end_src
 
-### Signals
-
-```c
+*** Signals
+:PROPERTIES:
+:CUSTOM_ID: signals
+:END:
+#+begin_src C
 /* Frame changed */
 g_signal_connect (anim, "frame-changed",
                   G_CALLBACK (on_frame_changed), user_data);
@@ -533,11 +603,13 @@ on_animation_finished (GrlAnimatedTexture *anim, gpointer user_data)
 {
     g_print ("Animation complete!\n");
 }
-```
+#+end_src
 
-## Complete Example
-
-```c
+** Complete Example
+:PROPERTIES:
+:CUSTOM_ID: complete-example
+:END:
+#+begin_src C
 #include <graylib.h>
 
 int
@@ -650,67 +722,81 @@ main (int argc, char *argv[])
 
     return 0;
 }
-```
+#+end_src
 
-## Properties Summary
+** Properties Summary
+:PROPERTIES:
+:CUSTOM_ID: properties-summary
+:END:
+*** GrlEntity Properties
+:PROPERTIES:
+:CUSTOM_ID: grlentity-properties
+:END:
+| Property   | Type     | Access     | Description                 |
+|------------+----------+------------+-----------------------------|
+| =x=        | gfloat   | Read/Write | X position                  |
+| =y=        | gfloat   | Read/Write | Y position                  |
+| =width=    | gfloat   | Read/Write | Width                       |
+| =height=   | gfloat   | Read/Write | Height                      |
+| =rotation= | gfloat   | Read/Write | Rotation in degrees         |
+| =scale=    | gfloat   | Read/Write | Scale factor (1.0 = normal) |
+| =origin-x= | gfloat   | Read/Write | Origin X (pivot point)      |
+| =origin-y= | gfloat   | Read/Write | Origin Y (pivot point)      |
+| =visible=  | gboolean | Read/Write | Whether entity is visible   |
+| =active=   | gboolean | Read/Write | Whether entity updates      |
+| =z-index=  | gint     | Read/Write | Draw order                  |
+| =tag=      | gchar*   | Read/Write | Entity tag string           |
 
-### GrlEntity Properties
+*** GrlSprite Properties
+:PROPERTIES:
+:CUSTOM_ID: grlsprite-properties
+:END:
+| Property      | Type          | Access     | Description              |
+|---------------+---------------+------------+--------------------------|
+| =texture=     | GrlTexture*   | Read/Write | The sprite's texture     |
+| =source-rect= | GrlRectangle* | Read/Write | Source region in texture |
+| =tint=        | GrlColor*     | Read/Write | Tint color (multiplied)  |
+| =flip-h=      | gboolean      | Read/Write | Horizontal flip          |
+| =flip-v=      | gboolean      | Read/Write | Vertical flip            |
 
-| Property | Type | Access | Description |
-|----------|------|--------|-------------|
-| `x` | gfloat | Read/Write | X position |
-| `y` | gfloat | Read/Write | Y position |
-| `width` | gfloat | Read/Write | Width |
-| `height` | gfloat | Read/Write | Height |
-| `rotation` | gfloat | Read/Write | Rotation in degrees |
-| `scale` | gfloat | Read/Write | Scale factor (1.0 = normal) |
-| `origin-x` | gfloat | Read/Write | Origin X (pivot point) |
-| `origin-y` | gfloat | Read/Write | Origin Y (pivot point) |
-| `visible` | gboolean | Read/Write | Whether entity is visible |
-| `active` | gboolean | Read/Write | Whether entity updates |
-| `z-index` | gint | Read/Write | Draw order |
-| `tag` | gchar* | Read/Write | Entity tag string |
+*** GrlAnimatedTexture Properties
+:PROPERTIES:
+:CUSTOM_ID: grlanimatedtexture-properties
+:END:
+| Property        | Type        | Access     | Description                  |
+|-----------------+-------------+------------+------------------------------|
+| =texture=       | GrlTexture* | Read       | Spritesheet texture          |
+| =frame-width=   | gint        | Read       | Frame width in pixels        |
+| =frame-height=  | gint        | Read       | Frame height in pixels       |
+| =frame-count=   | gint        | Read/Write | Number of frames to use      |
+| =current-frame= | gint        | Read/Write | Current frame index          |
+| =fps=           | gfloat      | Read/Write | Frames per second            |
+| =looping=       | gboolean    | Read/Write | Whether animation loops      |
+| =playing=       | gboolean    | Read/Write | Whether animation is playing |
 
-### GrlSprite Properties
-
-| Property | Type | Access | Description |
-|----------|------|--------|-------------|
-| `texture` | GrlTexture* | Read/Write | The sprite's texture |
-| `source-rect` | GrlRectangle* | Read/Write | Source region in texture |
-| `tint` | GrlColor* | Read/Write | Tint color (multiplied) |
-| `flip-h` | gboolean | Read/Write | Horizontal flip |
-| `flip-v` | gboolean | Read/Write | Vertical flip |
-
-### GrlAnimatedTexture Properties
-
-| Property | Type | Access | Description |
-|----------|------|--------|-------------|
-| `texture` | GrlTexture* | Read | Spritesheet texture |
-| `frame-width` | gint | Read | Frame width in pixels |
-| `frame-height` | gint | Read | Frame height in pixels |
-| `frame-count` | gint | Read/Write | Number of frames to use |
-| `current-frame` | gint | Read/Write | Current frame index |
-| `fps` | gfloat | Read/Write | Frames per second |
-| `looping` | gboolean | Read/Write | Whether animation loops |
-| `playing` | gboolean | Read/Write | Whether animation is playing |
-
-## GrlScene
-
+** GrlScene
+:PROPERTIES:
+:CUSTOM_ID: grlscene
+:END:
 A container for entities with lifecycle management. Scenes can be subclassed to create custom game states (menus, levels, etc.).
 
-### Creating Scenes
-
-```c
+*** Creating Scenes
+:PROPERTIES:
+:CUSTOM_ID: creating-scenes
+:END:
+#+begin_src C
 /* Empty scene */
 g_autoptr(GrlScene) scene = grl_scene_new ();
 
 /* Scene with name */
 g_autoptr(GrlScene) menu = grl_scene_new_with_name ("menu");
-```
+#+end_src
 
-### Properties
-
-```c
+*** Properties
+:PROPERTIES:
+:CUSTOM_ID: properties
+:END:
+#+begin_src C
 /* Name (for identification/debugging) */
 grl_scene_set_name (scene, "game_level_1");
 const gchar *name = grl_scene_get_name (scene);
@@ -726,11 +812,13 @@ gboolean visible = grl_scene_get_visible (scene);
 /* Update/draw behavior when paused */
 grl_scene_set_update_when_paused (scene, FALSE);
 grl_scene_set_draw_when_paused (scene, TRUE);  /* Useful for showing pause overlay */
-```
+#+end_src
 
-### Entity Management
-
-```c
+*** Entity Management
+:PROPERTIES:
+:CUSTOM_ID: entity-management
+:END:
+#+begin_src C
 /* Add entity (scene takes a reference) */
 grl_scene_add_entity (scene, GRL_ENTITY (player));
 grl_scene_add_entity (scene, GRL_ENTITY (enemy));
@@ -760,13 +848,15 @@ my_foreach_func (GrlEntity *entity, gpointer user_data)
     /* Process entity */
     return TRUE;  /* Continue iteration */
 }
-```
+#+end_src
 
-### Lifecycle Methods
-
+*** Lifecycle Methods
+:PROPERTIES:
+:CUSTOM_ID: lifecycle-methods
+:END:
 Scenes have virtual methods that are called during transitions:
 
-```c
+#+begin_src C
 /* Called when scene becomes active */
 void grl_scene_enter (GrlScene *self);
 
@@ -784,11 +874,13 @@ void grl_scene_update (GrlScene *self, gfloat delta);
 
 /* Draw all entities sorted by z-index */
 void grl_scene_draw (GrlScene *self);
-```
+#+end_src
 
-### Signals
-
-```c
+*** Signals
+:PROPERTIES:
+:CUSTOM_ID: signals-1
+:END:
+#+begin_src C
 /* Lifecycle signals */
 g_signal_connect (scene, "entered", G_CALLBACK (on_entered), NULL);
 g_signal_connect (scene, "exited", G_CALLBACK (on_exited), NULL);
@@ -810,11 +902,13 @@ on_entity_added (GrlScene *scene, GrlEntity *entity, gpointer user_data)
 {
     g_print ("Entity added with tag: %s\n", grl_entity_get_tag (entity));
 }
-```
+#+end_src
 
-### Subclassing GrlScene
-
-```c
+*** Subclassing GrlScene
+:PROPERTIES:
+:CUSTOM_ID: subclassing-grlscene
+:END:
+#+begin_src C
 /* In my-game-scene.h */
 #define MY_TYPE_GAME_SCENE (my_game_scene_get_type ())
 G_DECLARE_FINAL_TYPE (MyGameScene, my_game_scene, MY, GAME_SCENE, GrlScene)
@@ -880,21 +974,27 @@ my_game_scene_class_init (MyGameSceneClass *klass)
     scene_class->exit = my_game_scene_exit;
     scene_class->update = my_game_scene_update;
 }
-```
+#+end_src
 
-## GrlSceneManager
-
+** GrlSceneManager
+:PROPERTIES:
+:CUSTOM_ID: grlscenemanager
+:END:
 Stack-based scene manager for handling multiple scenes and transitions.
 
-### Creating a Scene Manager
-
-```c
+*** Creating a Scene Manager
+:PROPERTIES:
+:CUSTOM_ID: creating-a-scene-manager
+:END:
+#+begin_src C
 g_autoptr(GrlSceneManager) manager = grl_scene_manager_new ();
-```
+#+end_src
 
-### Stack Operations
-
-```c
+*** Stack Operations
+:PROPERTIES:
+:CUSTOM_ID: stack-operations
+:END:
+#+begin_src C
 /* Push scene (current scene is paused, new scene enters) */
 grl_scene_manager_push (manager, game_scene);
 
@@ -912,11 +1012,13 @@ grl_scene_manager_pop_to_root (manager);
 
 /* Clear all scenes */
 grl_scene_manager_clear (manager);
-```
+#+end_src
 
-### Accessors
-
-```c
+*** Accessors
+:PROPERTIES:
+:CUSTOM_ID: accessors
+:END:
+#+begin_src C
 /* Get current (top) scene */
 GrlScene *current = grl_scene_manager_get_current (manager);
 
@@ -940,11 +1042,13 @@ if (grl_scene_manager_contains (manager, game_scene))
 
 /* Find by name */
 GrlScene *found = grl_scene_manager_find_by_name (manager, "menu");
-```
+#+end_src
 
-### Game Loop Integration
-
-```c
+*** Game Loop Integration
+:PROPERTIES:
+:CUSTOM_ID: game-loop-integration
+:END:
+#+begin_src C
 /* Update only current scene */
 grl_scene_manager_update (manager, delta);
 
@@ -956,11 +1060,13 @@ grl_scene_manager_update_all (manager, delta);
 
 /* Draw all scenes (creates layered effect for overlays) */
 grl_scene_manager_draw_all (manager);
-```
+#+end_src
 
-### Signals
-
-```c
+*** Signals
+:PROPERTIES:
+:CUSTOM_ID: signals-2
+:END:
+#+begin_src C
 g_signal_connect (manager, "scene-pushed",
                   G_CALLBACK (on_scene_pushed), NULL);
 g_signal_connect (manager, "scene-popped",
@@ -978,11 +1084,13 @@ on_scene_changed (GrlSceneManager *manager,
     const gchar *new_name = new_scene ? grl_scene_get_name (new_scene) : "(none)";
     g_print ("Scene transition: %s -> %s\n", old_name, new_name);
 }
-```
+#+end_src
 
-### Complete Scene Management Example
-
-```c
+*** Complete Scene Management Example
+:PROPERTIES:
+:CUSTOM_ID: complete-scene-management-example
+:END:
+#+begin_src C
 #include <graylib.h>
 
 static GrlSceneManager *manager;
@@ -1088,24 +1196,28 @@ main (int argc, char *argv[])
 
     return 0;
 }
-```
+#+end_src
 
-### GrlScene Properties
+*** GrlScene Properties
+:PROPERTIES:
+:CUSTOM_ID: grlscene-properties
+:END:
+| Property             | Type     | Access     | Description              |
+|----------------------+----------+------------+--------------------------|
+| =name=               | gchar*   | Read/Write | Scene name               |
+| =active=             | gboolean | Read       | Whether scene is active  |
+| =paused=             | gboolean | Read       | Whether scene is paused  |
+| =visible=            | gboolean | Read/Write | Whether scene is visible |
+| =update-when-paused= | gboolean | Read/Write | Update when paused       |
+| =draw-when-paused=   | gboolean | Read/Write | Draw when paused         |
+| =entity-count=       | guint    | Read       | Number of entities       |
 
-| Property | Type | Access | Description |
-|----------|------|--------|-------------|
-| `name` | gchar* | Read/Write | Scene name |
-| `active` | gboolean | Read | Whether scene is active |
-| `paused` | gboolean | Read | Whether scene is paused |
-| `visible` | gboolean | Read/Write | Whether scene is visible |
-| `update-when-paused` | gboolean | Read/Write | Update when paused |
-| `draw-when-paused` | gboolean | Read/Write | Draw when paused |
-| `entity-count` | guint | Read | Number of entities |
-
-### GrlSceneManager Properties
-
-| Property | Type | Access | Description |
-|----------|------|--------|-------------|
-| `current-scene` | GrlScene* | Read | Current (top) scene |
-| `scene-count` | guint | Read | Number of scenes on stack |
-| `is-empty` | gboolean | Read | Whether stack is empty |
+*** GrlSceneManager Properties
+:PROPERTIES:
+:CUSTOM_ID: grlscenemanager-properties
+:END:
+| Property        | Type      | Access | Description               |
+|-----------------+-----------+--------+---------------------------|
+| =current-scene= | GrlScene* | Read   | Current (top) scene       |
+| =scene-count=   | guint     | Read   | Number of scenes on stack |
+| =is-empty=      | gboolean  | Read   | Whether stack is empty    |

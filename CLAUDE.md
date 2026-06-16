@@ -439,8 +439,8 @@ G_DEFINE_BOXED_TYPE (GrlVector2, grl_vector2,
 **IMPORTANT:** When adding new types or changing APIs, documentation must be updated:
 
 1. **gtk-doc comments** on all public functions with GIR annotations
-2. **Update `docs/api/*.md`** for the relevant module
-3. **Update `docs/index.md`** if adding new examples
+2. **Update `docs/api/*.org`** for the relevant module
+3. **Update `docs/index.org`** if adding new examples
 4. **Update `README.md`** if adding major features
 
 ## Running Examples
@@ -550,7 +550,7 @@ When adding a new type:
 
    This generates proper assembly: `test %al,%al` + `movzbl %al,%eax` instead of `test %eax,%eax`.
 
-   **Affected functions**: All raylib functions returning `bool` - input functions (`IsKeyDown`, `IsMouseButtonPressed`, etc.), collision detection (`CheckCollision*`), and any other boolean-returning APIs. See `docs/api/input.md` for the full list.
+   **Affected functions**: All raylib functions returning `bool` - input functions (`IsKeyDown`, `IsMouseButtonPressed`, etc.), collision detection (`CheckCollision*`), and any other boolean-returning APIs. See `docs/api/input.org` for the full list.
 
 ## GrlImage CPU Drawing
 

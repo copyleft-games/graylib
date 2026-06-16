@@ -1,29 +1,39 @@
-# Cameras
-
+* Cameras
+:PROPERTIES:
+:CUSTOM_ID: cameras
+:END:
 Graylib provides 2D and 3D camera systems for controlling the view into your game world.
 
-## GrlCamera2D
-
+** GrlCamera2D
+:PROPERTIES:
+:CUSTOM_ID: grlcamera2d
+:END:
 A 2D camera for scrolling, zooming, and rotating 2D scenes.
 
-### Constructors
-
-```c
+*** Constructors
+:PROPERTIES:
+:CUSTOM_ID: constructors
+:END:
+#+begin_src C
 GrlCamera2D * grl_camera2d_new (void);
-```
+#+end_src
 
-### Properties
+*** Properties
+:PROPERTIES:
+:CUSTOM_ID: properties
+:END:
+| Property   | Type         | Access     | Default | Description                                  |
+|------------+--------------+------------+---------+----------------------------------------------|
+| =offset=   | =GrlVector2= | Read/Write | (0, 0)  | Camera offset from target (screen space)     |
+| =target=   | =GrlVector2= | Read/Write | (0, 0)  | Point the camera is looking at (world space) |
+| =rotation= | =gfloat=     | Read/Write | 0.0     | Camera rotation in degrees                   |
+| =zoom=     | =gfloat=     | Read/Write | 1.0     | Camera zoom (scale factor)                   |
 
-| Property | Type | Access | Default | Description |
-|----------|------|--------|---------|-------------|
-| `offset` | `GrlVector2` | Read/Write | (0, 0) | Camera offset from target (screen space) |
-| `target` | `GrlVector2` | Read/Write | (0, 0) | Point the camera is looking at (world space) |
-| `rotation` | `gfloat` | Read/Write | 0.0 | Camera rotation in degrees |
-| `zoom` | `gfloat` | Read/Write | 1.0 | Camera zoom (scale factor) |
-
-### Methods
-
-```c
+*** Methods
+:PROPERTIES:
+:CUSTOM_ID: methods
+:END:
+#+begin_src C
 /* Property accessors */
 void         grl_camera2d_set_offset   (GrlCamera2D      *camera,
                                         const GrlVector2 *offset);
@@ -50,13 +60,15 @@ GrlVector2 * grl_camera2d_get_world_to_screen (GrlCamera2D      *camera,
                                                const GrlVector2 *world_pos);
 GrlVector2 * grl_camera2d_get_screen_to_world (GrlCamera2D      *camera,
                                                const GrlVector2 *screen_pos);
-```
+#+end_src
 
-### Usage
+*** Usage
+:PROPERTIES:
+:CUSTOM_ID: usage
+:END:
+The camera transform is applied between =begin()= and =end()= calls:
 
-The camera transform is applied between `begin()` and `end()` calls:
-
-```c
+#+begin_src C
 grl_camera2d_begin (camera);
 /* All drawing here uses camera coordinates */
 grl_draw_circle_v (world_position, 50.0f, red);
@@ -64,11 +76,13 @@ grl_camera2d_end (camera);
 
 /* Drawing here uses screen coordinates */
 grl_draw_text ("HUD", 10, 10, 20, white);
-```
+#+end_src
 
-### Example: Following a Player
-
-```c
+*** Example: Following a Player
+:PROPERTIES:
+:CUSTOM_ID: example-following-a-player
+:END:
+#+begin_src C
 g_autoptr(GrlCamera2D) camera = grl_camera2d_new ();
 g_autoptr(GrlVector2) offset = grl_vector2_new (400.0f, 300.0f);  /* Screen center */
 
@@ -84,11 +98,13 @@ zoom += grl_input_get_mouse_wheel_move () * 0.1f;
 if (zoom < 0.1f) zoom = 0.1f;
 if (zoom > 3.0f) zoom = 3.0f;
 grl_camera2d_set_zoom (camera, zoom);
-```
+#+end_src
 
-### Example: Screen to World Picking
-
-```c
+*** Example: Screen to World Picking
+:PROPERTIES:
+:CUSTOM_ID: example-screen-to-world-picking
+:END:
+#+begin_src C
 /* Get mouse position in world coordinates */
 g_autoptr(GrlVector2) mouse_screen = grl_vector2_new (
     grl_input_get_mouse_x (),
@@ -99,41 +115,51 @@ g_autoptr(GrlVector2) mouse_world = grl_camera2d_get_screen_to_world (
 );
 
 g_print ("Mouse world position: %.1f, %.1f\n", mouse_world->x, mouse_world->y);
-```
+#+end_src
 
-## GrlCamera3D
-
+** GrlCamera3D
+:PROPERTIES:
+:CUSTOM_ID: grlcamera3d
+:END:
 A 3D camera for perspective or orthographic rendering.
 
-### Constructors
-
-```c
+*** Constructors
+:PROPERTIES:
+:CUSTOM_ID: constructors-1
+:END:
+#+begin_src C
 GrlCamera3D * grl_camera3d_new (void);
-```
+#+end_src
 
-### Properties
+*** Properties
+:PROPERTIES:
+:CUSTOM_ID: properties-1
+:END:
+| Property     | Type                  | Access     | Default     | Description                        |
+|--------------+-----------------------+------------+-------------+------------------------------------|
+| =position=   | =GrlVector3=          | Read/Write | (0, 10, 10) | Camera position in world space     |
+| =target=     | =GrlVector3=          | Read/Write | (0, 0, 0)   | Point the camera looks at          |
+| =up=         | =GrlVector3=          | Read/Write | (0, 1, 0)   | Up direction vector                |
+| =fovy=       | =gfloat=              | Read/Write | 45.0        | Field of view (Y axis, in degrees) |
+| =projection= | =GrlCameraProjection= | Read/Write | PERSPECTIVE | Projection mode                    |
 
-| Property | Type | Access | Default | Description |
-|----------|------|--------|---------|-------------|
-| `position` | `GrlVector3` | Read/Write | (0, 10, 10) | Camera position in world space |
-| `target` | `GrlVector3` | Read/Write | (0, 0, 0) | Point the camera looks at |
-| `up` | `GrlVector3` | Read/Write | (0, 1, 0) | Up direction vector |
-| `fovy` | `gfloat` | Read/Write | 45.0 | Field of view (Y axis, in degrees) |
-| `projection` | `GrlCameraProjection` | Read/Write | PERSPECTIVE | Projection mode |
-
-### Camera Projection Modes
-
-```c
+*** Camera Projection Modes
+:PROPERTIES:
+:CUSTOM_ID: camera-projection-modes
+:END:
+#+begin_src C
 typedef enum
 {
     GRL_CAMERA_PROJECTION_PERSPECTIVE,   /* Perspective projection (3D look) */
     GRL_CAMERA_PROJECTION_ORTHOGRAPHIC   /* Orthographic projection (2D look) */
 } GrlCameraProjection;
-```
+#+end_src
 
-### Methods
-
-```c
+*** Methods
+:PROPERTIES:
+:CUSTOM_ID: methods-1
+:END:
+#+begin_src C
 /* Property accessors */
 void         grl_camera3d_set_position   (GrlCamera3D      *camera,
                                           const GrlVector3 *position);
@@ -158,13 +184,15 @@ GrlCameraProjection   grl_camera3d_get_projection (GrlCamera3D *camera);
 /* Camera mode */
 void         grl_camera3d_begin          (GrlCamera3D *camera);
 void         grl_camera3d_end            (GrlCamera3D *camera);
-```
+#+end_src
 
-### Usage
+*** Usage
+:PROPERTIES:
+:CUSTOM_ID: usage-1
+:END:
+The 3D camera transform is applied between =begin()= and =end()= calls:
 
-The 3D camera transform is applied between `begin()` and `end()` calls:
-
-```c
+#+begin_src C
 grl_camera3d_begin (camera);
 /* All 3D drawing here uses camera view */
 grl_model_draw (model, position, 1.0f, white);
@@ -173,11 +201,13 @@ grl_camera3d_end (camera);
 
 /* 2D drawing (HUD, UI) */
 grl_draw_text ("Score: 100", 10, 10, 20, white);
-```
+#+end_src
 
-### Example: Orbiting Camera
-
-```c
+*** Example: Orbiting Camera
+:PROPERTIES:
+:CUSTOM_ID: example-orbiting-camera
+:END:
+#+begin_src C
 g_autoptr(GrlCamera3D) camera = grl_camera3d_new ();
 g_autoptr(GrlVector3) target = grl_vector3_new (0.0f, 0.0f, 0.0f);
 gfloat angle = 0.0f;
@@ -196,11 +226,13 @@ g_autoptr(GrlVector3) pos = grl_vector3_new (
     sinf (angle * DEG2RAD) * distance
 );
 grl_camera3d_set_position (camera, pos);
-```
+#+end_src
 
-### Example: First-Person Camera
-
-```c
+*** Example: First-Person Camera
+:PROPERTIES:
+:CUSTOM_ID: example-first-person-camera
+:END:
+#+begin_src C
 g_autoptr(GrlCamera3D) camera = grl_camera3d_new ();
 g_autoptr(GrlVector3) position = grl_vector3_new (0.0f, 1.8f, 0.0f);  /* Eye height */
 g_autoptr(GrlVector3) target = grl_vector3_new (0.0f, 1.8f, -1.0f);   /* Looking forward */
@@ -230,11 +262,13 @@ g_autoptr(GrlVector3) new_target = grl_vector3_new (
     position->z + cosf (pitch * DEG2RAD) * cosf (yaw * DEG2RAD)
 );
 grl_camera3d_set_target (camera, new_target);
-```
+#+end_src
 
-### Example: Isometric Camera
-
-```c
+*** Example: Isometric Camera
+:PROPERTIES:
+:CUSTOM_ID: example-isometric-camera
+:END:
+#+begin_src C
 g_autoptr(GrlCamera3D) camera = grl_camera3d_new ();
 
 /* Position camera at 45-degree angle */
@@ -247,27 +281,35 @@ grl_camera3d_set_target (camera, target);
 /* Use orthographic projection for true isometric look */
 grl_camera3d_set_projection (camera, GRL_CAMERA_PROJECTION_ORTHOGRAPHIC);
 grl_camera3d_set_fovy (camera, 20.0f);  /* Controls zoom in ortho mode */
-```
+#+end_src
 
-## Coordinate Systems
+** Coordinate Systems
+:PROPERTIES:
+:CUSTOM_ID: coordinate-systems
+:END:
+*** 2D Coordinate System
+:PROPERTIES:
+:CUSTOM_ID: 2d-coordinate-system
+:END:
+- *Screen space*: Origin at top-left, Y increases downward
+- *World space*: Defined by your game logic (typically origin at center or top-left)
+- Use =get_screen_to_world()= and =get_world_to_screen()= to convert
 
-### 2D Coordinate System
-
-- **Screen space**: Origin at top-left, Y increases downward
-- **World space**: Defined by your game logic (typically origin at center or top-left)
-- Use `get_screen_to_world()` and `get_world_to_screen()` to convert
-
-### 3D Coordinate System
-
+*** 3D Coordinate System
+:PROPERTIES:
+:CUSTOM_ID: 3d-coordinate-system
+:END:
 Graylib uses a right-handed coordinate system (same as raylib):
 
-- **X axis**: Right
-- **Y axis**: Up
-- **Z axis**: Out of screen (toward viewer)
+- *X axis*: Right
+- *Y axis*: Up
+- *Z axis*: Out of screen (toward viewer)
 
-## Complete Example: 2D Camera Game
-
-```c
+** Complete Example: 2D Camera Game
+:PROPERTIES:
+:CUSTOM_ID: complete-example-2d-camera-game
+:END:
+#+begin_src C
 #include <graylib.h>
 
 int
@@ -349,4 +391,4 @@ main (int argc, char *argv[])
 
     return 0;
 }
-```
+#+end_src

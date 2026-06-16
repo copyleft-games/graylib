@@ -1,27 +1,37 @@
-# UI Controls
-
+* UI Controls
+:PROPERTIES:
+:CUSTOM_ID: ui-controls
+:END:
 This document covers the raygui-based UI controls in Graylib.
 
-## Overview
-
+** Overview
+:PROPERTIES:
+:CUSTOM_ID: overview
+:END:
 Graylib provides a comprehensive set of immediate-mode UI controls built on top of raygui. All controls inherit from GrlUiControl and can be rendered in a single draw call.
 
-## GrlUiControl (Base Class)
-
+** GrlUiControl (Base Class)
+:PROPERTIES:
+:CUSTOM_ID: grluicontrol-base-class
+:END:
 All UI controls derive from GrlUiControl, which provides common properties:
 
-### Common Properties
+*** Common Properties
+:PROPERTIES:
+:CUSTOM_ID: common-properties
+:END:
+| Property  | Type         | Description                   |
+|-----------+--------------+-------------------------------|
+| =bounds=  | GrlRectangle | Position and size             |
+| =text=    | gchar*       | Display text                  |
+| =enabled= | gboolean     | Whether control accepts input |
+| =state=   | GrlUiState   | Current visual state          |
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `bounds` | GrlRectangle | Position and size |
-| `text` | gchar* | Display text |
-| `enabled` | gboolean | Whether control accepts input |
-| `state` | GrlUiState | Current visual state |
-
-### Common Usage
-
-```c
+*** Common Usage
+:PROPERTIES:
+:CUSTOM_ID: common-usage
+:END:
+#+begin_src C
 /* All controls share these patterns */
 g_autoptr(GrlRectangle) bounds = grl_rectangle_new (10, 10, 200, 30);
 
@@ -33,27 +43,33 @@ grl_ui_control_set_enabled (GRL_UI_CONTROL (button), FALSE);
 
 /* Get current state */
 GrlUiState state = grl_ui_control_get_state (GRL_UI_CONTROL (button));
-```
+#+end_src
 
-## Control Types
-
-### GrlUiLabel
-
+** Control Types
+:PROPERTIES:
+:CUSTOM_ID: control-types
+:END:
+*** GrlUiLabel
+:PROPERTIES:
+:CUSTOM_ID: grluilabel
+:END:
 Simple text display:
 
-```c
+#+begin_src C
 g_autoptr(GrlRectangle) bounds = grl_rectangle_new (10, 10, 200, 20);
 g_autoptr(GrlUiLabel) label = grl_ui_label_new (bounds, "Hello, World!");
 
 /* Draw the label */
 grl_ui_label_draw (label);
-```
+#+end_src
 
-### GrlUiButton
-
+*** GrlUiButton
+:PROPERTIES:
+:CUSTOM_ID: grluibutton
+:END:
 Clickable button:
 
-```c
+#+begin_src C
 g_autoptr(GrlRectangle) bounds = grl_rectangle_new (10, 50, 120, 30);
 g_autoptr(GrlUiButton) button = grl_ui_button_new (bounds, "Submit");
 
@@ -62,13 +78,15 @@ if (grl_ui_button_draw (button))
 {
     g_print ("Button clicked!\n");
 }
-```
+#+end_src
 
-### GrlUiCheckbox
-
+*** GrlUiCheckbox
+:PROPERTIES:
+:CUSTOM_ID: grluicheckbox
+:END:
 Boolean toggle:
 
-```c
+#+begin_src C
 g_autoptr(GrlRectangle) bounds = grl_rectangle_new (10, 90, 20, 20);
 g_autoptr(GrlUiCheckbox) checkbox = grl_ui_checkbox_new (bounds, "Enable Feature");
 
@@ -81,13 +99,15 @@ if (grl_ui_checkbox_draw (checkbox))
     gboolean checked = grl_ui_checkbox_get_checked (checkbox);
     g_print ("Checkbox is now: %s\n", checked ? "checked" : "unchecked");
 }
-```
+#+end_src
 
-### GrlUiToggle
-
+*** GrlUiToggle
+:PROPERTIES:
+:CUSTOM_ID: grluitoggle
+:END:
 Toggle button (stays pressed):
 
-```c
+#+begin_src C
 g_autoptr(GrlRectangle) bounds = grl_rectangle_new (10, 130, 100, 30);
 g_autoptr(GrlUiToggle) toggle = grl_ui_toggle_new (bounds, "Dark Mode");
 
@@ -98,13 +118,15 @@ if (grl_ui_toggle_draw (toggle))
     gboolean active = grl_ui_toggle_get_active (toggle);
     g_print ("Toggle is: %s\n", active ? "on" : "off");
 }
-```
+#+end_src
 
-### GrlUiSlider
-
+*** GrlUiSlider
+:PROPERTIES:
+:CUSTOM_ID: grluislider
+:END:
 Horizontal value slider:
 
-```c
+#+begin_src C
 g_autoptr(GrlRectangle) bounds = grl_rectangle_new (10, 170, 200, 20);
 g_autoptr(GrlUiSlider) slider = grl_ui_slider_new (bounds, "Volume", "100");
 
@@ -115,13 +137,15 @@ grl_ui_slider_set_value (slider, 80.0f);
 /* Draw and get value */
 grl_ui_slider_draw (slider);
 gfloat volume = grl_ui_slider_get_value (slider);
-```
+#+end_src
 
-### GrlUiProgressBar
-
+*** GrlUiProgressBar
+:PROPERTIES:
+:CUSTOM_ID: grluiprogressbar
+:END:
 Progress indicator:
 
-```c
+#+begin_src C
 g_autoptr(GrlRectangle) bounds = grl_rectangle_new (10, 210, 200, 20);
 g_autoptr(GrlUiProgressBar) progress = grl_ui_progressbar_new (bounds, "Loading", "100%");
 
@@ -129,13 +153,15 @@ grl_ui_progressbar_set_range (progress, 0.0f, 100.0f);
 grl_ui_progressbar_set_value (progress, 65.0f);
 
 grl_ui_progressbar_draw (progress);
-```
+#+end_src
 
-### GrlUiSpinner
-
+*** GrlUiSpinner
+:PROPERTIES:
+:CUSTOM_ID: grluispinner
+:END:
 Numeric value with +/- buttons:
 
-```c
+#+begin_src C
 g_autoptr(GrlRectangle) bounds = grl_rectangle_new (10, 250, 120, 30);
 g_autoptr(GrlUiSpinner) spinner = grl_ui_spinner_new (bounds, "Quantity");
 
@@ -147,13 +173,15 @@ if (grl_ui_spinner_draw (spinner))
     gint value = grl_ui_spinner_get_value (spinner);
     g_print ("Spinner value: %d\n", value);
 }
-```
+#+end_src
 
-### GrlUiValueBox
-
+*** GrlUiValueBox
+:PROPERTIES:
+:CUSTOM_ID: grluivaluebox
+:END:
 Editable numeric value:
 
-```c
+#+begin_src C
 g_autoptr(GrlRectangle) bounds = grl_rectangle_new (10, 290, 120, 30);
 g_autoptr(GrlUiValueBox) valuebox = grl_ui_valuebox_new (bounds, "Score");
 
@@ -164,13 +192,15 @@ if (grl_ui_valuebox_draw (valuebox))
 {
     gint value = grl_ui_valuebox_get_value (valuebox);
 }
-```
+#+end_src
 
-### GrlUiTextBox
-
+*** GrlUiTextBox
+:PROPERTIES:
+:CUSTOM_ID: grluitextbox
+:END:
 Single-line text input:
 
-```c
+#+begin_src C
 g_autoptr(GrlRectangle) bounds = grl_rectangle_new (10, 330, 200, 30);
 g_autoptr(GrlUiTextBox) textbox = grl_ui_textbox_new (bounds, 128);
 
@@ -181,13 +211,15 @@ if (grl_ui_textbox_draw (textbox))
     const gchar *text = grl_ui_textbox_get_text (textbox);
     g_print ("Text entered: %s\n", text);
 }
-```
+#+end_src
 
-### GrlUiComboBox
-
+*** GrlUiComboBox
+:PROPERTIES:
+:CUSTOM_ID: grluicombobox
+:END:
 Dropdown selection:
 
-```c
+#+begin_src C
 g_autoptr(GrlRectangle) bounds = grl_rectangle_new (10, 370, 150, 30);
 g_autoptr(GrlUiComboBox) combo = grl_ui_combobox_new (bounds, "Easy;Medium;Hard");
 
@@ -195,13 +227,15 @@ grl_ui_combobox_set_active (combo, 1);  /* Select "Medium" */
 
 grl_ui_combobox_draw (combo);
 gint selected = grl_ui_combobox_get_active (combo);
-```
+#+end_src
 
-### GrlUiDropdownBox
-
+*** GrlUiDropdownBox
+:PROPERTIES:
+:CUSTOM_ID: grluidropdownbox
+:END:
 Expandable dropdown:
 
-```c
+#+begin_src C
 g_autoptr(GrlRectangle) bounds = grl_rectangle_new (10, 410, 150, 30);
 g_autoptr(GrlUiDropdownBox) dropdown = grl_ui_dropdownbox_new (bounds, "Red;Green;Blue");
 
@@ -212,13 +246,15 @@ if (grl_ui_dropdownbox_draw (dropdown))
     gint selected = grl_ui_dropdownbox_get_active (dropdown);
     g_print ("Selected: %d\n", selected);
 }
-```
+#+end_src
 
-### GrlUiToggleGroup
-
+*** GrlUiToggleGroup
+:PROPERTIES:
+:CUSTOM_ID: grluitogglegroup
+:END:
 Group of exclusive toggle buttons:
 
-```c
+#+begin_src C
 g_autoptr(GrlRectangle) bounds = grl_rectangle_new (10, 450, 200, 30);
 g_autoptr(GrlUiToggleGroup) group = grl_ui_togglegroup_new (bounds, "Low;Medium;High");
 
@@ -226,13 +262,15 @@ grl_ui_togglegroup_set_active (group, 1);
 
 grl_ui_togglegroup_draw (group);
 gint active = grl_ui_togglegroup_get_active (group);
-```
+#+end_src
 
-### GrlUiListView
-
+*** GrlUiListView
+:PROPERTIES:
+:CUSTOM_ID: grluilistview
+:END:
 Scrollable list:
 
-```c
+#+begin_src C
 g_autoptr(GrlRectangle) bounds = grl_rectangle_new (10, 490, 200, 150);
 g_autoptr(GrlUiListView) list = grl_ui_listview_new (bounds, "Item 1;Item 2;Item 3;Item 4;Item 5");
 
@@ -243,13 +281,15 @@ if (grl_ui_listview_draw (list))
     gint selected = grl_ui_listview_get_active (list);
     gint scroll = grl_ui_listview_get_scroll_index (list);
 }
-```
+#+end_src
 
-### GrlUiColorPicker
-
+*** GrlUiColorPicker
+:PROPERTIES:
+:CUSTOM_ID: grluicolorpicker
+:END:
 Color selection widget:
 
-```c
+#+begin_src C
 g_autoptr(GrlRectangle) bounds = grl_rectangle_new (220, 10, 200, 200);
 g_autoptr(GrlColor) initial = grl_color_new (255, 128, 64, 255);
 g_autoptr(GrlUiColorPicker) picker = grl_ui_colorpicker_new (bounds);
@@ -258,37 +298,43 @@ grl_ui_colorpicker_set_color (picker, initial);
 
 grl_ui_colorpicker_draw (picker);
 g_autoptr(GrlColor) selected = grl_ui_colorpicker_get_color (picker);
-```
+#+end_src
 
-### GrlUiPanel
-
+*** GrlUiPanel
+:PROPERTIES:
+:CUSTOM_ID: grluipanel
+:END:
 Container panel:
 
-```c
+#+begin_src C
 g_autoptr(GrlRectangle) bounds = grl_rectangle_new (220, 220, 200, 150);
 g_autoptr(GrlUiPanel) panel = grl_ui_panel_new (bounds, "Settings");
 
 grl_ui_panel_draw (panel);
 /* Draw child controls inside panel bounds */
-```
+#+end_src
 
-### GrlUiGroupBox
-
+*** GrlUiGroupBox
+:PROPERTIES:
+:CUSTOM_ID: grluigroupbox
+:END:
 Labeled container:
 
-```c
+#+begin_src C
 g_autoptr(GrlRectangle) bounds = grl_rectangle_new (220, 380, 200, 100);
 g_autoptr(GrlUiGroupBox) groupbox = grl_ui_groupbox_new (bounds, "Audio Options");
 
 grl_ui_groupbox_draw (groupbox);
 /* Draw child controls inside */
-```
+#+end_src
 
-### GrlUiWindowBox
-
+*** GrlUiWindowBox
+:PROPERTIES:
+:CUSTOM_ID: grluiwindowbox
+:END:
 Movable window with title bar:
 
-```c
+#+begin_src C
 g_autoptr(GrlRectangle) bounds = grl_rectangle_new (430, 10, 200, 150);
 g_autoptr(GrlUiWindowBox) windowbox = grl_ui_windowbox_new (bounds, "Properties");
 
@@ -296,13 +342,15 @@ if (!grl_ui_windowbox_draw (windowbox))
 {
     g_print ("Window close button clicked\n");
 }
-```
+#+end_src
 
-## GrlUiStyle (Theming)
-
+** GrlUiStyle (Theming)
+:PROPERTIES:
+:CUSTOM_ID: grluistyle-theming
+:END:
 Control the visual appearance of all UI controls:
 
-```c
+#+begin_src C
 /* Get the style singleton */
 GrlUiStyle *style = grl_ui_style_get_default ();
 
@@ -330,13 +378,15 @@ grl_ui_style_unlock (style);
 
 /* Set global transparency */
 grl_ui_style_set_alpha (style, 0.9f);
-```
+#+end_src
 
-## Edit Mode (Exclusive Input)
-
+** Edit Mode (Exclusive Input)
+:PROPERTIES:
+:CUSTOM_ID: edit-mode-exclusive-input
+:END:
 Some controls like TextBox, Spinner, and ValueBox enter "edit mode" when clicked. Only one control can be in edit mode at a time:
 
-```c
+#+begin_src C
 /* Check if a control is currently being edited */
 GrlUiControl *editing = grl_ui_control_get_current_edit ();
 if (editing != NULL)
@@ -346,11 +396,13 @@ if (editing != NULL)
 
 /* Clear edit mode (e.g., when clicking elsewhere) */
 grl_ui_control_clear_edit_mode ();
-```
+#+end_src
 
-## Complete Example
-
-```c
+** Complete Example
+:PROPERTIES:
+:CUSTOM_ID: complete-example
+:END:
+#+begin_src C
 #include <graylib.h>
 
 int
@@ -413,11 +465,13 @@ main (int argc, char *argv[])
 
     return 0;
 }
-```
+#+end_src
 
-## UI State Reference
-
-```c
+** UI State Reference
+:PROPERTIES:
+:CUSTOM_ID: ui-state-reference
+:END:
+#+begin_src C
 typedef enum
 {
     GRL_UI_STATE_NORMAL,    /* Default state */
@@ -425,26 +479,28 @@ typedef enum
     GRL_UI_STATE_PRESSED,   /* Mouse button down */
     GRL_UI_STATE_DISABLED   /* Control disabled */
 } GrlUiState;
-```
+#+end_src
 
-## Control Summary
-
-| Control | Purpose | Returns on draw |
-|---------|---------|-----------------|
-| Label | Display text | void |
-| Button | Click action | gboolean (clicked) |
-| Checkbox | Boolean toggle | gboolean (changed) |
-| Toggle | Toggle button | gboolean (changed) |
-| Slider | Float value | void |
-| ProgressBar | Progress display | void |
-| Spinner | Int with +/- | gboolean (changed) |
-| ValueBox | Editable int | gboolean (changed) |
-| TextBox | Text input | gboolean (enter pressed) |
-| ComboBox | Dropdown select | void |
-| DropdownBox | Expandable dropdown | gboolean (changed) |
-| ToggleGroup | Exclusive toggles | void |
-| ListView | Scrollable list | gboolean (changed) |
-| ColorPicker | Color selection | void |
-| Panel | Container | void |
-| GroupBox | Labeled container | void |
-| WindowBox | Movable window | gboolean (not closed) |
+** Control Summary
+:PROPERTIES:
+:CUSTOM_ID: control-summary
+:END:
+| Control     | Purpose             | Returns on draw          |
+|-------------+---------------------+--------------------------|
+| Label       | Display text        | void                     |
+| Button      | Click action        | gboolean (clicked)       |
+| Checkbox    | Boolean toggle      | gboolean (changed)       |
+| Toggle      | Toggle button       | gboolean (changed)       |
+| Slider      | Float value         | void                     |
+| ProgressBar | Progress display    | void                     |
+| Spinner     | Int with +/-        | gboolean (changed)       |
+| ValueBox    | Editable int        | gboolean (changed)       |
+| TextBox     | Text input          | gboolean (enter pressed) |
+| ComboBox    | Dropdown select     | void                     |
+| DropdownBox | Expandable dropdown | gboolean (changed)       |
+| ToggleGroup | Exclusive toggles   | void                     |
+| ListView    | Scrollable list     | gboolean (changed)       |
+| ColorPicker | Color selection     | void                     |
+| Panel       | Container           | void                     |
+| GroupBox    | Labeled container   | void                     |
+| WindowBox   | Movable window      | gboolean (not closed)    |

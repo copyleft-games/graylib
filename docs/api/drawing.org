@@ -1,17 +1,23 @@
-# Drawing Functions
+* Drawing Functions
+:PROPERTIES:
+:CUSTOM_ID: drawing-functions
+:END:
+All drawing functions must be called between =grl_window_begin_drawing()= and =grl_window_end_drawing()=.
 
-All drawing functions must be called between `grl_window_begin_drawing()` and `grl_window_end_drawing()`.
-
-## Background
-
-```c
+** Background
+:PROPERTIES:
+:CUSTOM_ID: background
+:END:
+#+begin_src C
 /* Clear screen with color */
 grl_draw_clear_background (color);
-```
+#+end_src
 
-## Blend Modes
-
-```c
+** Blend Modes
+:PROPERTIES:
+:CUSTOM_ID: blend-modes
+:END:
+#+begin_src C
 /* Begin blend mode */
 grl_draw_begin_blend_mode (GRL_BLEND_MODE_ADDITIVE);
 
@@ -20,40 +26,47 @@ grl_draw_circle_v (pos, 50.0f, color);
 
 /* End blend mode (return to default alpha) */
 grl_draw_end_blend_mode ();
-```
+#+end_src
 
 Available blend modes:
-- `GRL_BLEND_MODE_ALPHA` - Default alpha blending
-- `GRL_BLEND_MODE_ADDITIVE` - Colors add together
-- `GRL_BLEND_MODE_MULTIPLIED` - Colors multiply
-- `GRL_BLEND_MODE_ADD_COLORS` - Add source to destination
-- `GRL_BLEND_MODE_SUBTRACT_COLORS` - Subtract source from destination
-- `GRL_BLEND_MODE_ALPHA_PREMULTIPLY` - Premultiplied alpha
-- `GRL_BLEND_MODE_CUSTOM` - Custom OpenGL blending
 
-## Scissor Mode
+- =GRL_BLEND_MODE_ALPHA= - Default alpha blending
+- =GRL_BLEND_MODE_ADDITIVE= - Colors add together
+- =GRL_BLEND_MODE_MULTIPLIED= - Colors multiply
+- =GRL_BLEND_MODE_ADD_COLORS= - Add source to destination
+- =GRL_BLEND_MODE_SUBTRACT_COLORS= - Subtract source from destination
+- =GRL_BLEND_MODE_ALPHA_PREMULTIPLY= - Premultiplied alpha
+- =GRL_BLEND_MODE_CUSTOM= - Custom OpenGL blending
 
+** Scissor Mode
+:PROPERTIES:
+:CUSTOM_ID: scissor-mode
+:END:
 Restrict drawing to a rectangular region.
 
-```c
+#+begin_src C
 grl_draw_begin_scissor_mode (x, y, width, height);
 /* Only draws within the rectangle */
 grl_draw_rectangle (0, 0, 1000, 1000, color);
 grl_draw_end_scissor_mode ();
-```
+#+end_src
 
-## Pixels
-
-```c
+** Pixels
+:PROPERTIES:
+:CUSTOM_ID: pixels
+:END:
+#+begin_src C
 grl_draw_pixel (x, y, color);
 grl_draw_pixel_v (position, color);
-```
+#+end_src
 
 Note: Pixel drawing is slow. Use sparingly.
 
-## Lines
-
-```c
+** Lines
+:PROPERTIES:
+:CUSTOM_ID: lines
+:END:
+#+begin_src C
 /* Basic line */
 grl_draw_line (start_x, start_y, end_x, end_y, color);
 grl_draw_line_v (start_vec, end_vec, color);
@@ -67,11 +80,13 @@ grl_draw_line_strip (points, count, color);
 
 /* Bezier curve */
 grl_draw_line_bezier (start_vec, end_vec, thickness, color);
-```
+#+end_src
 
-## Circles
-
-```c
+** Circles
+:PROPERTIES:
+:CUSTOM_ID: circles
+:END:
+#+begin_src C
 /* Filled circle */
 grl_draw_circle (center_x, center_y, radius, color);
 grl_draw_circle_v (center_vec, radius, color);
@@ -86,27 +101,35 @@ grl_draw_circle_sector_lines (center_vec, radius, start_angle, end_angle, segmen
 
 /* Gradient circle */
 grl_draw_circle_gradient (center_x, center_y, radius, inner_color, outer_color);
-```
+#+end_src
 
-## Ellipses
-
-```c
+** Ellipses
+:PROPERTIES:
+:CUSTOM_ID: ellipses
+:END:
+#+begin_src C
 grl_draw_ellipse (center_x, center_y, radius_h, radius_v, color);
 grl_draw_ellipse_lines (center_x, center_y, radius_h, radius_v, color);
-```
+#+end_src
 
-## Rings
-
-```c
+** Rings
+:PROPERTIES:
+:CUSTOM_ID: rings
+:END:
+#+begin_src C
 grl_draw_ring (center_vec, inner_radius, outer_radius, start_angle, end_angle, segments, color);
 grl_draw_ring_lines (center_vec, inner_radius, outer_radius, start_angle, end_angle, segments, color);
-```
+#+end_src
 
-## Rectangles
-
-### Basic Rectangles
-
-```c
+** Rectangles
+:PROPERTIES:
+:CUSTOM_ID: rectangles
+:END:
+*** Basic Rectangles
+:PROPERTIES:
+:CUSTOM_ID: basic-rectangles
+:END:
+#+begin_src C
 /* Position and size */
 grl_draw_rectangle (x, y, width, height, color);
 grl_draw_rectangle_v (position_vec, size_vec, color);
@@ -120,26 +143,31 @@ grl_draw_rectangle_pro (rect, origin_vec, rotation_degrees, color);
 /* Outline */
 grl_draw_rectangle_lines (x, y, width, height, color);
 grl_draw_rectangle_lines_ex (rect, line_thickness, color);
-```
+#+end_src
 
-### Rounded Rectangles
-
-```c
+*** Rounded Rectangles
+:PROPERTIES:
+:CUSTOM_ID: rounded-rectangles
+:END:
+#+begin_src C
 /* Filled */
 grl_draw_rectangle_rounded (rect, roundness, segments, color);
 
 /* Outline */
 grl_draw_rectangle_rounded_lines (rect, roundness, segments, color);
 grl_draw_rectangle_rounded_lines_ex (rect, roundness, segments, line_thickness, color);
-```
+#+end_src
 
 Parameters:
-- `roundness`: 0.0 (square) to 1.0 (maximum rounding)
-- `segments`: Number of segments per corner (more = smoother)
 
-### Gradient Rectangles
+- =roundness=: 0.0 (square) to 1.0 (maximum rounding)
+- =segments=: Number of segments per corner (more = smoother)
 
-```c
+*** Gradient Rectangles
+:PROPERTIES:
+:CUSTOM_ID: gradient-rectangles
+:END:
+#+begin_src C
 /* Vertical gradient */
 grl_draw_rectangle_gradient_v (x, y, width, height, top_color, bottom_color);
 
@@ -148,11 +176,13 @@ grl_draw_rectangle_gradient_h (x, y, width, height, left_color, right_color);
 
 /* Four-corner gradient */
 grl_draw_rectangle_gradient_ex (rect, top_left, bottom_left, top_right, bottom_right);
-```
+#+end_src
 
-## Triangles
-
-```c
+** Triangles
+:PROPERTIES:
+:CUSTOM_ID: triangles
+:END:
+#+begin_src C
 /* Filled triangle (counter-clockwise vertices) */
 grl_draw_triangle (v1, v2, v3, color);
 
@@ -165,28 +195,33 @@ grl_draw_triangle_fan (points, count, color);
 
 /* Triangle strip */
 grl_draw_triangle_strip (points, count, color);
-```
+#+end_src
 
-## Polygons
-
-```c
+** Polygons
+:PROPERTIES:
+:CUSTOM_ID: polygons
+:END:
+#+begin_src C
 /* Regular polygon (filled) */
 grl_draw_poly (center_vec, sides, radius, rotation_degrees, color);
 
 /* Polygon outline */
 grl_draw_poly_lines (center_vec, sides, radius, rotation_degrees, color);
 grl_draw_poly_lines_ex (center_vec, sides, radius, rotation_degrees, line_thickness, color);
-```
+#+end_src
 
 Examples:
-- `sides = 3`: Triangle
-- `sides = 4`: Square (rotated 45 degrees = diamond)
-- `sides = 5`: Pentagon
-- `sides = 6`: Hexagon
 
-## Splines
+- =sides = 3=: Triangle
+- =sides = 4=: Square (rotated 45 degrees = diamond)
+- =sides = 5=: Pentagon
+- =sides = 6=: Hexagon
 
-```c
+** Splines
+:PROPERTIES:
+:CUSTOM_ID: splines
+:END:
+#+begin_src C
 /* Linear spline (minimum 2 points) */
 grl_draw_spline_linear (points, count, thickness, color);
 
@@ -201,11 +236,13 @@ grl_draw_spline_bezier_quadratic (points, count, thickness, color);
 
 /* Cubic Bezier (minimum 4 points: start, control1, control2, end) */
 grl_draw_spline_bezier_cubic (points, count, thickness, color);
-```
+#+end_src
 
-## Example: Drawing Shapes
-
-```c
+** Example: Drawing Shapes
+:PROPERTIES:
+:CUSTOM_ID: example-drawing-shapes
+:END:
+#+begin_src C
 g_autoptr(GrlWindow) window = grl_window_new (800, 600, "Shapes");
 g_autoptr(GrlColor) bg = grl_color_new (40, 40, 60, 255);
 g_autoptr(GrlColor) red = grl_color_new_red ();
@@ -230,4 +267,4 @@ while (!grl_window_should_close (window))
 
     grl_window_end_drawing (window);
 }
-```
+#+end_src

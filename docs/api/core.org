@@ -1,27 +1,37 @@
-# Core Types
-
+* Core Types
+:PROPERTIES:
+:CUSTOM_ID: core-types
+:END:
 The core module provides the fundamental types for managing a Graylib application.
 
-## GrlApplication
-
+** GrlApplication
+:PROPERTIES:
+:CUSTOM_ID: grlapplication
+:END:
 A singleton that manages the overall application lifecycle.
 
-### Creating an Application
-
-```c
+*** Creating an Application
+:PROPERTIES:
+:CUSTOM_ID: creating-an-application
+:END:
+#+begin_src C
 g_autoptr(GrlApplication) app = grl_application_new ("com.example.MyGame");
-```
+#+end_src
 
-### Accessing the Default Application
-
-```c
+*** Accessing the Default Application
+:PROPERTIES:
+:CUSTOM_ID: accessing-the-default-application
+:END:
+#+begin_src C
 GrlApplication *app = grl_application_get_default ();
 gboolean exists = grl_application_is_initialized ();
-```
+#+end_src
 
-### Configuration (Before Running)
-
-```c
+*** Configuration (Before Running)
+:PROPERTIES:
+:CUSTOM_ID: configuration-before-running
+:END:
+#+begin_src C
 /* Set raylib configuration flags */
 grl_application_set_config_flags (app,
     GRL_CONFIG_FLAG_VSYNC_HINT |
@@ -32,11 +42,13 @@ grl_application_set_log_level (app, GRL_LOG_LEVEL_WARNING);
 
 /* Set target FPS */
 grl_application_set_target_fps (app, 60);
-```
+#+end_src
 
-### Running the Application
-
-```c
+*** Running the Application
+:PROPERTIES:
+:CUSTOM_ID: running-the-application
+:END:
+#+begin_src C
 /* Runs the application lifecycle */
 gint status = grl_application_run (app);
 
@@ -45,28 +57,34 @@ grl_application_quit (app);
 
 /* Check if running */
 gboolean running = grl_application_is_running (app);
-```
+#+end_src
 
-### Timing Information
-
-```c
+*** Timing Information
+:PROPERTIES:
+:CUSTOM_ID: timing-information
+:END:
+#+begin_src C
 gfloat dt = grl_application_get_frame_time (app);
 gint fps = grl_application_get_fps (app);
 gdouble time = grl_application_get_time (app);
 guint64 frames = grl_application_get_frame_count (app);
-```
+#+end_src
 
-### Signals
+*** Signals
+:PROPERTIES:
+:CUSTOM_ID: signals
+:END:
+| Signal     | Parameters | Description                              |
+|------------+------------+------------------------------------------|
+| =startup=  | None       | Emitted during startup, before windows   |
+| =activate= | None       | Create and show main window here         |
+| =shutdown= | None       | Emitted during shutdown, after main loop |
 
-| Signal | Parameters | Description |
-|--------|------------|-------------|
-| `startup` | None | Emitted during startup, before windows |
-| `activate` | None | Create and show main window here |
-| `shutdown` | None | Emitted during shutdown, after main loop |
-
-### Subclassing
-
-```c
+*** Subclassing
+:PROPERTIES:
+:CUSTOM_ID: subclassing
+:END:
+#+begin_src C
 #define MY_TYPE_APPLICATION (my_application_get_type ())
 G_DECLARE_FINAL_TYPE (MyApplication, my_application, MY, APPLICATION, GrlApplication)
 
@@ -93,21 +111,27 @@ my_application_class_init (MyApplicationClass *klass)
     GrlApplicationClass *app_class = GRL_APPLICATION_CLASS (klass);
     app_class->activate = my_application_activate;
 }
-```
+#+end_src
 
-## GrlWindow
-
+** GrlWindow
+:PROPERTIES:
+:CUSTOM_ID: grlwindow
+:END:
 Manages a window and its graphics context.
 
-### Creating a Window
-
-```c
+*** Creating a Window
+:PROPERTIES:
+:CUSTOM_ID: creating-a-window
+:END:
+#+begin_src C
 g_autoptr(GrlWindow) window = grl_window_new (800, 600, "Window Title");
-```
+#+end_src
 
-### Window State
-
-```c
+*** Window State
+:PROPERTIES:
+:CUSTOM_ID: window-state
+:END:
+#+begin_src C
 gboolean should_close = grl_window_should_close (window);
 gboolean ready = grl_window_is_ready (window);
 gboolean fullscreen = grl_window_is_fullscreen (window);
@@ -116,11 +140,13 @@ gboolean minimized = grl_window_is_minimized (window);
 gboolean maximized = grl_window_is_maximized (window);
 gboolean focused = grl_window_is_focused (window);
 gboolean resized = grl_window_is_resized (window);
-```
+#+end_src
 
-### Window Configuration
-
-```c
+*** Window Configuration
+:PROPERTIES:
+:CUSTOM_ID: window-configuration
+:END:
+#+begin_src C
 /* Creation-time config flags -- call BEFORE creating a window (raylib applies
    them in InitWindow).  Used for hints that cannot change after creation, such
    as GRL_FLAG_WINDOW_TRANSPARENT (transparent framebuffer) or
@@ -145,11 +171,13 @@ grl_window_set_max_size (window, 1920, 1080);
 grl_window_set_opacity (window, 0.9f);
 grl_window_set_monitor (window, 0);
 grl_window_focus (window);
-```
+#+end_src
 
-### Window Information
-
-```c
+*** Window Information
+:PROPERTIES:
+:CUSTOM_ID: window-information
+:END:
+#+begin_src C
 const gchar *title = grl_window_get_title (window);
 g_autoptr(GrlVector2) pos = grl_window_get_position (window);
 gint width = grl_window_get_width (window);
@@ -157,22 +185,26 @@ gint height = grl_window_get_height (window);
 gint render_width = grl_window_get_render_width (window);
 gint render_height = grl_window_get_render_height (window);
 g_autoptr(GrlVector2) scale = grl_window_get_scale_dpi (window);
-```
+#+end_src
 
-### Monitor Information
-
-```c
+*** Monitor Information
+:PROPERTIES:
+:CUSTOM_ID: monitor-information
+:END:
+#+begin_src C
 gint count = grl_window_get_monitor_count (window);
 gint current = grl_window_get_current_monitor (window);
 gint mon_width = grl_window_get_monitor_width (window, 0);
 gint mon_height = grl_window_get_monitor_height (window, 0);
 gint refresh = grl_window_get_monitor_refresh_rate (window, 0);
 const gchar *name = grl_window_get_monitor_name (window, 0);
-```
+#+end_src
 
-### Cursor Control
-
-```c
+*** Cursor Control
+:PROPERTIES:
+:CUSTOM_ID: cursor-control
+:END:
+#+begin_src C
 grl_window_show_cursor (window);
 grl_window_hide_cursor (window);
 grl_window_enable_cursor (window);
@@ -180,30 +212,36 @@ grl_window_disable_cursor (window);
 gboolean hidden = grl_window_is_cursor_hidden (window);
 gboolean on_screen = grl_window_is_cursor_on_screen (window);
 grl_window_set_cursor (window, GRL_MOUSE_CURSOR_CROSSHAIR);
-```
+#+end_src
 
-### Drawing
-
-```c
+*** Drawing
+:PROPERTIES:
+:CUSTOM_ID: drawing
+:END:
+#+begin_src C
 /* Basic loop structure */
 grl_window_begin_drawing (window);
 grl_window_clear_background (window, bg_color);
 /* ... draw content ... */
 grl_window_end_drawing (window);
-```
+#+end_src
 
-### Frame Timing
-
-```c
+*** Frame Timing
+:PROPERTIES:
+:CUSTOM_ID: frame-timing
+:END:
+#+begin_src C
 grl_window_set_target_fps (window, 60);
 gint fps = grl_window_get_fps (window);
 gfloat dt = grl_window_get_frame_time (window);
 gdouble time = grl_window_get_time (window);
-```
+#+end_src
 
-### Running the Window Loop
-
-```c
+*** Running the Window Loop
+:PROPERTIES:
+:CUSTOM_ID: running-the-window-loop
+:END:
+#+begin_src C
 /* Option 1: Built-in loop (uses signals) */
 grl_window_run (window);
 
@@ -215,37 +253,45 @@ while (!grl_window_should_close (window))
     /* Draw content */
     grl_window_end_drawing (window);
 }
-```
+#+end_src
 
-### Clipboard
-
-```c
+*** Clipboard
+:PROPERTIES:
+:CUSTOM_ID: clipboard
+:END:
+#+begin_src C
 grl_window_set_clipboard_text (window, "Hello!");
 g_autofree gchar *text = grl_window_get_clipboard_text (window);
-```
+#+end_src
 
-### Signals
+*** Signals
+:PROPERTIES:
+:CUSTOM_ID: signals-1
+:END:
+| Signal          | Parameters               | Description                                       |
+|-----------------+--------------------------+---------------------------------------------------|
+| =draw=          | None                     | Emitted each frame for drawing                    |
+| =update=        | =delta_time= (gfloat)    | Emitted each frame for logic                      |
+| =resize=        | =width=, =height= (gint) | Emitted when window resizes                       |
+| =close-request= | None                     | Emitted on close request (return FALSE to cancel) |
 
-| Signal | Parameters | Description |
-|--------|------------|-------------|
-| `draw` | None | Emitted each frame for drawing |
-| `update` | `delta_time` (gfloat) | Emitted each frame for logic |
-| `resize` | `width`, `height` (gint) | Emitted when window resizes |
-| `close-request` | None | Emitted on close request (return FALSE to cancel) |
+*** Properties
+:PROPERTIES:
+:CUSTOM_ID: properties
+:END:
+| Property         | Type    | Description                         |
+|------------------+---------+-------------------------------------|
+| =title=          | string  | Window title                        |
+| =width=          | int     | Window width (construct-only)       |
+| =height=         | int     | Window height (construct-only)      |
+| =target-fps=     | int     | Target frames per second            |
+| =is-initialized= | boolean | Whether window is ready (read-only) |
 
-### Properties
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `title` | string | Window title |
-| `width` | int | Window width (construct-only) |
-| `height` | int | Window height (construct-only) |
-| `target-fps` | int | Target frames per second |
-| `is-initialized` | boolean | Whether window is ready (read-only) |
-
-### Subclassing
-
-```c
+*** Subclassing
+:PROPERTIES:
+:CUSTOM_ID: subclassing-1
+:END:
+#+begin_src C
 #define MY_TYPE_WINDOW (my_window_get_type ())
 G_DECLARE_FINAL_TYPE (MyWindow, my_window, MY, WINDOW, GrlWindow)
 
@@ -280,4 +326,4 @@ my_window_class_init (MyWindowClass *klass)
     window_class->draw = my_window_draw;
     window_class->update = my_window_update;
 }
-```
+#+end_src

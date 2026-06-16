@@ -1,0 +1,433 @@
+* Building Graylib
+:PROPERTIES:
+:CUSTOM_ID: building-graylib
+:END:
+This guide covers all aspects of building Graylib from source.
+
+** Requirements
+:PROPERTIES:
+:CUSTOM_ID: requirements
+:END:
+*** Compiler
+:PROPERTIES:
+:CUSTOM_ID: compiler
+:END:
+- GCC (GNU Compiler Collection)
+- GNU Make
+
+*** Libraries
+:PROPERTIES:
+:CUSTOM_ID: libraries
+:END:
+- GLib 2.56+
+- GObject Introspection (for GIR generation)
+- pkg-config
+
+*** For raylib (bundled)
+:PROPERTIES:
+:CUSTOM_ID: for-raylib-bundled
+:END:
+When building raylib from the bundled submodule:
+
+- OpenGL development headers
+- X11 development libraries (Linux)
+- Mesa libraries
+
+** Installing Dependencies
+:PROPERTIES:
+:CUSTOM_ID: installing-dependencies
+:END:
+*** Fedora
+:PROPERTIES:
+:CUSTOM_ID: fedora
+:END:
+#+begin_src sh
+sudo dnf install gcc make glib2-devel gobject-introspection-devel \
+    mesa-libGL-devel libX11-devel libXrandr-devel \
+    libXi-devel libXcursor-devel libXinerama-devel
+#+end_src
+
+*** Ubuntu/Debian
+:PROPERTIES:
+:CUSTOM_ID: ubuntudebian
+:END:
+#+begin_src sh
+sudo apt install build-essential libglib2.0-dev \
+    gobject-introspection libgirepository1.0-dev \
+    libgl1-mesa-dev libx11-dev libxrandr-dev \
+    libxi-dev libxcursor-dev libxinerama-dev
+#+end_src
+
+*** Arch Linux
+:PROPERTIES:
+:CUSTOM_ID: arch-linux
+:END:
+#+begin_src sh
+sudo pacman -S gcc make glib2 gobject-introspection \
+    mesa libx11 libxrandr libxi libxcursor libxinerama
+#+end_src
+
+** Build Configuration
+:PROPERTIES:
+:CUSTOM_ID: build-configuration
+:END:
+Build options are configured in =config.mk=. You can override them on the command line:
+
+*** Version Settings
+:PROPERTIES:
+:CUSTOM_ID: version-settings
+:END:
+| Variable        | Default | Description          |
+|-----------------+---------+----------------------|
+| =VERSION_MAJOR= | 0       | Major version number |
+| =VERSION_MINOR= | 1       | Minor version number |
+| =VERSION_MICRO= | 0       | Micro version number |
+| =API_VERSION=   | 1       | API version for GIR  |
+
+*** Directory Settings
+:PROPERTIES:
+:CUSTOM_ID: directory-settings
+:END:
+| Variable       | Default                      | Description                    |
+|----------------+------------------------------+--------------------------------|
+| =PREFIX=       | =/usr/local=                 | Installation prefix            |
+| =LIBDIR=       | =$(PREFIX)/lib=              | Library installation directory |
+| =INCLUDEDIR=   | =$(PREFIX)/include=          | Header installation directory  |
+| =PKGCONFIGDIR= | =$(LIBDIR)/pkgconfig=        | pkg-config file directory      |
+| =GIRDIR=       | =$(DATADIR)/gir-1.0=         | GIR file directory             |
+| =TYPELIBDIR=   | =$(LIBDIR)/girepository-1.0= | Typelib directory              |
+
+*** Build Options
+:PROPERTIES:
+:CUSTOM_ID: build-options
+:END:
+| Variable         | Default | Description                          |
+|------------------+---------+--------------------------------------|
+| =BUILD_SHARED=   | 1       | Build shared library                 |
+| =BUILD_STATIC=   | 1       | Build static library                 |
+| =BUILD_GIR=      | 1       | Generate GObject Introspection files |
+| =BUILD_TESTS=    | 1       | Build unit tests                     |
+| =BUILD_EXAMPLES= | 1       | Build example programs               |
+| =BUILD_DOCS=     | 0       | Generate API documentation           |
+| =RAYLIB_SHARED=  | 0       | Link against system raylib           |
+| =DEBUG=          | 0       | Enable debug build                   |
+| =WINDOWS=        | 0       | Cross-compile for 64-bit Windows     |
+| =CROSS=          | (empty) | Cross-compilation toolchain prefix   |
+
+** Build Targets
+:PROPERTIES:
+:CUSTOM_ID: build-targets
+:END:
+*** Building
+:PROPERTIES:
+:CUSTOM_ID: building
+:END:
+#+begin_src sh
+# Build everything (library + GIR)
+make
+
+# Build only the library
+make lib
+
+# Build static library only
+make lib-static
+
+# Build shared library only
+make lib-shared
+
+# Build with debug symbols
+make DEBUG=1
+
+# Build raylib from submodule
+make raylib
+#+end_src
+
+*** Testing
+:PROPERTIES:
+:CUSTOM_ID: testing
+:END:
+#+begin_src sh
+# Build and run tests
+make test
+
+# Build tests only
+make -C tests
+
+# Run specific test
+./tests/test-vector2
+#+end_src
+
+*** Examples
+:PROPERTIES:
+:CUSTOM_ID: examples
+:END:
+#+begin_src sh
+# Build examples
+make examples
+
+# Run an example
+make -C examples run-basic-window
+#+end_src
+
+*** GObject Introspection
+:PROPERTIES:
+:CUSTOM_ID: gobject-introspection
+:END:
+#+begin_src sh
+# Generate GIR and typelib
+make gir
+#+end_src
+
+This generates:
+
+- =build/gir/Graylib-1.gir= - GIR XML file
+- =build/gir/Graylib-1.typelib= - Compiled typelib
+
+*** Installation
+:PROPERTIES:
+:CUSTOM_ID: installation
+:END:
+#+begin_src sh
+# Install to PREFIX (default /usr/local)
+sudo make install
+
+# Install to custom location
+make install PREFIX=/opt/graylib
+
+# Install to staging directory (for packaging)
+make install DESTDIR=/path/to/staging
+
+# Uninstall
+sudo make uninstall
+#+end_src
+
+*** Cleaning
+:PROPERTIES:
+:CUSTOM_ID: cleaning
+:END:
+#+begin_src sh
+# Clean build artifacts
+make clean
+
+# Clean everything including raylib
+make distclean
+
+# Clean raylib only
+make raylib-clean
+#+end_src
+
+** Debug Builds
+:PROPERTIES:
+:CUSTOM_ID: debug-builds
+:END:
+For debugging with gdb, build with =DEBUG=1=:
+
+#+begin_src sh
+make DEBUG=1
+#+end_src
+
+This enables:
+
+- =-g3= for maximum debug information
+- =-O0= to disable optimizations
+- =-fno-omit-frame-pointer= for better stack traces
+- =GRL_DEBUG= macro defined
+
+Example debugging session:
+
+#+begin_src sh
+# Build with debug symbols
+make DEBUG=1
+
+# Run example under gdb
+gdb ./examples/basic-window
+(gdb) run
+(gdb) bt   # backtrace on crash
+#+end_src
+
+** Using System raylib
+:PROPERTIES:
+:CUSTOM_ID: using-system-raylib
+:END:
+By default, Graylib builds raylib from the bundled submodule. To use system raylib:
+
+#+begin_src sh
+# Ensure raylib is installed
+sudo dnf install raylib-devel
+
+# Build with system raylib
+make RAYLIB_SHARED=1
+#+end_src
+
+When using system raylib:
+
+- pkg-config is used to find raylib
+- The bundled raylib is not built
+- Make sure raylib 6.0+ is installed
+
+** Cross-Platform Support
+:PROPERTIES:
+:CUSTOM_ID: cross-platform-support
+:END:
+*** Linux (Primary Platform)
+:PROPERTIES:
+:CUSTOM_ID: linux-primary-platform
+:END:
+Full native support. All features work.
+
+*** Windows (Cross-Compilation)
+:PROPERTIES:
+:CUSTOM_ID: windows-cross-compilation
+:END:
+Build Windows binaries from a Linux host using MinGW-w64.
+
+**** Installing Cross-Compilation Dependencies
+:PROPERTIES:
+:CUSTOM_ID: installing-cross-compilation-dependencies
+:END:
+*Fedora:*
+
+#+begin_src sh
+sudo dnf install mingw64-gcc mingw64-glib2 mingw64-pkg-config
+#+end_src
+
+*Ubuntu/Debian:*
+
+#+begin_src sh
+sudo apt install gcc-mingw-w64-x86-64 mingw-w64-tools
+# Note: GLib cross-compilation packages may need manual setup
+#+end_src
+
+**** Building for Windows
+:PROPERTIES:
+:CUSTOM_ID: building-for-windows
+:END:
+#+begin_src sh
+# Build everything for 64-bit Windows
+make WINDOWS=1
+
+# Build just the library
+make WINDOWS=1 lib
+
+# Build examples
+make WINDOWS=1 examples
+
+# Build tests
+make WINDOWS=1 test
+
+# Alternative: use CROSS directly (for advanced users)
+make CROSS=x86_64-w64-mingw32
+#+end_src
+
+**** Output Files
+:PROPERTIES:
+:CUSTOM_ID: output-files
+:END:
+#+begin_example
+build/lib/
+├── graylib.dll        # Shared library (DLL)
+├── libgraylib.dll.a   # Import library for linking
+└── libgraylib.a       # Static library
+
+build/examples/
+├── basic-window.exe
+├── shapes-demo.exe
+└── ...
+
+build/tests/
+├── test-vector2.exe
+└── ...
+#+end_example
+
+**** Running Windows Binaries on Linux
+:PROPERTIES:
+:CUSTOM_ID: running-windows-binaries-on-linux
+:END:
+Use Wine to test Windows executables:
+
+#+begin_src sh
+# Run an example
+wine build/examples/basic-window.exe
+
+# Run a test
+wine build/tests/test-vector2.exe
+
+# Run tests via make (uses Wine automatically)
+make WINDOWS=1 test
+#+end_src
+
+**** Limitations
+:PROPERTIES:
+:CUSTOM_ID: limitations
+:END:
+- GObject Introspection (.gir/.typelib) is disabled when cross-compiling
+- Running Windows executables requires Wine or a Windows machine
+- Python bindings are not available for cross-compiled builds
+
+*** macOS
+:PROPERTIES:
+:CUSTOM_ID: macos
+:END:
+Not yet tested. Should work with:
+
+- Xcode command line tools
+- Homebrew packages for dependencies
+
+** Troubleshooting
+:PROPERTIES:
+:CUSTOM_ID: troubleshooting
+:END:
+*** pkg-config not finding GLib
+:PROPERTIES:
+:CUSTOM_ID: pkg-config-not-finding-glib
+:END:
+Ensure pkg-config can find glib:
+
+#+begin_src sh
+pkg-config --cflags --libs glib-2.0
+#+end_src
+
+If not found, check that =PKG_CONFIG_PATH= includes the glib .pc file location.
+
+*** raylib build fails
+:PROPERTIES:
+:CUSTOM_ID: raylib-build-fails
+:END:
+Ensure all X11 development packages are installed:
+
+#+begin_src sh
+# Fedora
+sudo dnf install libX11-devel libXrandr-devel libXi-devel \
+    libXcursor-devel libXinerama-devel
+
+# Check OpenGL
+glxinfo | head
+#+end_src
+
+*** GIR scanner fails
+:PROPERTIES:
+:CUSTOM_ID: gir-scanner-fails
+:END:
+Ensure gobject-introspection is installed:
+
+#+begin_src sh
+which g-ir-scanner
+g-ir-scanner --version
+#+end_src
+
+*** Library not found at runtime
+:PROPERTIES:
+:CUSTOM_ID: library-not-found-at-runtime
+:END:
+Set =LD_LIBRARY_PATH=:
+
+#+begin_src sh
+export LD_LIBRARY_PATH=/path/to/graylib/build/lib:$LD_LIBRARY_PATH
+#+end_src
+
+Or install the library system-wide:
+
+#+begin_src sh
+sudo make install
+sudo ldconfig
+#+end_src

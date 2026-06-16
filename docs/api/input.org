@@ -1,20 +1,28 @@
-# Input System
-
+* Input System
+:PROPERTIES:
+:CUSTOM_ID: input-system
+:END:
 This document covers the input system added in Phase 3: keyboard, mouse, gamepad, and touch input.
 
-## Overview
-
+** Overview
+:PROPERTIES:
+:CUSTOM_ID: overview
+:END:
 Graylib provides two approaches for handling input:
 
-1. **Signal-based (Event-driven)**: Connect to GrlWindow signals for input events. Best for discrete actions (jump, shoot, menu selection).
+1. *Signal-based (Event-driven)*: Connect to GrlWindow signals for input events. Best for discrete actions (jump, shoot, menu selection).
 
-2. **Polling-based (Continuous)**: Use `grl_input_*` functions to check input state each frame. Best for continuous actions (movement, camera control).
+2. *Polling-based (Continuous)*: Use =grl_input_*= functions to check input state each frame. Best for continuous actions (movement, camera control).
 
-## Keyboard Input
-
-### Polling Functions
-
-```c
+** Keyboard Input
+:PROPERTIES:
+:CUSTOM_ID: keyboard-input
+:END:
+*** Polling Functions
+:PROPERTIES:
+:CUSTOM_ID: polling-functions
+:END:
+#+begin_src C
 /* Check if a key was just pressed (single frame) */
 if (grl_input_is_key_pressed (GRL_KEY_SPACE))
 {
@@ -56,11 +64,13 @@ if (codepoint != 0)
     /* Process text input */
     text_buffer_append_char (codepoint);
 }
-```
+#+end_src
 
-### Signal-based Keyboard Input
-
-```c
+*** Signal-based Keyboard Input
+:PROPERTIES:
+:CUSTOM_ID: signal-based-keyboard-input
+:END:
+#+begin_src C
 static void
 on_key_pressed (GrlWindow *window,
                 GrlKey     key,
@@ -93,32 +103,36 @@ g_signal_connect (window, "key-pressed",
                   G_CALLBACK (on_key_pressed), NULL);
 g_signal_connect (window, "key-released",
                   G_CALLBACK (on_key_released), NULL);
-```
+#+end_src
 
-### Key Constants
+*** Key Constants
+:PROPERTIES:
+:CUSTOM_ID: key-constants
+:END:
+Common key constants (see =GrlKey= enum for full list):
 
-Common key constants (see `GrlKey` enum for full list):
+| Constant                        | Description      |
+|---------------------------------+------------------|
+| =GRL_KEY_SPACE=                 | Spacebar         |
+| =GRL_KEY_ESCAPE=                | Escape key       |
+| =GRL_KEY_ENTER=                 | Enter/Return     |
+| =GRL_KEY_TAB=                   | Tab key          |
+| =GRL_KEY_A= - =GRL_KEY_Z=       | Letter keys      |
+| =GRL_KEY_ZERO= - =GRL_KEY_NINE= | Number keys      |
+| =GRL_KEY_F1= - =GRL_KEY_F12=    | Function keys    |
+| =GRL_KEY_UP/DOWN/LEFT/RIGHT=    | Arrow keys       |
+| =GRL_KEY_LEFT_SHIFT=            | Left Shift       |
+| =GRL_KEY_LEFT_CONTROL=          | Left Control     |
+| =GRL_KEY_LEFT_ALT=              | Left Alt         |
+| =GRL_KEY_NULL=                  | No key (value 0) |
 
-| Constant | Description |
-|----------|-------------|
-| `GRL_KEY_SPACE` | Spacebar |
-| `GRL_KEY_ESCAPE` | Escape key |
-| `GRL_KEY_ENTER` | Enter/Return |
-| `GRL_KEY_TAB` | Tab key |
-| `GRL_KEY_A` - `GRL_KEY_Z` | Letter keys |
-| `GRL_KEY_ZERO` - `GRL_KEY_NINE` | Number keys |
-| `GRL_KEY_F1` - `GRL_KEY_F12` | Function keys |
-| `GRL_KEY_UP/DOWN/LEFT/RIGHT` | Arrow keys |
-| `GRL_KEY_LEFT_SHIFT` | Left Shift |
-| `GRL_KEY_LEFT_CONTROL` | Left Control |
-| `GRL_KEY_LEFT_ALT` | Left Alt |
-| `GRL_KEY_NULL` | No key (value 0) |
-
-### Exit Key Configuration
-
+*** Exit Key Configuration
+:PROPERTIES:
+:CUSTOM_ID: exit-key-configuration
+:END:
 By default, pressing ESC will close the window. You can customize or disable this behavior:
 
-```c
+#+begin_src C
 /* Disable the default ESC exit behavior */
 grl_input_set_exit_key (GRL_KEY_NULL);
 
@@ -130,13 +144,17 @@ if (grl_input_is_key_pressed (GRL_KEY_ESCAPE))
 
 /* Or use a different key to exit */
 grl_input_set_exit_key (GRL_KEY_F10);
-```
+#+end_src
 
-## Mouse Input
-
-### Polling Functions
-
-```c
+** Mouse Input
+:PROPERTIES:
+:CUSTOM_ID: mouse-input
+:END:
+*** Polling Functions
+:PROPERTIES:
+:CUSTOM_ID: polling-functions-1
+:END:
+#+begin_src C
 /* Check mouse button state */
 if (grl_input_is_mouse_button_pressed (GRL_MOUSE_BUTTON_LEFT))
 {
@@ -174,11 +192,13 @@ if (wheel != 0.0f)
 
 /* Both axes for horizontal scrolling */
 g_autoptr(GrlVector2) wheel_v = grl_input_get_mouse_wheel_move_v ();
-```
+#+end_src
 
-### Signal-based Mouse Input
-
-```c
+*** Signal-based Mouse Input
+:PROPERTIES:
+:CUSTOM_ID: signal-based-mouse-input
+:END:
+#+begin_src C
 static void
 on_mouse_button_pressed (GrlWindow      *window,
                          GrlMouseButton  button,
@@ -224,11 +244,13 @@ g_signal_connect (window, "mouse-moved",
                   G_CALLBACK (on_mouse_moved), NULL);
 g_signal_connect (window, "mouse-wheel",
                   G_CALLBACK (on_mouse_wheel), NULL);
-```
+#+end_src
 
-### Mouse Control Functions
-
-```c
+*** Mouse Control Functions
+:PROPERTIES:
+:CUSTOM_ID: mouse-control-functions
+:END:
+#+begin_src C
 /* Set mouse position */
 grl_input_set_mouse_position (screen_width / 2, screen_height / 2);
 
@@ -238,13 +260,17 @@ grl_input_set_mouse_scale (scale_x, scale_y);
 
 /* Set cursor shape */
 grl_input_set_mouse_cursor (GRL_MOUSE_CURSOR_CROSSHAIR);
-```
+#+end_src
 
-## Gamepad Input
-
-### Polling Functions
-
-```c
+** Gamepad Input
+:PROPERTIES:
+:CUSTOM_ID: gamepad-input
+:END:
+*** Polling Functions
+:PROPERTIES:
+:CUSTOM_ID: polling-functions-2
+:END:
+#+begin_src C
 /* Check if gamepad is connected (0-3) */
 if (grl_input_is_gamepad_available (0))
 {
@@ -277,11 +303,13 @@ if (grl_input_is_gamepad_available (0))
     gfloat lt = grl_input_get_gamepad_axis_movement (0, GRL_GAMEPAD_AXIS_LEFT_TRIGGER);
     gfloat rt = grl_input_get_gamepad_axis_movement (0, GRL_GAMEPAD_AXIS_RIGHT_TRIGGER);
 }
-```
+#+end_src
 
-### Signal-based Gamepad Input
-
-```c
+*** Signal-based Gamepad Input
+:PROPERTIES:
+:CUSTOM_ID: signal-based-gamepad-input
+:END:
+#+begin_src C
 static void
 on_gamepad_button_pressed (GrlWindow        *window,
                            gint              gamepad,
@@ -313,21 +341,25 @@ g_signal_connect (window, "gamepad-button-pressed",
                   G_CALLBACK (on_gamepad_button_pressed), NULL);
 g_signal_connect (window, "gamepad-axis-moved",
                   G_CALLBACK (on_gamepad_axis_moved), NULL);
-```
+#+end_src
 
-### Gamepad Vibration
-
-```c
+*** Gamepad Vibration
+:PROPERTIES:
+:CUSTOM_ID: gamepad-vibration
+:END:
+#+begin_src C
 /* Rumble: left motor, right motor, duration in seconds */
 grl_input_set_gamepad_vibration (0, 0.5f, 0.5f, 0.2f);
 
 /* Asymmetric rumble */
 grl_input_set_gamepad_vibration (0, 0.8f, 0.2f, 0.1f);
-```
+#+end_src
 
-### Gamepad Mappings
-
-```c
+*** Gamepad Mappings
+:PROPERTIES:
+:CUSTOM_ID: gamepad-mappings
+:END:
+#+begin_src C
 /* Load custom gamepad mappings (SDL_GameControllerDB format) */
 const gchar *mappings =
     "03000000790000001100000010010000,Retro Controller,"
@@ -337,13 +369,17 @@ const gchar *mappings =
 
 gint count = grl_input_set_gamepad_mappings (mappings);
 g_print ("Loaded %d mappings\n", count);
-```
+#+end_src
 
-## Touch Input
-
-### Polling Functions
-
-```c
+** Touch Input
+:PROPERTIES:
+:CUSTOM_ID: touch-input
+:END:
+*** Polling Functions
+:PROPERTIES:
+:CUSTOM_ID: polling-functions-3
+:END:
+#+begin_src C
 /* Get number of touch points */
 gint count = grl_input_get_touch_point_count ();
 
@@ -358,24 +394,30 @@ for (gint i = 0; i < count; i++)
     gint id = grl_input_get_touch_point_id (i);
     /* Process touch */
 }
-```
+#+end_src
 
-## Gesture Detection
-
-### Enabling Gestures
-
-```c
+** Gesture Detection
+:PROPERTIES:
+:CUSTOM_ID: gesture-detection
+:END:
+*** Enabling Gestures
+:PROPERTIES:
+:CUSTOM_ID: enabling-gestures
+:END:
+#+begin_src C
 /* Enable specific gestures */
 grl_input_set_gestures_enabled (GRL_GESTURE_TAP |
                                  GRL_GESTURE_DOUBLETAP |
                                  GRL_GESTURE_DRAG |
                                  GRL_GESTURE_PINCH_IN |
                                  GRL_GESTURE_PINCH_OUT);
-```
+#+end_src
 
-### Detecting Gestures
-
-```c
+*** Detecting Gestures
+:PROPERTIES:
+:CUSTOM_ID: detecting-gestures
+:END:
+#+begin_src C
 /* Check for specific gesture */
 if (grl_input_is_gesture_detected (GRL_GESTURE_TAP))
 {
@@ -407,11 +449,13 @@ if (gesture == GRL_GESTURE_PINCH_IN || gesture == GRL_GESTURE_PINCH_OUT)
     g_autoptr(GrlVector2) pinch = grl_input_get_gesture_pinch_vector ();
     gfloat angle = grl_input_get_gesture_pinch_angle ();
 }
-```
+#+end_src
 
-## Complete Example
-
-```c
+** Complete Example
+:PROPERTIES:
+:CUSTOM_ID: complete-example
+:END:
+#+begin_src C
 #include <graylib.h>
 
 typedef struct
@@ -487,87 +531,104 @@ main (int argc, char *argv[])
 
     return 0;
 }
-```
+#+end_src
 
-## Window Signals Reference
+** Window Signals Reference
+:PROPERTIES:
+:CUSTOM_ID: window-signals-reference
+:END:
+| Signal                    | Parameters                         | Description                    |
+|---------------------------+------------------------------------+--------------------------------|
+| =key-pressed=             | GrlKey key                         | Emitted when a key is pressed  |
+| =key-released=            | GrlKey key                         | Emitted when a key is released |
+| =mouse-button-pressed=    | GrlMouseButton, int x, int y       | Mouse button pressed           |
+| =mouse-button-released=   | GrlMouseButton, int x, int y       | Mouse button released          |
+| =mouse-moved=             | int x, int y, int dx, int dy       | Mouse position changed         |
+| =mouse-wheel=             | float x, float y                   | Mouse wheel scrolled           |
+| =gamepad-button-pressed=  | int gamepad, GrlGamepadButton      | Gamepad button pressed         |
+| =gamepad-button-released= | int gamepad, GrlGamepadButton      | Gamepad button released        |
+| =gamepad-axis-moved=      | int gamepad, GrlGamepadAxis, float | Gamepad axis changed           |
 
-| Signal | Parameters | Description |
-|--------|------------|-------------|
-| `key-pressed` | GrlKey key | Emitted when a key is pressed |
-| `key-released` | GrlKey key | Emitted when a key is released |
-| `mouse-button-pressed` | GrlMouseButton, int x, int y | Mouse button pressed |
-| `mouse-button-released` | GrlMouseButton, int x, int y | Mouse button released |
-| `mouse-moved` | int x, int y, int dx, int dy | Mouse position changed |
-| `mouse-wheel` | float x, float y | Mouse wheel scrolled |
-| `gamepad-button-pressed` | int gamepad, GrlGamepadButton | Gamepad button pressed |
-| `gamepad-button-released` | int gamepad, GrlGamepadButton | Gamepad button released |
-| `gamepad-axis-moved` | int gamepad, GrlGamepadAxis, float | Gamepad axis changed |
+--------------
 
----
+** Implementation Notes: bool vs gboolean ABI
+:PROPERTIES:
+:CUSTOM_ID: implementation-notes-bool-vs-gboolean-abi
+:END:
+All input polling functions that check state (pressed, down, released, up) wrap raylib functions that return C99 =bool=. Since =bool= is 1 byte and =gboolean= is 4 bytes, special care is needed to avoid ABI mismatches.
 
-## Implementation Notes: bool vs gboolean ABI
+*** The Problem
+:PROPERTIES:
+:CUSTOM_ID: the-problem
+:END:
+Raylib's =IsKeyDown()= and similar functions return =bool=, which sets only the low byte (=%al=) of the return register. When our wrapper returns =gboolean=, the caller reads all 4 bytes (=%eax=), but the upper 3 bytes may contain garbage.
 
-All input polling functions that check state (pressed, down, released, up) wrap raylib functions that return C99 `bool`. Since `bool` is 1 byte and `gboolean` is 4 bytes, special care is needed to avoid ABI mismatches.
+*** The Solution
+:PROPERTIES:
+:CUSTOM_ID: the-solution
+:END:
+All boolean-returning wrappers use an =unsigned char= intermediate to force the compiler to read only the low byte:
 
-### The Problem
-
-Raylib's `IsKeyDown()` and similar functions return `bool`, which sets only the low byte (`%al`) of the return register. When our wrapper returns `gboolean`, the caller reads all 4 bytes (`%eax`), but the upper 3 bytes may contain garbage.
-
-### The Solution
-
-All boolean-returning wrappers use an `unsigned char` intermediate to force the compiler to read only the low byte:
-
-```c
+#+begin_src C
 gboolean
 grl_input_is_key_down (GrlKey key)
 {
     unsigned char raw = IsKeyDown ((int)key);
     return raw != 0;
 }
-```
+#+end_src
 
 This generates correct assembly:
-```asm
+
+#+begin_src asm
 call   IsKeyDown@plt
 test   %al,%al          ; Only test low byte
 setne  %al
 movzbl %al,%eax         ; Zero-extend to 32-bit gboolean
 ret
-```
+#+end_src
 
-### Affected Functions
-
+*** Affected Functions
+:PROPERTIES:
+:CUSTOM_ID: affected-functions
+:END:
 The following wrapper functions use this pattern:
 
-**Keyboard:**
-- `grl_input_is_key_pressed()`
-- `grl_input_is_key_pressed_repeat()`
-- `grl_input_is_key_down()`
-- `grl_input_is_key_released()`
-- `grl_input_is_key_up()`
+*Keyboard:*
 
-**Mouse:**
-- `grl_input_is_mouse_button_pressed()`
-- `grl_input_is_mouse_button_down()`
-- `grl_input_is_mouse_button_released()`
-- `grl_input_is_mouse_button_up()`
+- =grl_input_is_key_pressed()=
+- =grl_input_is_key_pressed_repeat()=
+- =grl_input_is_key_down()=
+- =grl_input_is_key_released()=
+- =grl_input_is_key_up()=
 
-**Gamepad:**
-- `grl_input_is_gamepad_available()`
-- `grl_input_is_gamepad_button_pressed()`
-- `grl_input_is_gamepad_button_down()`
-- `grl_input_is_gamepad_button_released()`
-- `grl_input_is_gamepad_button_up()`
+*Mouse:*
 
-**Gestures:**
-- `grl_input_is_gesture_detected()`
+- =grl_input_is_mouse_button_pressed()=
+- =grl_input_is_mouse_button_down()=
+- =grl_input_is_mouse_button_released()=
+- =grl_input_is_mouse_button_up()=
 
-### Verification
+*Gamepad:*
 
+- =grl_input_is_gamepad_available()=
+- =grl_input_is_gamepad_button_pressed()=
+- =grl_input_is_gamepad_button_down()=
+- =grl_input_is_gamepad_button_released()=
+- =grl_input_is_gamepad_button_up()=
+
+*Gestures:*
+
+- =grl_input_is_gesture_detected()=
+
+*** Verification
+:PROPERTIES:
+:CUSTOM_ID: verification
+:END:
 You can verify correct code generation with objdump:
 
-```bash
+#+begin_src sh
 objdump -d build/lib/libgraylib.so | grep -A10 '<grl_input_is_key_down>:'
-```
+#+end_src
 
-Look for `test %al,%al` (correct) rather than `test %eax,%eax` (wrong).
+Look for =test %al,%al= (correct) rather than =test %eax,%eax= (wrong).

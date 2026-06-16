@@ -1,0 +1,450 @@
+* Quaternions
+:PROPERTIES:
+:CUSTOM_ID: quaternions
+:END:
+This document covers the GrlQuaternion type for representing 3D rotations and orientations.
+
+** Overview
+:PROPERTIES:
+:CUSTOM_ID: overview
+:END:
+Quaternions are a mathematical representation of 3D rotations that avoid gimbal lock and provide smooth interpolation. They are particularly useful for camera control, character animation, and any situation requiring smooth rotation transitions.
+
+** GrlQuaternion
+:PROPERTIES:
+:CUSTOM_ID: grlquaternion
+:END:
+A quaternion consists of four components: x, y, z (imaginary/vector part) and w (real/scalar part).
+
+*** Structure
+:PROPERTIES:
+:CUSTOM_ID: structure
+:END:
+#+begin_src C
+struct _GrlQuaternion
+{
+    gfloat x;  /* Imaginary i component */
+    gfloat y;  /* Imaginary j component */
+    gfloat z;  /* Imaginary k component */
+    gfloat w;  /* Real/scalar component */
+};
+#+end_src
+
+** Creating Quaternions
+:PROPERTIES:
+:CUSTOM_ID: creating-quaternions
+:END:
+*** Identity Quaternion
+:PROPERTIES:
+:CUSTOM_ID: identity-quaternion
+:END:
+The identity quaternion represents no rotation:
+
+#+begin_src C
+g_autoptr(GrlQuaternion) identity = grl_quaternion_new_identity ();
+/* Creates (0, 0, 0, 1) */
+#+end_src
+
+*** From Components
+:PROPERTIES:
+:CUSTOM_ID: from-components
+:END:
+#+begin_src C
+g_autoptr(GrlQuaternion) q = grl_quaternion_new (0.0f, 0.0f, 0.0f, 1.0f);
+#+end_src
+
+*** From Axis-Angle
+:PROPERTIES:
+:CUSTOM_ID: from-axis-angle
+:END:
+Create a rotation around an axis:
+
+#+begin_src C
+g_autoptr(GrlVector3) axis = grl_vector3_new (0.0f, 1.0f, 0.0f);  /* Y axis */
+gfloat angle = G_PI / 4.0f;  /* 45 degrees in radians */
+
+g_autoptr(GrlQuaternion) rotation = grl_quaternion_new_from_axis_angle (axis, angle);
+#+end_src
+
+*** From Euler Angles
+:PROPERTIES:
+:CUSTOM_ID: from-euler-angles
+:END:
+Create from pitch, yaw, and roll:
+
+#+begin_src C
+gfloat pitch = 0.0f;           /* Rotation around X */
+gfloat yaw = G_PI / 2.0f;      /* Rotation around Y (90 degrees) */
+gfloat roll = 0.0f;            /* Rotation around Z */
+
+g_autoptr(GrlQuaternion) rotation = grl_quaternion_new_from_euler (pitch, yaw, roll);
+#+end_src
+
+*** From Rotation Matrix
+:PROPERTIES:
+:CUSTOM_ID: from-rotation-matrix
+:END:
+#+begin_src C
+g_autoptr(GrlMatrix) rotation_matrix = grl_matrix_new_rotate_y (G_PI / 4.0f);
+g_autoptr(GrlQuaternion) q = grl_quaternion_new_from_matrix (rotation_matrix);
+#+end_src
+
+*** From Two Vectors
+:PROPERTIES:
+:CUSTOM_ID: from-two-vectors
+:END:
+Create a quaternion that rotates one vector to another:
+
+#+begin_src C
+g_autoptr(GrlVector3) from = grl_vector3_new (1.0f, 0.0f, 0.0f);  /* X axis */
+g_autoptr(GrlVector3) to = grl_vector3_new (0.0f, 1.0f, 0.0f);    /* Y axis */
+
+g_autoptr(GrlQuaternion) rotation = grl_quaternion_new_from_vectors (from, to);
+/* Rotation that turns X into Y (90 degrees around Z) */
+#+end_src
+
+** Arithmetic Operations
+:PROPERTIES:
+:CUSTOM_ID: arithmetic-operations
+:END:
+*** Addition and Subtraction
+:PROPERTIES:
+:CUSTOM_ID: addition-and-subtraction
+:END:
+#+begin_src C
+g_autoptr(GrlQuaternion) sum = grl_quaternion_add (q1, q2);
+g_autoptr(GrlQuaternion) diff = grl_quaternion_subtract (q1, q2);
+
+/* Add/subtract a scalar to all components */
+g_autoptr(GrlQuaternion) shifted = grl_quaternion_add_value (q, 0.5f);
+#+end_src
+
+*** Multiplication (Combining Rotations)
+:PROPERTIES:
+:CUSTOM_ID: multiplication-combining-rotations
+:END:
+Quaternion multiplication combines rotations. *Order matters!*
+
+#+begin_src C
+/* Apply rotation2 AFTER rotation1 */
+g_autoptr(GrlQuaternion) combined = grl_quaternion_multiply (rotation1, rotation2);
+#+end_src
+
+*** Scaling
+:PROPERTIES:
+:CUSTOM_ID: scaling
+:END:
+#+begin_src C
+g_autoptr(GrlQuaternion) scaled = grl_quaternion_scale (q, 2.0f);
+#+end_src
+
+*** Division
+:PROPERTIES:
+:CUSTOM_ID: division
+:END:
+#+begin_src C
+g_autoptr(GrlQuaternion) quotient = grl_quaternion_divide (q1, q2);
+#+end_src
+
+*** Negation
+:PROPERTIES:
+:CUSTOM_ID: negation
+:END:
+#+begin_src C
+g_autoptr(GrlQuaternion) negated = grl_quaternion_negate (q);
+#+end_src
+
+** Quaternion Operations
+:PROPERTIES:
+:CUSTOM_ID: quaternion-operations
+:END:
+*** Length (Magnitude)
+:PROPERTIES:
+:CUSTOM_ID: length-magnitude
+:END:
+#+begin_src C
+gfloat len = grl_quaternion_length (q);
+#+end_src
+
+*** Normalization
+:PROPERTIES:
+:CUSTOM_ID: normalization
+:END:
+Unit quaternions are required for proper rotation representation:
+
+#+begin_src C
+g_autoptr(GrlQuaternion) unit = grl_quaternion_normalize (q);
+#+end_src
+
+*** Inverse
+:PROPERTIES:
+:CUSTOM_ID: inverse
+:END:
+The inverse quaternion represents the opposite rotation:
+
+#+begin_src C
+g_autoptr(GrlQuaternion) inverse = grl_quaternion_invert (q);
+
+/* Multiplying by inverse gives identity */
+g_autoptr(GrlQuaternion) identity = grl_quaternion_multiply (q, inverse);
+#+end_src
+
+** Interpolation
+:PROPERTIES:
+:CUSTOM_ID: interpolation
+:END:
+*** Linear Interpolation (LERP)
+:PROPERTIES:
+:CUSTOM_ID: linear-interpolation-lerp
+:END:
+Simple but doesn't preserve unit length:
+
+#+begin_src C
+g_autoptr(GrlQuaternion) mid = grl_quaternion_lerp (start, end, 0.5f);
+#+end_src
+
+*** Normalized LERP (NLERP)
+:PROPERTIES:
+:CUSTOM_ID: normalized-lerp-nlerp
+:END:
+Fast rotation interpolation:
+
+#+begin_src C
+/* Interpolate 30% from start toward end */
+g_autoptr(GrlQuaternion) result = grl_quaternion_nlerp (start, end, 0.3f);
+#+end_src
+
+*** Spherical LERP (SLERP)
+:PROPERTIES:
+:CUSTOM_ID: spherical-lerp-slerp
+:END:
+Constant angular velocity interpolation (best for animation):
+
+#+begin_src C
+g_autoptr(GrlQuaternion) result = grl_quaternion_slerp (start, end, 0.5f);
+#+end_src
+
+*** Cubic Hermite Spline
+:PROPERTIES:
+:CUSTOM_ID: cubic-hermite-spline
+:END:
+Smooth curve interpolation through control points:
+
+#+begin_src C
+g_autoptr(GrlQuaternion) result = grl_quaternion_cubic_hermite_spline (
+    q1, out_tangent1,
+    q2, in_tangent2,
+    t
+);
+#+end_src
+
+** Conversions
+:PROPERTIES:
+:CUSTOM_ID: conversions
+:END:
+*** To Rotation Matrix
+:PROPERTIES:
+:CUSTOM_ID: to-rotation-matrix
+:END:
+#+begin_src C
+g_autoptr(GrlMatrix) matrix = grl_quaternion_to_matrix (q);
+#+end_src
+
+*** To Euler Angles
+:PROPERTIES:
+:CUSTOM_ID: to-euler-angles
+:END:
+#+begin_src C
+gfloat pitch, yaw, roll;
+grl_quaternion_to_euler (q, &pitch, &yaw, &roll);
+
+g_print ("Pitch: %.2f, Yaw: %.2f, Roll: %.2f (radians)\n",
+         pitch, yaw, roll);
+#+end_src
+
+*** To Axis-Angle
+:PROPERTIES:
+:CUSTOM_ID: to-axis-angle
+:END:
+#+begin_src C
+GrlVector3 axis;
+gfloat angle;
+grl_quaternion_to_axis_angle (q, &axis, &angle);
+
+g_print ("Axis: (%.2f, %.2f, %.2f), Angle: %.2f radians\n",
+         axis.x, axis.y, axis.z, angle);
+#+end_src
+
+** Transformation
+:PROPERTIES:
+:CUSTOM_ID: transformation
+:END:
+Apply a matrix transformation to a quaternion:
+
+#+begin_src C
+g_autoptr(GrlMatrix) transform = grl_matrix_new_identity ();
+g_autoptr(GrlQuaternion) transformed = grl_quaternion_transform (q, transform);
+#+end_src
+
+** Comparison
+:PROPERTIES:
+:CUSTOM_ID: comparison
+:END:
+Check if two quaternions are approximately equal:
+
+#+begin_src C
+if (grl_quaternion_equal (q1, q2))
+{
+    g_print ("Quaternions represent the same rotation\n");
+}
+#+end_src
+
+** NLERP vs SLERP
+:PROPERTIES:
+:CUSTOM_ID: nlerp-vs-slerp
+:END:
+| Feature          | NLERP                 | SLERP                  |
+|------------------+-----------------------+------------------------|
+| Speed            | Faster                | Slower                 |
+| Accuracy         | Good for small angles | Perfect for all angles |
+| Angular velocity | Variable              | Constant               |
+| Use case         | Real-time games       | Cinematics, animations |
+
+*Recommendation:* Use NLERP for real-time interpolation (camera smoothing, input response). Use SLERP for pre-recorded animations where constant speed matters.
+
+** Complete Example
+:PROPERTIES:
+:CUSTOM_ID: complete-example
+:END:
+#+begin_src C
+#include <graylib.h>
+
+int
+main (int argc, char *argv[])
+{
+    g_autoptr(GrlWindow) window = NULL;
+    g_autoptr(GrlCamera3D) camera = NULL;
+    g_autoptr(GrlColor) bg = NULL;
+    g_autoptr(GrlQuaternion) start_rot = NULL;
+    g_autoptr(GrlQuaternion) end_rot = NULL;
+    gfloat t = 0.0f;
+    gfloat direction = 1.0f;
+
+    window = grl_window_new (800, 600, "Quaternion Demo");
+    grl_window_set_target_fps (window, 60);
+
+    camera = grl_camera3d_new_default ();
+    bg = grl_color_new (40, 40, 60, 255);
+
+    /* Create two rotations to interpolate between */
+    start_rot = grl_quaternion_new_from_euler (0.0f, 0.0f, 0.0f);
+    end_rot = grl_quaternion_new_from_euler (0.0f, G_PI, G_PI / 4.0f);
+
+    while (!grl_window_should_close (window))
+    {
+        gfloat delta = grl_window_get_frame_time (window);
+        g_autoptr(GrlQuaternion) current_rot = NULL;
+        g_autoptr(GrlMatrix) rotation_matrix = NULL;
+        g_autoptr(GrlVector3) position = NULL;
+
+        /* Animate interpolation parameter */
+        t += delta * direction * 0.5f;
+        if (t >= 1.0f) { t = 1.0f; direction = -1.0f; }
+        if (t <= 0.0f) { t = 0.0f; direction = 1.0f; }
+
+        /* Interpolate rotation using SLERP */
+        current_rot = grl_quaternion_slerp (start_rot, end_rot, t);
+        rotation_matrix = grl_quaternion_to_matrix (current_rot);
+
+        grl_window_begin_drawing (window);
+        grl_window_clear_background (window, bg);
+
+        grl_camera3d_begin_mode (camera);
+
+        /* Draw a rotating cube using the quaternion rotation */
+        position = grl_vector3_new (0.0f, 0.0f, 0.0f);
+        /* Apply rotation_matrix to cube here... */
+
+        grl_camera3d_end_mode (camera);
+
+        grl_draw_fps (10, 10);
+        grl_window_end_drawing (window);
+    }
+
+    return 0;
+}
+#+end_src
+
+** Function Reference
+:PROPERTIES:
+:CUSTOM_ID: function-reference
+:END:
+*** Constructors
+:PROPERTIES:
+:CUSTOM_ID: constructors
+:END:
+| Function                               | Description                     |
+|----------------------------------------+---------------------------------|
+| =grl_quaternion_new()=                 | Create from components          |
+| =grl_quaternion_new_identity()=        | Create identity (no rotation)   |
+| =grl_quaternion_new_from_axis_angle()= | Create from axis and angle      |
+| =grl_quaternion_new_from_euler()=      | Create from pitch/yaw/roll      |
+| =grl_quaternion_new_from_matrix()=     | Create from rotation matrix     |
+| =grl_quaternion_new_from_vectors()=    | Create rotation between vectors |
+| =grl_quaternion_copy()=                | Copy a quaternion               |
+| =grl_quaternion_free()=                | Free a quaternion               |
+
+*** Arithmetic
+:PROPERTIES:
+:CUSTOM_ID: arithmetic
+:END:
+| Function                          | Description                     |
+|-----------------------------------+---------------------------------|
+| =grl_quaternion_add()=            | Add two quaternions             |
+| =grl_quaternion_add_value()=      | Add scalar to all components    |
+| =grl_quaternion_subtract()=       | Subtract quaternions            |
+| =grl_quaternion_subtract_value()= | Subtract scalar from components |
+| =grl_quaternion_multiply()=       | Multiply (combine rotations)    |
+| =grl_quaternion_scale()=          | Scale by scalar                 |
+| =grl_quaternion_divide()=         | Divide quaternions              |
+| =grl_quaternion_negate()=         | Negate all components           |
+
+*** Operations
+:PROPERTIES:
+:CUSTOM_ID: operations
+:END:
+| Function                     | Description              |
+|------------------------------+--------------------------|
+| =grl_quaternion_length()=    | Get magnitude            |
+| =grl_quaternion_normalize()= | Normalize to unit length |
+| =grl_quaternion_invert()=    | Get inverse rotation     |
+
+*** Interpolation
+:PROPERTIES:
+:CUSTOM_ID: interpolation-1
+:END:
+| Function                                | Description                     |
+|-----------------------------------------+---------------------------------|
+| =grl_quaternion_lerp()=                 | Linear interpolation            |
+| =grl_quaternion_nlerp()=                | Normalized linear interpolation |
+| =grl_quaternion_slerp()=                | Spherical linear interpolation  |
+| =grl_quaternion_cubic_hermite_spline()= | Cubic spline interpolation      |
+
+*** Conversions
+:PROPERTIES:
+:CUSTOM_ID: conversions-1
+:END:
+| Function                         | Description                |
+|----------------------------------+----------------------------|
+| =grl_quaternion_to_matrix()=     | Convert to rotation matrix |
+| =grl_quaternion_to_euler()=      | Convert to Euler angles    |
+| =grl_quaternion_to_axis_angle()= | Convert to axis-angle      |
+| =grl_quaternion_transform()=     | Transform by matrix        |
+
+*** Comparison
+:PROPERTIES:
+:CUSTOM_ID: comparison-1
+:END:
+| Function                 | Description                |
+|--------------------------+----------------------------|
+| =grl_quaternion_equal()= | Check approximate equality |

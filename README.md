@@ -34,7 +34,7 @@ sudo dnf install mingw64-gcc mingw64-glib2 mingw64-pkg-config
 make WINDOWS=1
 ```
 
-See [Building Guide](docs/guides/building.md#windows-cross-compilation) for details.
+See [Building Guide](docs/guides/building.org#windows-cross-compilation) for details.
 
 ## Getting Started
 
@@ -212,23 +212,23 @@ graylib/
 
 ## Documentation
 
-- [Getting Started](docs/getting-started.md)
-- [Building Guide](docs/guides/building.md)
+- [Getting Started](docs/getting-started.org)
+- [Building Guide](docs/guides/building.org)
 - [API Reference](docs/api/)
-  - [Math Types](docs/api/math-types.md) - Vector2, Vector3, Vector4, Color, Rectangle, Matrix, BoundingBox, Quaternion
-  - [Core Types](docs/api/core.md) - Application, Window
-  - [Input System](docs/api/input.md) - Keyboard, Mouse, Gamepad
-  - [Graphics Types](docs/api/graphics.md) - Image, Texture, Font, Shader, RenderTexture
-  - [Drawing Functions](docs/api/drawing.md) - Shapes, textures, text
-  - [Audio System](docs/api/audio.md) - Wave, Sound, Music, AudioStream
-  - [Scene System](docs/api/scene.md) - Entity, Sprite, Scene, SceneManager
-  - [Cameras](docs/api/cameras.md) - Camera2D, Camera3D
-  - [Models](docs/api/models.md) - Mesh, Material, Model, ModelAnimation
-  - [Collision](docs/api/collision.md) - 2D and 3D collision detection
-  - [UI Controls](docs/api/ui.md) - Button, Slider, TextBox, ListView, ColorPicker, etc.
-  - [PNG Chunks](docs/api/png.md) - PNG metadata manipulation
-  - [Resources](docs/api/resources.md) - Resource pack loading (rres format)
-  - [Enumerations](docs/api/enums.md) - Key codes, blend modes, and constants
+  - [Math Types](docs/api/math-types.org) - Vector2, Vector3, Vector4, Color, Rectangle, Matrix, BoundingBox, Quaternion
+  - [Core Types](docs/api/core.org) - Application, Window
+  - [Input System](docs/api/input.org) - Keyboard, Mouse, Gamepad
+  - [Graphics Types](docs/api/graphics.org) - Image, Texture, Font, Shader, RenderTexture
+  - [Drawing Functions](docs/api/drawing.org) - Shapes, textures, text
+  - [Audio System](docs/api/audio.org) - Wave, Sound, Music, AudioStream
+  - [Scene System](docs/api/scene.org) - Entity, Sprite, Scene, SceneManager
+  - [Cameras](docs/api/cameras.org) - Camera2D, Camera3D
+  - [Models](docs/api/models.org) - Mesh, Material, Model, ModelAnimation
+  - [Collision](docs/api/collision.org) - 2D and 3D collision detection
+  - [UI Controls](docs/api/ui.org) - Button, Slider, TextBox, ListView, ColorPicker, etc.
+  - [PNG Chunks](docs/api/png.org) - PNG metadata manipulation
+  - [Resources](docs/api/resources.org) - Resource pack loading (rres format)
+  - [Enumerations](docs/api/enums.org) - Key codes, blend modes, and constants
 
 ## Examples
 
