@@ -321,6 +321,24 @@ grl_window_constructed (GObject *object)
 
     G_OBJECT_CLASS (grl_window_parent_class)->constructed (object);
 
+    /* Pre-flight GLFW before InitWindow: raylib's InitWindow() calls
+       InitPlatform() but does NOT check its return value, so when GLFW cannot
+       initialize (e.g. no usable display -- "X11: The DISPLAY environment
+       variable is missing") it proceeds into GL setup with no context and
+       crashes (rlglInit -> rlLoadTexture dereferences a NULL GLAD pointer).
+       glfwInit() reports that failure cleanly; it is idempotent and reference
+       counted, so InitWindow()'s own glfwInit() call below is then a no-op. */
+    {
+        extern int glfwInit (void);
+        if (!glfwInit ())
+        {
+            g_warning ("graylib: GLFW could not initialize (no usable display? "
+                       "X11 needs DISPLAY) -- window not created");
+            priv->is_initialized = FALSE;
+            return;
+        }
+    }
+
     /* Initialize the raylib window */
     InitWindow (priv->initial_width,
                 priv->initial_height,
@@ -739,11 +757,26 @@ grl_window_new (gint         width,
                 gint         height,
                 const gchar *title)
 {
-    return g_object_new (GRL_TYPE_WINDOW,
+    GrlWindow        *self;
+    GrlWindowPrivate *priv;
+
+    self = g_object_new (GRL_TYPE_WINDOW,
                          "width", width,
                          "height", height,
                          "title", title,
                          NULL);
+    priv = grl_window_get_instance_private (self);
+
+    /* Window / GL bring-up can fail (e.g. no usable display -- see the glfwInit
+       pre-flight in grl_window_constructed).  Return NULL rather than a
+       half-initialized window: its GL/GLFW accessors (e.g. GetWindowScaleDPI)
+       would otherwise assert/crash on a NULL GLFW window. */
+    if (!priv->is_initialized)
+    {
+        g_object_unref (self);
+        return NULL;
+    }
+    return self;
 }
 
 /*
