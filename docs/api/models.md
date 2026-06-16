@@ -35,6 +35,7 @@ Graylib provides functions to generate common 3D shapes:
 ```c
 gint             grl_mesh_get_vertex_count   (GrlMesh *mesh);
 gint             grl_mesh_get_triangle_count (GrlMesh *mesh);
+gint             grl_mesh_get_bone_count     (GrlMesh *mesh);
 GrlBoundingBox * grl_mesh_get_bounding_box   (GrlMesh *mesh);
 gboolean         grl_mesh_is_valid           (GrlMesh *mesh);
 void             grl_mesh_upload             (GrlMesh *mesh,
@@ -45,6 +46,7 @@ void             grl_mesh_upload             (GrlMesh *mesh,
 |--------|-------------|
 | `get_vertex_count()` | Get number of vertices |
 | `get_triangle_count()` | Get number of triangles |
+| `get_bone_count()` | Get number of bones influencing this mesh for GPU skinning (0 if the mesh has no skin data) |
 | `get_bounding_box()` | Calculate and return the mesh's bounding box |
 | `is_valid()` | Check if mesh data is valid |
 | `upload(dynamic)` | Upload mesh data to GPU (set `dynamic` for frequently updated meshes) |
@@ -167,7 +169,12 @@ g_autoptr(GrlModel) model = grl_model_new_from_mesh (mesh);
 |----------|------|--------|-------------|
 | `mesh-count` | `gint` | Read | Number of meshes in the model |
 | `material-count` | `gint` | Read | Number of materials |
-| `bone-count` | `gint` | Read | Number of bones (0 if not animated) |
+| `bone-count` | `gint` | Read | Number of bones in the model's skeleton (0 if not animated) |
+
+> **raylib 6.0 note:** Bone data moved into the model's skeleton.
+> `grl_model_get_bone_count()` now reflects the skeleton bone count, and the
+> per-bone data is reached via `grl_model_get_bone()` and
+> `grl_model_get_bind_pose_transform()` (see [Skeletal Animation](#skeletal-animation--gpu-skinning) below).
 
 ### Methods
 
@@ -176,6 +183,12 @@ g_autoptr(GrlModel) model = grl_model_new_from_mesh (mesh);
 gint             grl_model_get_mesh_count     (GrlModel *model);
 gint             grl_model_get_material_count (GrlModel *model);
 gint             grl_model_get_bone_count     (GrlModel *model);
+
+/* Skeleton (see Skeletal Animation below) */
+GrlBoneInfo *    grl_model_get_bone           (GrlModel *model,
+                                               gint      index);
+GrlTransform *   grl_model_get_bind_pose_transform (GrlModel *model,
+                                                     gint      bone);
 
 /* Bounding box */
 GrlBoundingBox * grl_model_get_bounding_box   (GrlModel *model);
@@ -266,28 +279,66 @@ Returns a NULL-terminated array of animations loaded from the file. The `count` 
 | Property | Type | Access | Description |
 |----------|------|--------|-------------|
 | `name` | `gchar *` | Read | Animation name |
-| `frame-count` | `gint` | Read | Total number of frames |
+| `frame-count` | `gint` | Read | Total number of keyframes |
 | `bone-count` | `gint` | Read | Number of bones in the animation |
+
+> **raylib 6.0 note:** raylib renamed the underlying `ModelAnimation` field
+> semantics — what was the per-frame array is now the *keyframe count* and the
+> per-keyframe bone *poses* are decomposed `Transform`s (translation, rotation,
+> scale). `grl_model_animation_get_frame_count()` returns the keyframe count, and
+> `grl_model_animation_get_frame_pose()` returns the local pose
+> (a [`GrlTransform`](#grltransform)) of a bone at a given keyframe.
 
 ### Methods
 
 ```c
-const gchar * grl_model_animation_get_name        (GrlModelAnimation *anim);
-gint          grl_model_animation_get_frame_count (GrlModelAnimation *anim);
-gint          grl_model_animation_get_bone_count  (GrlModelAnimation *anim);
-gboolean      grl_model_animation_is_valid        (GrlModelAnimation *anim);
-void          grl_model_animation_update          (GrlModelAnimation *anim,
-                                                   GrlModel          *model,
-                                                   gint               frame);
+const gchar *  grl_model_animation_get_name        (GrlModelAnimation *anim);
+gint           grl_model_animation_get_frame_count (GrlModelAnimation *anim);
+gint           grl_model_animation_get_bone_count  (GrlModelAnimation *anim);
+GrlTransform * grl_model_animation_get_frame_pose  (GrlModelAnimation *anim,
+                                                    gint               frame,
+                                                    gint               bone);
+gboolean       grl_model_animation_is_valid        (GrlModelAnimation *anim,
+                                                    GrlModel          *model);
+void           grl_model_animation_update          (GrlModelAnimation *anim,
+                                                    GrlModel          *model,
+                                                    gint               frame);
+void           grl_model_animation_blend           (GrlModel          *model,
+                                                    GrlModelAnimation *anim_a,
+                                                    gfloat             frame_a,
+                                                    GrlModelAnimation *anim_b,
+                                                    gfloat             frame_b,
+                                                    gfloat             blend);
 ```
 
 | Method | Description |
 |--------|-------------|
 | `get_name()` | Get the animation name |
-| `get_frame_count()` | Get total number of frames |
+| `get_frame_count()` | Get total number of keyframes |
 | `get_bone_count()` | Get number of bones |
-| `is_valid()` | Check if animation data is valid |
-| `update(model, frame)` | Apply animation frame to model |
+| `get_frame_pose(frame, bone)` | Get the local pose (`GrlTransform`) of `bone` at keyframe `frame` |
+| `is_valid(model)` | Check if the animation is compatible with `model` |
+| `update(model, frame)` | Apply animation frame to model (wraps if `frame` exceeds the keyframe count) |
+| `blend(model, anim_a, frame_a, anim_b, frame_b, blend)` | Blend `model`'s pose between two animation frames (see below) |
+
+### Animation Blending
+
+`grl_model_animation_blend()` poses a model by interpolating between two
+animation frames, using raylib 6.0's GPU-skinning-aware blending (built on
+`UpdateModelAnimationEx`). It is the basis for smooth transitions between
+animation clips (e.g. crossfading from a *walk* to a *run* cycle). `blend`
+ranges over `[0.0, 1.0]`, where `0.0` poses purely from `anim_a`/`frame_a` and
+`1.0` purely from `anim_b`/`frame_b`. The frame parameters are floats, so
+fractional keyframe positions interpolate within each clip.
+
+```c
+/* Crossfade from walk to run over 0.5 seconds */
+gfloat t = elapsed / 0.5f;  /* 0.0 .. 1.0 */
+grl_model_animation_blend (character,
+                           walk_anim, walk_frame,
+                           run_anim, run_frame,
+                           t);
+```
 
 ### Example: Animated Character
 
@@ -330,6 +381,94 @@ for (gint i = 0; i < anim_count; i++)
 }
 g_free (animations);
 ```
+
+## Skeletal Animation & GPU Skinning
+
+raylib 6.0 adds GPU vertex skinning for skeletal animation. Two GBoxed value
+types describe the skeleton and its poses: `GrlBoneInfo` (the static bone
+hierarchy) and `GrlTransform` (a decomposed translation/rotation/scale pose).
+
+### GrlBoneInfo
+
+A GBoxed value type describing a single bone in a model's animation skeleton:
+its name and the index of its parent bone (`-1` for a root bone). It backs
+raylib 6.0's `BoneInfo`.
+
+```c
+GrlBoneInfo * grl_bone_info_new        (const gchar       *name,
+                                        gint               parent);
+GrlBoneInfo * grl_bone_info_copy       (const GrlBoneInfo *self);
+void          grl_bone_info_free       (GrlBoneInfo       *self);
+
+const gchar * grl_bone_info_get_name   (const GrlBoneInfo *self);
+gint          grl_bone_info_get_parent (const GrlBoneInfo *self);
+```
+
+| Function | Description |
+|----------|-------------|
+| `new(name, parent)` | Create bone metadata (bone name + parent index, `-1` for root) |
+| `copy()` | Duplicate a `GrlBoneInfo` |
+| `free()` | Free a `GrlBoneInfo` (it is a GBoxed value type, **not** a GObject) |
+| `get_name()` | Get the bone name |
+| `get_parent()` | Get the parent bone index (`-1` for a root bone) |
+
+Bone metadata lives on the model's skeleton; obtain it with
+`grl_model_get_bone()`.
+
+### GrlTransform
+
+A GBoxed value type holding a decomposed 3D transform — translation, rotation
+(as a quaternion), and per-axis scale. It backs raylib 6.0's `Transform` and is
+used for skeleton bind poses and per-keyframe bone poses.
+
+```c
+GrlTransform *  grl_transform_new             (const GrlVector3    *translation,
+                                               const GrlQuaternion *rotation,
+                                               const GrlVector3    *scale);
+GrlTransform *  grl_transform_new_identity    (void);
+GrlTransform *  grl_transform_copy            (const GrlTransform  *self);
+void            grl_transform_free            (GrlTransform        *self);
+
+GrlVector3 *    grl_transform_get_translation (const GrlTransform  *self);
+GrlQuaternion * grl_transform_get_rotation    (const GrlTransform  *self);
+GrlVector3 *    grl_transform_get_scale       (const GrlTransform  *self);
+```
+
+| Function | Description |
+|----------|-------------|
+| `new(translation, rotation, scale)` | Create a transform from its components |
+| `new_identity()` | Create an identity transform (zero translation, identity rotation, unit scale) |
+| `copy()` | Duplicate a `GrlTransform` |
+| `free()` | Free a `GrlTransform` (GBoxed value type, **not** a GObject) |
+| `get_translation()` | Get the translation component (returns a freshly allocated `GrlVector3`) |
+| `get_rotation()` | Get the rotation component (returns a freshly allocated `GrlQuaternion`) |
+| `get_scale()` | Get the scale component (returns a freshly allocated `GrlVector3`) |
+
+The accessors each return a newly allocated copy that the caller owns.
+
+### Example: Inspecting a Skeleton
+
+```c
+g_autoptr(GrlModel) model = grl_model_new_from_file ("character.glb", NULL);
+gint bone_count = grl_model_get_bone_count (model);
+
+for (gint i = 0; i < bone_count; i++)
+{
+    g_autoptr(GrlBoneInfo) bone = grl_model_get_bone (model, i);
+    g_autoptr(GrlTransform) bind = grl_model_get_bind_pose_transform (model, i);
+    g_autoptr(GrlVector3) t = grl_transform_get_translation (bind);
+
+    g_print ("Bone %d \"%s\" (parent %d) bind translation = (%.2f, %.2f, %.2f)\n",
+             i,
+             grl_bone_info_get_name (bone),
+             grl_bone_info_get_parent (bone),
+             t->x, t->y, t->z);
+}
+```
+
+> **GBoxed reminder:** `GrlBoneInfo` and `GrlTransform` are GBoxed value types.
+> Free them with `grl_bone_info_free()` / `grl_transform_free()` (or
+> `g_autoptr`), never `g_object_unref()`.
 
 ## Supported File Formats
 

@@ -134,7 +134,7 @@ grl_model_get_property (GObject    *object,
         break;
 
     case PROP_BONE_COUNT:
-        g_value_set_int (value, priv->valid ? priv->model.boneCount : 0);
+        g_value_set_int (value, priv->valid ? priv->model.skeleton.boneCount : 0);
         break;
 
     default:
@@ -372,7 +372,78 @@ grl_model_get_bone_count (GrlModel *self)
 
     priv = grl_model_get_instance_private (self);
 
-    return priv->valid ? priv->model.boneCount : 0;
+    /* raylib 6.0 moved bone data into Model.skeleton */
+    return priv->valid ? priv->model.skeleton.boneCount : 0;
+}
+
+/**
+ * grl_model_get_bone:
+ * @self: A #GrlModel
+ * @index: Bone index in range [0, grl_model_get_bone_count())
+ *
+ * Gets metadata for a bone in the model's animation skeleton.
+ *
+ * Returns: (transfer full) (nullable): A new #GrlBoneInfo, or %NULL if the
+ *          model has no skeleton or @index is out of range
+ */
+GrlBoneInfo *
+grl_model_get_bone (GrlModel *self,
+                    gint      index)
+{
+    GrlModelPrivate *priv;
+    BoneInfo         bone;
+
+    g_return_val_if_fail (GRL_IS_MODEL (self), NULL);
+
+    priv = grl_model_get_instance_private (self);
+
+    if (!priv->valid || priv->model.skeleton.bones == NULL)
+        return NULL;
+
+    if (index < 0 || index >= priv->model.skeleton.boneCount)
+        return NULL;
+
+    bone = priv->model.skeleton.bones[index];
+
+    return grl_bone_info_new (bone.name, bone.parent);
+}
+
+/**
+ * grl_model_get_bind_pose_transform:
+ * @self: A #GrlModel
+ * @bone: Bone index in range [0, grl_model_get_bone_count())
+ *
+ * Gets the bind-pose (rest) transform of a skeleton bone.
+ *
+ * Returns: (transfer full) (nullable): A new #GrlTransform, or %NULL if the
+ *          model has no skeleton or @bone is out of range
+ */
+GrlTransform *
+grl_model_get_bind_pose_transform (GrlModel *self,
+                                   gint      bone)
+{
+    GrlModelPrivate         *priv;
+    Transform                t;
+    g_autoptr (GrlVector3)    translation = NULL;
+    g_autoptr (GrlQuaternion) rotation = NULL;
+    g_autoptr (GrlVector3)    scale = NULL;
+
+    g_return_val_if_fail (GRL_IS_MODEL (self), NULL);
+
+    priv = grl_model_get_instance_private (self);
+
+    if (!priv->valid || priv->model.skeleton.bindPose == NULL)
+        return NULL;
+
+    if (bone < 0 || bone >= priv->model.skeleton.boneCount)
+        return NULL;
+
+    t = priv->model.skeleton.bindPose[bone];
+    translation = grl_vector3_new (t.translation.x, t.translation.y, t.translation.z);
+    rotation = grl_quaternion_new (t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w);
+    scale = grl_vector3_new (t.scale.x, t.scale.y, t.scale.z);
+
+    return grl_transform_new (translation, rotation, scale);
 }
 
 /**

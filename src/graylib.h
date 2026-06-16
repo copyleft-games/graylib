@@ -86,6 +86,8 @@
 #include "graphics/grl-model.h"
 #include "graphics/grl-model-animation.h"
 #include "graphics/grl-png.h"
+#include "graphics/grl-bone-info.h"
+#include "graphics/grl-transform.h"
 
 /* Drawing module */
 #include "drawing/grl-draw.h"
@@ -139,6 +141,15 @@
 
 /* RLGL module (low-level OpenGL abstraction) */
 #include "rlgl/grl-rlgl.h"
+
+/* Software renderer module (rlsw CPU rasterizer) */
+#include "rlsw/grl-software-renderer.h"
+
+/* System module (filesystem helpers) */
+#include "system/grl-fs.h"
+
+/* Text module (string utilities) */
+#include "text/grl-text-utils.h"
 
 /* Utility functions */
 #include "grl-utils.h"

@@ -17,6 +17,8 @@
 #include "../grl-version.h"
 #include "grl-mesh.h"
 #include "grl-material.h"
+#include "grl-bone-info.h"
+#include "grl-transform.h"
 #include "../math/grl-matrix.h"
 #include "../math/grl-bounding-box.h"
 #include "../math/grl-vector3.h"
@@ -106,6 +108,34 @@ gint                grl_model_get_material_count    (GrlModel           *self);
  */
 GRL_AVAILABLE_IN_ALL
 gint                grl_model_get_bone_count        (GrlModel           *self);
+
+/**
+ * grl_model_get_bone:
+ * @self: A #GrlModel
+ * @index: Bone index in range [0, grl_model_get_bone_count())
+ *
+ * Gets metadata for a bone in the model's animation skeleton.
+ *
+ * Returns: (transfer full) (nullable): A new #GrlBoneInfo, or %NULL if the
+ *          model has no skeleton or @index is out of range
+ */
+GRL_AVAILABLE_IN_ALL
+GrlBoneInfo *       grl_model_get_bone              (GrlModel           *self,
+                                                     gint                index);
+
+/**
+ * grl_model_get_bind_pose_transform:
+ * @self: A #GrlModel
+ * @bone: Bone index in range [0, grl_model_get_bone_count())
+ *
+ * Gets the bind-pose (rest) transform of a skeleton bone.
+ *
+ * Returns: (transfer full) (nullable): A new #GrlTransform, or %NULL if the
+ *          model has no skeleton or @bone is out of range
+ */
+GRL_AVAILABLE_IN_ALL
+GrlTransform *      grl_model_get_bind_pose_transform (GrlModel         *self,
+                                                       gint              bone);
 
 /**
  * grl_model_get_bounding_box:

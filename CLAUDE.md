@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**Graylib** is a GObject/GLib wrapper around the [raylib](https://www.raylib.com/) 5.5 game programming library. It provides:
+**Graylib** is a GObject/GLib wrapper around the [raylib](https://www.raylib.com/) 6.0 game programming library. It provides:
 
 - GObject types with automatic memory management via reference counting
 - GObject Introspection (GIR) support for language bindings (Python, Lua, Vala, JS)
@@ -19,7 +19,7 @@
 | Language | C (gnu89 standard) |
 | Compiler | GCC |
 | Build System | GNU Make |
-| Dependencies | GLib 2.56+, GObject Introspection, raylib 5.5 |
+| Dependencies | GLib 2.56+, GObject Introspection, raylib 6.0 |
 | Testing | GLib GTest framework |
 | Documentation | gtk-doc comments, gi-docgen |
 
@@ -146,6 +146,8 @@ Stack-allocatable, copyable value types:
 | `GrlMatrix` | 4x4 transformation matrix |
 | `GrlQuaternion` | Quaternion for 3D rotations (x, y, z, w) |
 | `GrlBoundingBox` | 3D bounding box (min, max) |
+| `GrlBoneInfo` | Skeleton bone metadata (name, parent) |
+| `GrlTransform` | Decomposed 3D transform (translation, rotation, scale) |
 | `GrlWave` | Raw audio wave data |
 | `GrlPngChunk` | PNG chunk metadata |
 | `GrlPngPalette` | PNG color palette |
@@ -165,6 +167,10 @@ Heap-allocated, reference-counted objects:
 **UI:** GrlUiControl (base), GrlUiButton, GrlUiLabel, GrlUiCheckBox, GrlUiSlider, GrlUiTextBox, GrlUiToggle, GrlUiProgressBar, GrlUiSpinner, GrlUiValueBox, GrlUiComboBox, GrlUiDropdownBox, GrlUiToggleGroup, GrlUiListView, GrlUiColorPicker, GrlUiPanel, GrlUiGroupBox, GrlUiWindowBox
 
 **Resources:** GrlResourcePack
+
+**Software renderer:** GrlSoftwareRenderer (wraps raylib 6.0's header-only `rlsw` CPU rasterizer; headless, no GPU. Singleton — one live instance.)
+
+**Modules of functions (no type):** `grl_fs_*` (filesystem helpers, `src/system/grl-fs.h`), `grl_text_*` (string utilities, `src/text/grl-text-utils.h`).
 
 ### Interfaces
 - `GrlDrawable` - Objects that can be drawn (`draw()`)

@@ -2,6 +2,16 @@
 
 This document covers the audio types added in Phase 4: audio device, sound effects, and streaming music.
 
+> **raylib 6.0 pan behavioral change.** Sound/music/stream pan is now
+> `[-1.0 .. 1.0]` end-to-end: `-1.0` = full left, `0.0` = centered, `1.0` = full
+> right. graylib's public pan API was always `[-1.0 .. 1.0]`; previously it
+> internally converted to raylib's old `[0 .. 1]` convention before forwarding.
+> raylib 6.0 adopts the `[-1.0 .. 1.0]` convention directly, so that internal
+> conversion has been **removed**. The public API is unchanged, but if you were
+> relying on the (undocumented) old internal mapping, the raw value now passes
+> straight through. Affected setters: `grl_sound_set_pan()`,
+> `grl_music_set_pan()`, and `grl_audio_stream_set_pan()`.
+
 ## GrlAudioDevice
 
 Singleton for managing the audio system. Must be initialized before using any audio features.

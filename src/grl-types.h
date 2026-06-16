@@ -110,6 +110,24 @@ typedef struct _GrlQuaternion GrlQuaternion;
 typedef struct _GrlBoundingBox GrlBoundingBox;
 
 /**
+ * GrlBoneInfo:
+ *
+ * Metadata for a single skeleton bone (name + parent index).
+ *
+ * This is a GBoxed type.
+ */
+typedef struct _GrlBoneInfo GrlBoneInfo;
+
+/**
+ * GrlTransform:
+ *
+ * A decomposed 3D transform (translation, rotation, scale).
+ *
+ * This is a GBoxed type.
+ */
+typedef struct _GrlTransform GrlTransform;
+
+/**
  * GrlPngChunk:
  *
  * A PNG chunk containing metadata or image data.

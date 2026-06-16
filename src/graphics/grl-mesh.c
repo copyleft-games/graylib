@@ -587,6 +587,27 @@ grl_mesh_get_triangle_count (GrlMesh *self)
 }
 
 /**
+ * grl_mesh_get_bone_count:
+ * @self: A #GrlMesh
+ *
+ * Gets the number of bones influencing this mesh for GPU/CPU skinning
+ * (0 if the mesh has no skin data).
+ *
+ * Returns: The bone count
+ */
+gint
+grl_mesh_get_bone_count (GrlMesh *self)
+{
+    GrlMeshPrivate *priv;
+
+    g_return_val_if_fail (GRL_IS_MESH (self), 0);
+
+    priv = grl_mesh_get_instance_private (self);
+
+    return priv->valid ? priv->mesh.boneCount : 0;
+}
+
+/**
  * grl_mesh_get_bounding_box:
  * @self: A #GrlMesh
  *

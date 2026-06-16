@@ -749,7 +749,7 @@ grl_music_set_pan (GrlMusic *self,
         self->pan = pan;
 
         if (self->is_loaded)
-            SetMusicPan (self->music, (pan + 1.0f) / 2.0f); /* Convert to 0.0-1.0 */
+            SetMusicPan (self->music, pan); /* raylib 6.0: pan is -1.0..1.0 */
 
         g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_PAN]);
     }

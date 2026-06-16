@@ -65,7 +65,21 @@ grl_model_animation_finalize (GObject *object)
 
     if (priv->valid && priv->owns_data)
     {
-        UnloadModelAnimation (priv->animation);
+        /* raylib 6.0 removed the public singular UnloadModelAnimation
+         * (only the array form UnloadModelAnimations remains) and renamed the
+         * fields: frameCount -> keyframeCount, framePoses -> keyframePoses.
+         * Bones now live in Model.skeleton, so an animation only owns its
+         * keyframe poses.  Free them directly, mirroring raylib's per-animation
+         * unload (RL_FREE defaults to free()). */
+        ModelAnimation *anim = &priv->animation;
+        gint f;
+
+        if (anim->keyframePoses != NULL)
+        {
+            for (f = 0; f < anim->keyframeCount; f++)
+                RL_FREE (anim->keyframePoses[f]);
+            RL_FREE (anim->keyframePoses);
+        }
         priv->valid = FALSE;
     }
 
@@ -88,7 +102,7 @@ grl_model_animation_get_property (GObject    *object,
         break;
 
     case PROP_FRAME_COUNT:
-        g_value_set_int (value, priv->valid ? priv->animation.frameCount : 0);
+        g_value_set_int (value, priv->valid ? priv->animation.keyframeCount : 0);
         break;
 
     case PROP_BONE_COUNT:
@@ -270,7 +284,7 @@ grl_model_animation_get_frame_count (GrlModelAnimation *self)
 
     priv = grl_model_animation_get_instance_private (self);
 
-    return priv->valid ? priv->animation.frameCount : 0;
+    return priv->valid ? priv->animation.keyframeCount : 0;
 }
 
 /**
@@ -291,6 +305,50 @@ grl_model_animation_get_bone_count (GrlModelAnimation *self)
     priv = grl_model_animation_get_instance_private (self);
 
     return priv->valid ? priv->animation.boneCount : 0;
+}
+
+/**
+ * grl_model_animation_get_frame_pose:
+ * @self: A #GrlModelAnimation
+ * @frame: Keyframe index in range [0, frame_count)
+ * @bone: Bone index in range [0, bone_count)
+ *
+ * Gets the local pose transform of a bone at a given animation keyframe.
+ *
+ * Returns: (transfer full) (nullable): A new #GrlTransform, or %NULL if
+ *          @frame or @bone is out of range
+ */
+GrlTransform *
+grl_model_animation_get_frame_pose (GrlModelAnimation *self,
+                                    gint               frame,
+                                    gint               bone)
+{
+    GrlModelAnimationPrivate *priv;
+    Transform                 t;
+    g_autoptr (GrlVector3)    translation = NULL;
+    g_autoptr (GrlQuaternion) rotation = NULL;
+    g_autoptr (GrlVector3)    scale = NULL;
+
+    g_return_val_if_fail (GRL_IS_MODEL_ANIMATION (self), NULL);
+
+    priv = grl_model_animation_get_instance_private (self);
+
+    if (!priv->valid || priv->animation.keyframePoses == NULL)
+        return NULL;
+
+    if (frame < 0 || frame >= priv->animation.keyframeCount)
+        return NULL;
+
+    if (bone < 0 || bone >= priv->animation.boneCount)
+        return NULL;
+
+    /* keyframePoses is a ModelAnimPose* (Transform**): [frame][bone] */
+    t = priv->animation.keyframePoses[frame][bone];
+    translation = grl_vector3_new (t.translation.x, t.translation.y, t.translation.z);
+    rotation = grl_quaternion_new (t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w);
+    scale = grl_vector3_new (t.scale.x, t.scale.y, t.scale.z);
+
+    return grl_transform_new (translation, rotation, scale);
 }
 
 /**
@@ -320,6 +378,45 @@ grl_model_animation_update (GrlModelAnimation *self,
 
     rl_model = (Model *)grl_model_get_handle (model);
     UpdateModelAnimation (*rl_model, priv->animation, frame);
+}
+
+/**
+ * grl_model_animation_blend:
+ * @model: The model to animate
+ * @anim_a: First animation
+ * @frame_a: Frame within @anim_a
+ * @anim_b: Second animation to blend toward
+ * @frame_b: Frame within @anim_b
+ * @blend: Blend factor in [0.0, 1.0] (0.0 = @anim_a, 1.0 = @anim_b)
+ *
+ * Updates @model's pose by blending between two animation frames using
+ * raylib 6.0's UpdateModelAnimationEx().
+ */
+void
+grl_model_animation_blend (GrlModel          *model,
+                           GrlModelAnimation *anim_a,
+                           gfloat             frame_a,
+                           GrlModelAnimation *anim_b,
+                           gfloat             frame_b,
+                           gfloat             blend)
+{
+    GrlModelAnimationPrivate *priv_a;
+    GrlModelAnimationPrivate *priv_b;
+    Model                    *rl_model;
+
+    g_return_if_fail (GRL_IS_MODEL (model));
+    g_return_if_fail (GRL_IS_MODEL_ANIMATION (anim_a));
+    g_return_if_fail (GRL_IS_MODEL_ANIMATION (anim_b));
+
+    priv_a = grl_model_animation_get_instance_private (anim_a);
+    priv_b = grl_model_animation_get_instance_private (anim_b);
+
+    if (!priv_a->valid || !priv_b->valid)
+        return;
+
+    rl_model = (Model *)grl_model_get_handle (model);
+    UpdateModelAnimationEx (*rl_model, priv_a->animation, frame_a,
+                            priv_b->animation, frame_b, blend);
 }
 
 /**

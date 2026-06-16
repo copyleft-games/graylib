@@ -10,7 +10,7 @@
 
 ## Features
 
-- Full wrapper around raylib 5.5 functionality
+- Full wrapper around raylib 6.0 functionality
 - Both static and shared library builds
 - Debug build support for gdb
 - Comprehensive documentation
@@ -39,9 +39,12 @@ See [Best Practices](best_practices.md) for common pitfalls and solutions when w
 - [Audio](api/audio.md) - Sound effects and music
 - [Scene](api/scene.md) - Entity system, sprites, and animations
 - [Cameras](api/cameras.md) - 2D and 3D camera systems
-- [Models](api/models.md) - 3D meshes, materials, models, and animations
+- [Models](api/models.md) - 3D meshes, materials, models, and skeletal animation (GPU skinning, bones, transforms)
 - [Collision](api/collision.md) - 2D and 3D collision detection
 - [RLGL](api/rlgl.md) - Low-level OpenGL abstraction layer
+- [Software Renderer](api/software-renderer.md) - Headless CPU rasterizer (rlsw)
+- [System](api/system.md) - Filesystem helper functions (`grl_fs_*`)
+- [Text](api/text.md) - String utility functions (`grl_text_*`)
 - [Enumerations](api/enums.md) - Key codes, blend modes, and other constants
 
 ## Examples
@@ -85,7 +88,7 @@ Note: raylib (bundled in deps/) is licensed under the Zlib license.
 
 - GLib 2.56+
 - GObject Introspection
-- raylib 5.5 (included as submodule)
+- raylib 6.0 (included as submodule)
 
 ### Fedora
 

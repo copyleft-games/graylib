@@ -24,7 +24,8 @@ guint
 grl_rlgl_load_shader_code (const gchar *vs_code,
                            const gchar *fs_code)
 {
-    return rlLoadShaderCode (vs_code, fs_code);
+    /* raylib 6.0 renamed rlLoadShaderCode -> rlLoadShaderProgram (string form) */
+    return rlLoadShaderProgram (vs_code, fs_code);
 }
 
 /**
@@ -42,7 +43,8 @@ grl_rlgl_compile_shader (const gchar *shader_code,
 {
     g_return_val_if_fail (shader_code != NULL, 0);
 
-    return rlCompileShader (shader_code, (int)type);
+    /* raylib 6.0 renamed rlCompileShader -> rlLoadShader */
+    return rlLoadShader (shader_code, (int)type);
 }
 
 /**
@@ -58,7 +60,9 @@ guint
 grl_rlgl_load_shader_program (guint vs_id,
                               guint fs_id)
 {
-    return rlLoadShaderProgram (vs_id, fs_id);
+    /* raylib 6.0: id-based linking is now rlLoadShaderProgramEx
+     * (rlLoadShaderProgram now takes code strings) */
+    return rlLoadShaderProgramEx (vs_id, fs_id);
 }
 
 /**

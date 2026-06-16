@@ -16,6 +16,7 @@
 #include <glib-object.h>
 #include "../grl-version.h"
 #include "grl-model.h"
+#include "grl-transform.h"
 
 G_BEGIN_DECLS
 
@@ -82,6 +83,22 @@ GRL_AVAILABLE_IN_ALL
 gint                grl_model_animation_get_bone_count (GrlModelAnimation *self);
 
 /**
+ * grl_model_animation_get_frame_pose:
+ * @self: A #GrlModelAnimation
+ * @frame: Keyframe index in range [0, frame_count)
+ * @bone: Bone index in range [0, bone_count)
+ *
+ * Gets the local pose transform of a bone at a given animation keyframe.
+ *
+ * Returns: (transfer full) (nullable): A new #GrlTransform, or %NULL if
+ *          @frame or @bone is out of range
+ */
+GRL_AVAILABLE_IN_ALL
+GrlTransform *      grl_model_animation_get_frame_pose (GrlModelAnimation *self,
+                                                        gint               frame,
+                                                        gint               bone);
+
+/**
  * grl_model_animation_update:
  * @self: A #GrlModelAnimation
  * @model: The model to animate
@@ -93,6 +110,27 @@ GRL_AVAILABLE_IN_ALL
 void                grl_model_animation_update      (GrlModelAnimation  *self,
                                                      GrlModel           *model,
                                                      gint                frame);
+
+/**
+ * grl_model_animation_blend:
+ * @model: The model to animate
+ * @anim_a: First animation
+ * @frame_a: Frame within @anim_a
+ * @anim_b: Second animation to blend toward
+ * @frame_b: Frame within @anim_b
+ * @blend: Blend factor in [0.0, 1.0] (0.0 = @anim_a, 1.0 = @anim_b)
+ *
+ * Updates @model's pose by blending between two animation frames, using
+ * raylib 6.0's GPU-skinning-aware animation blending. This is the basis for
+ * smooth transitions between animation clips.
+ */
+GRL_AVAILABLE_IN_ALL
+void                grl_model_animation_blend       (GrlModel           *model,
+                                                     GrlModelAnimation  *anim_a,
+                                                     gfloat              frame_a,
+                                                     GrlModelAnimation  *anim_b,
+                                                     gfloat              frame_b,
+                                                     gfloat              blend);
 
 /**
  * grl_model_animation_is_valid:

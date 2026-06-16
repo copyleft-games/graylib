@@ -51,7 +51,14 @@ TEST_SOURCES := \
 	test-image-noise-overlay.c \
 	test-image-bloom.c \
 	test-image-stamp-path.c \
-	test-image-layer.c
+	test-image-layer.c \
+	test-bone-info.c \
+	test-transform.c \
+	test-fs.c \
+	test-text.c \
+	test-software-renderer.c \
+	test-sound-pan.c \
+	test-model-skinning.c
 
 # Test executables (with output directory and platform-specific extension)
 TEST_PROGRAMS := $(addprefix $(TESTOUTDIR)/,$(patsubst %.c,%$(EXE_EXT),$(TEST_SOURCES)))

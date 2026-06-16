@@ -230,6 +230,17 @@ GRL_AVAILABLE_IN_ALL
 gint                grl_mesh_get_triangle_count     (GrlMesh            *self);
 
 /**
+ * grl_mesh_get_bone_count:
+ * @self: A #GrlMesh
+ *
+ * Gets the number of bones influencing this mesh for skinning.
+ *
+ * Returns: The bone count (0 if the mesh has no skin data)
+ */
+GRL_AVAILABLE_IN_ALL
+gint                grl_mesh_get_bone_count         (GrlMesh            *self);
+
+/**
  * grl_mesh_get_bounding_box:
  * @self: A #GrlMesh
  *

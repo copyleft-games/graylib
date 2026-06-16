@@ -30,7 +30,7 @@ else
     # Use -isystem to suppress warnings from raylib headers (raymath.h has C99 code)
     RAYLIB_CFLAGS := -isystem $(RAYLIB_SRC)
     RAYLIB_LIBS := $(RAYLIB_SRC)/libraylib.a
-    RAYLIB_VERSION := 5.5
+    RAYLIB_VERSION := 6.0
 endif
 
 # =============================================================================

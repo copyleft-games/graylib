@@ -868,3 +868,238 @@ typedef enum
 | `GRL_RLGL_SHADER_FRAGMENT` | Fragment (pixel) shader |
 | `GRL_RLGL_SHADER_VERTEX` | Vertex shader |
 | `GRL_RLGL_SHADER_COMPUTE` | Compute shader |
+
+## Software Renderer (rlsw)
+
+These enumerations configure the headless CPU rasterizer. See
+[Software Renderer](software-renderer.md) for the full API. The numeric values
+mirror the underlying `rlsw` `SW*` enumerators (themselves OpenGL token values),
+so they can be cast straight across the ABI boundary.
+
+### GrlSwState
+
+Toggleable rasterizer state capabilities, used with
+`grl_software_renderer_enable()` and `grl_software_renderer_disable()`.
+
+```c
+typedef enum
+{
+    GRL_SW_STATE_SCISSOR_TEST = 0x0C11,
+    GRL_SW_STATE_TEXTURE_2D   = 0x0DE1,
+    GRL_SW_STATE_DEPTH_TEST   = 0x0B71,
+    GRL_SW_STATE_CULL_FACE    = 0x0B44,
+    GRL_SW_STATE_BLEND        = 0x0BE2
+} GrlSwState;
+```
+
+| Value | Description |
+|-------|-------------|
+| `GRL_SW_STATE_SCISSOR_TEST` | Enable/disable the scissor test |
+| `GRL_SW_STATE_TEXTURE_2D` | Enable/disable 2D texturing |
+| `GRL_SW_STATE_DEPTH_TEST` | Enable/disable the depth test |
+| `GRL_SW_STATE_CULL_FACE` | Enable/disable face culling |
+| `GRL_SW_STATE_BLEND` | Enable/disable blending |
+
+### GrlSwBuffer
+
+Framebuffer clear bitmask flags, combined with bitwise OR and passed to
+`grl_software_renderer_clear()`.
+
+```c
+typedef enum /*< flags >*/
+{
+    GRL_SW_BUFFER_COLOR = 0x00004000,
+    GRL_SW_BUFFER_DEPTH = 0x00000100
+} GrlSwBuffer;
+```
+
+| Flag | Description |
+|------|-------------|
+| `GRL_SW_BUFFER_COLOR` | Clear the color buffer |
+| `GRL_SW_BUFFER_DEPTH` | Clear the depth buffer |
+
+### GrlSwMatrixMode
+
+Selects which matrix stack subsequent matrix operations affect, used with
+`grl_software_renderer_matrix_mode()`.
+
+```c
+typedef enum
+{
+    GRL_SW_MATRIX_MODE_MODELVIEW  = 0x1700,
+    GRL_SW_MATRIX_MODE_PROJECTION = 0x1701,
+    GRL_SW_MATRIX_MODE_TEXTURE    = 0x1702
+} GrlSwMatrixMode;
+```
+
+| Mode | Description |
+|------|-------------|
+| `GRL_SW_MATRIX_MODE_MODELVIEW` | The modelview matrix stack |
+| `GRL_SW_MATRIX_MODE_PROJECTION` | The projection matrix stack |
+| `GRL_SW_MATRIX_MODE_TEXTURE` | The texture matrix stack |
+
+### GrlSwDrawMode
+
+Primitive assembly mode, used with `grl_software_renderer_begin()`.
+
+```c
+typedef enum
+{
+    GRL_SW_DRAW_MODE_POINTS    = 0x0000,
+    GRL_SW_DRAW_MODE_LINES     = 0x0001,
+    GRL_SW_DRAW_MODE_TRIANGLES = 0x0004,
+    GRL_SW_DRAW_MODE_QUADS     = 0x0007
+} GrlSwDrawMode;
+```
+
+| Mode | Description |
+|------|-------------|
+| `GRL_SW_DRAW_MODE_POINTS` | Draw a sequence of points |
+| `GRL_SW_DRAW_MODE_LINES` | Draw a sequence of line segments |
+| `GRL_SW_DRAW_MODE_TRIANGLES` | Draw a sequence of triangles |
+| `GRL_SW_DRAW_MODE_QUADS` | Draw a sequence of quads |
+
+### GrlSwPolygonMode
+
+Polygon rasterization mode, used with `grl_software_renderer_polygon_mode()`.
+
+```c
+typedef enum
+{
+    GRL_SW_POLYGON_MODE_POINT = 0x1B00,
+    GRL_SW_POLYGON_MODE_LINE  = 0x1B01,
+    GRL_SW_POLYGON_MODE_FILL  = 0x1B02
+} GrlSwPolygonMode;
+```
+
+| Mode | Description |
+|------|-------------|
+| `GRL_SW_POLYGON_MODE_POINT` | Rasterize polygons as points |
+| `GRL_SW_POLYGON_MODE_LINE` | Rasterize polygons as wireframe lines |
+| `GRL_SW_POLYGON_MODE_FILL` | Rasterize polygons as filled faces |
+
+### GrlSwFace
+
+Selects which polygon faces are culled, used with
+`grl_software_renderer_cull_face()`.
+
+```c
+typedef enum
+{
+    GRL_SW_FACE_FRONT = 0x0404,
+    GRL_SW_FACE_BACK  = 0x0405
+} GrlSwFace;
+```
+
+| Face | Description |
+|------|-------------|
+| `GRL_SW_FACE_FRONT` | Cull front-facing polygons |
+| `GRL_SW_FACE_BACK` | Cull back-facing polygons |
+
+### GrlSwFactor
+
+Blend factors for `grl_software_renderer_blend_func()`.
+
+```c
+typedef enum
+{
+    GRL_SW_FACTOR_ZERO                = 0,
+    GRL_SW_FACTOR_ONE                 = 1,
+    GRL_SW_FACTOR_SRC_COLOR           = 0x0300,
+    GRL_SW_FACTOR_ONE_MINUS_SRC_COLOR = 0x0301,
+    GRL_SW_FACTOR_SRC_ALPHA           = 0x0302,
+    GRL_SW_FACTOR_ONE_MINUS_SRC_ALPHA = 0x0303,
+    GRL_SW_FACTOR_DST_ALPHA           = 0x0304,
+    GRL_SW_FACTOR_ONE_MINUS_DST_ALPHA = 0x0305,
+    GRL_SW_FACTOR_DST_COLOR           = 0x0306,
+    GRL_SW_FACTOR_ONE_MINUS_DST_COLOR = 0x0307,
+    GRL_SW_FACTOR_SRC_ALPHA_SATURATE  = 0x0308
+} GrlSwFactor;
+```
+
+| Factor | Description |
+|--------|-------------|
+| `GRL_SW_FACTOR_ZERO` | Factor of (0, 0, 0, 0) |
+| `GRL_SW_FACTOR_ONE` | Factor of (1, 1, 1, 1) |
+| `GRL_SW_FACTOR_SRC_COLOR` | Source color factor |
+| `GRL_SW_FACTOR_ONE_MINUS_SRC_COLOR` | 1 − source color |
+| `GRL_SW_FACTOR_SRC_ALPHA` | Source alpha factor |
+| `GRL_SW_FACTOR_ONE_MINUS_SRC_ALPHA` | 1 − source alpha |
+| `GRL_SW_FACTOR_DST_ALPHA` | Destination alpha factor |
+| `GRL_SW_FACTOR_ONE_MINUS_DST_ALPHA` | 1 − destination alpha |
+| `GRL_SW_FACTOR_DST_COLOR` | Destination color factor |
+| `GRL_SW_FACTOR_ONE_MINUS_DST_COLOR` | 1 − destination color |
+| `GRL_SW_FACTOR_SRC_ALPHA_SATURATE` | Saturated source alpha |
+
+### GrlSwFormat
+
+Pixel component layout, used by `grl_software_renderer_tex_image_2d()` and the
+pixel-readback functions.
+
+```c
+typedef enum
+{
+    GRL_SW_FORMAT_LUMINANCE       = 0x1909,
+    GRL_SW_FORMAT_LUMINANCE_ALPHA = 0x190A,
+    GRL_SW_FORMAT_RGB             = 0x1907,
+    GRL_SW_FORMAT_RGBA            = 0x1908,
+    GRL_SW_FORMAT_DEPTH_COMPONENT = 0x1902
+} GrlSwFormat;
+```
+
+| Format | Description |
+|--------|-------------|
+| `GRL_SW_FORMAT_LUMINANCE` | Single-channel luminance |
+| `GRL_SW_FORMAT_LUMINANCE_ALPHA` | Luminance + alpha |
+| `GRL_SW_FORMAT_RGB` | Three-channel RGB |
+| `GRL_SW_FORMAT_RGBA` | Four-channel RGBA |
+| `GRL_SW_FORMAT_DEPTH_COMPONENT` | Depth component |
+
+### GrlSwType
+
+Per-component data type, used by `grl_software_renderer_tex_image_2d()` and the
+pixel-readback functions.
+
+```c
+typedef enum
+{
+    GRL_SW_TYPE_BYTE           = 0x1400,
+    GRL_SW_TYPE_UNSIGNED_BYTE  = 0x1401,
+    GRL_SW_TYPE_SHORT          = 0x1402,
+    GRL_SW_TYPE_UNSIGNED_SHORT = 0x1403,
+    GRL_SW_TYPE_INT            = 0x1404,
+    GRL_SW_TYPE_UNSIGNED_INT   = 0x1405,
+    GRL_SW_TYPE_FLOAT          = 0x1406
+} GrlSwType;
+```
+
+| Type | Description |
+|------|-------------|
+| `GRL_SW_TYPE_BYTE` | 8-bit signed integer |
+| `GRL_SW_TYPE_UNSIGNED_BYTE` | 8-bit unsigned integer |
+| `GRL_SW_TYPE_SHORT` | 16-bit signed integer |
+| `GRL_SW_TYPE_UNSIGNED_SHORT` | 16-bit unsigned integer |
+| `GRL_SW_TYPE_INT` | 32-bit signed integer |
+| `GRL_SW_TYPE_UNSIGNED_INT` | 32-bit unsigned integer |
+| `GRL_SW_TYPE_FLOAT` | 32-bit float |
+
+### GrlSwTexParam
+
+Texture parameter names accepted by `grl_software_renderer_tex_parameteri()`.
+
+```c
+typedef enum
+{
+    GRL_SW_TEX_PARAM_MAG_FILTER = 0x2800,
+    GRL_SW_TEX_PARAM_MIN_FILTER = 0x2801,
+    GRL_SW_TEX_PARAM_WRAP_S     = 0x2802,
+    GRL_SW_TEX_PARAM_WRAP_T     = 0x2803
+} GrlSwTexParam;
+```
+
+| Parameter | Description |
+|-----------|-------------|
+| `GRL_SW_TEX_PARAM_MAG_FILTER` | Magnification filter |
+| `GRL_SW_TEX_PARAM_MIN_FILTER` | Minification filter |
+| `GRL_SW_TEX_PARAM_WRAP_S` | Horizontal wrap mode |
+| `GRL_SW_TEX_PARAM_WRAP_T` | Vertical wrap mode |

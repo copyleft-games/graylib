@@ -458,8 +458,8 @@ grl_draw_circle_gradient (gint            center_x,
     g_return_if_fail (inner != NULL);
     g_return_if_fail (outer != NULL);
 
-    DrawCircleGradient (center_x,
-                        center_y,
+    /* raylib 6.0 changed DrawCircleGradient to take a Vector2 center */
+    DrawCircleGradient ((Vector2){ .x = (gfloat)center_x, .y = (gfloat)center_y },
                         radius,
                         GRL_TO_RAYLIB_COLOR (inner),
                         GRL_TO_RAYLIB_COLOR (outer));

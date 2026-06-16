@@ -1,6 +1,6 @@
 # Graylib
 
-**Graylib** is a GObject/GLib wrapper around the [raylib](https://www.raylib.com/) 5.5 game programming library.
+**Graylib** is a GObject/GLib wrapper around the [raylib](https://www.raylib.com/) 6.0 game programming library.
 
 ## Features
 
@@ -265,7 +265,7 @@ export PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig:$PKG_CONFIG_PATH
 - GNU Make
 - GLib 2.56+
 - GObject Introspection
-- raylib 5.5 (included as submodule)
+- raylib 6.0 (included as submodule)
 
 ## License
 

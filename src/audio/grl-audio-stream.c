@@ -647,7 +647,7 @@ grl_audio_stream_set_pan (GrlAudioStream *self,
         self->pan = pan;
 
         if (self->is_loaded)
-            SetAudioStreamPan (self->stream, (pan + 1.0f) / 2.0f); /* Convert to 0.0-1.0 */
+            SetAudioStreamPan (self->stream, pan); /* raylib 6.0: pan is -1.0..1.0 */
 
         g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_PAN]);
     }

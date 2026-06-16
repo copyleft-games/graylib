@@ -216,7 +216,7 @@ make RAYLIB_SHARED=1
 When using system raylib:
 - pkg-config is used to find raylib
 - The bundled raylib is not built
-- Make sure raylib 5.5+ is installed
+- Make sure raylib 6.0+ is installed
 
 ## Cross-Platform Support
 

@@ -82,6 +82,18 @@ base_url = "https://gitlab.com/your-username/graylib/-/blob/master/"
   title = "Scene API"
   filename = "api/scene.md"
 
+  [[extra.docs]]
+  title = "Software Renderer API"
+  filename = "api/software-renderer.md"
+
+  [[extra.docs]]
+  title = "System API"
+  filename = "api/system.md"
+
+  [[extra.docs]]
+  title = "Text API"
+  filename = "api/text.md"
+
 [object_hierarchy]
 
   description = """

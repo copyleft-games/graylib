@@ -769,7 +769,7 @@ grl_sound_set_pan (GrlSound *self,
         self->pan = pan;
 
         if (self->is_loaded)
-            SetSoundPan (self->sound, (pan + 1.0f) / 2.0f); /* Convert to 0.0-1.0 */
+            SetSoundPan (self->sound, pan); /* raylib 6.0: pan is -1.0..1.0 */
 
         g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_PAN]);
     }

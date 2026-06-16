@@ -99,6 +99,11 @@ PUBLIC_HEADERS := \
 	src/resources/grl-resource-chunk-info.h \
 	src/resources/grl-resource-pack.h \
 	src/rlgl/grl-rlgl.h \
+	src/graphics/grl-bone-info.h \
+	src/graphics/grl-transform.h \
+	src/rlsw/grl-software-renderer.h \
+	src/system/grl-fs.h \
+	src/text/grl-text-utils.h \
 	src/grl-utils.h
 
 # Source files
@@ -184,6 +189,11 @@ SOURCES := \
 	src/rlgl/grl-rlgl-buffer.c \
 	src/rlgl/grl-rlgl-framebuffer.c \
 	src/rlgl/grl-rlgl-shader.c \
+	src/graphics/grl-bone-info.c \
+	src/graphics/grl-transform.c \
+	src/rlsw/grl-software-renderer.c \
+	src/system/grl-fs.c \
+	src/text/grl-text-utils.c \
 	src/grl-utils.c
 
 # Object files
@@ -691,6 +701,29 @@ $(OBJDIR)/src/graphics/grl-model.o: src/graphics/grl-model.c
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
 $(OBJDIR)/src/graphics/grl-model-animation.o: src/graphics/grl-model-animation.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(LIB_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/graphics/grl-bone-info.o: src/graphics/grl-bone-info.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(LIB_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/graphics/grl-transform.o: src/graphics/grl-transform.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(LIB_CFLAGS) -c -o $@ $<
+
+# Software renderer module (rlsw is header-only C99; build this TU as gnu99)
+$(OBJDIR)/src/rlsw/grl-software-renderer.o: src/rlsw/grl-software-renderer.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(subst -std=gnu89,-std=gnu99,$(LIB_CFLAGS)) -c -o $@ $<
+
+# System module
+$(OBJDIR)/src/system/grl-fs.o: src/system/grl-fs.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(LIB_CFLAGS) -c -o $@ $<
+
+# Text module
+$(OBJDIR)/src/text/grl-text-utils.o: src/text/grl-text-utils.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
