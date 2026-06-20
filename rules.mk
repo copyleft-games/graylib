@@ -87,7 +87,7 @@ ifeq ($(DEBUG),1)
         OPT_LDFLAGS += -fsanitize=undefined
     endif
 else
-    OPT_CFLAGS := -O2 -DNDEBUG
+    OPT_CFLAGS := -Og -g -DNDEBUG
     # Link-time optimization (optional, can be slow)
     # OPT_CFLAGS += -flto
     # OPT_LDFLAGS += -flto
