@@ -1696,6 +1696,10 @@ grl_window_poll_events (GrlWindow *self)
     g_return_if_fail (GRL_IS_WINDOW (self));
 
     PollInputEvents ();
+    /* Deliver queued test injections INSIDE the poll so their
+       press/release edges survive the current->previous copy that
+       PollInputEvents performs at its start (see grl-input.c).  */
+    grl_input_drain_injections ();
 }
 
 /**

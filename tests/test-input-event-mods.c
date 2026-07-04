@@ -101,6 +101,18 @@ test_event_mods_init_headless (void)
     g_assert_false (grl_input_event_mods_armed ());
 }
 
+/*
+ * Test injection requires an armed chain: headless it must refuse (and
+ * draining with an empty queue is a no-op).
+ */
+static void
+test_injection_requires_arming (void)
+{
+    g_assert_false (grl_input_inject_mouse_motion (10.0, 10.0));
+    g_assert_false (grl_input_inject_mouse_button (0, TRUE, 0));
+    grl_input_drain_injections ();      /* must not crash */
+}
+
 int
 main (int argc, char *argv[])
 {
@@ -116,6 +128,8 @@ main (int argc, char *argv[])
                      test_focus_generation_both_edges);
     g_test_add_func ("/input/event-mods/init-headless",
                      test_event_mods_init_headless);
+    g_test_add_func ("/input/event-mods/injection-requires-arming",
+                     test_injection_requires_arming);
 
     return g_test_run ();
 }

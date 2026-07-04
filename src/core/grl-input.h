@@ -643,6 +643,46 @@ GRL_AVAILABLE_IN_ALL
 gboolean        grl_input_event_mods_armed          (void);
 
 /**
+ * grl_input_inject_mouse_motion:
+ * @x: cursor x in window pixels
+ * @y: cursor y in window pixels
+ *
+ * TESTING: synthesise pointer motion through the backend's GLFW cursor
+ * callback (updates polled position/deltas like a real move).
+ *
+ * Returns: %TRUE when delivered (arming required)
+ */
+GRL_AVAILABLE_IN_ALL
+gboolean        grl_input_inject_mouse_motion       (gdouble x,
+                                                     gdouble y);
+
+/**
+ * grl_input_inject_mouse_button:
+ * @button: GLFW button number (0 left, 1 right, 2 middle, ...)
+ * @pressed: %TRUE for press, %FALSE for release
+ * @mods: #GrlEventMods bits carried on the event
+ *
+ * TESTING: synthesise a button event through the full callback chain
+ * (recorder + backend), driving polled state and press/release edges
+ * like a real click.
+ *
+ * Returns: %TRUE when delivered (arming required)
+ */
+GRL_AVAILABLE_IN_ALL
+gboolean        grl_input_inject_mouse_button       (gint button,
+                                                     gboolean pressed,
+                                                     guint mods);
+
+/**
+ * grl_input_drain_injections: (skip)
+ *
+ * Delivers queued injected events; called by grl_window_poll_events()
+ * right after the real pump.  Not for application use.
+ */
+GRL_AVAILABLE_IN_ALL
+void            grl_input_drain_injections          (void);
+
+/**
  * grl_input_record_event_mods:
  * @mods: the #GrlEventMods bits of an input event
  *

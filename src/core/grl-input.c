@@ -777,7 +777,10 @@ typedef struct GLFWwindow GLFWwindow;
 typedef void (*GrlGlfwKeyFn) (GLFWwindow *, int, int, int, int);
 typedef void (*GrlGlfwMouseButtonFn) (GLFWwindow *, int, int, int);
 typedef void (*GrlGlfwFocusFn) (GLFWwindow *, int);
+typedef void (*GrlGlfwCursorPosFn) (GLFWwindow *, double, double);
 extern GrlGlfwKeyFn glfwSetKeyCallback (GLFWwindow *, GrlGlfwKeyFn);
+extern GrlGlfwCursorPosFn glfwSetCursorPosCallback (GLFWwindow *,
+                                                    GrlGlfwCursorPosFn);
 extern GrlGlfwMouseButtonFn glfwSetMouseButtonCallback (GLFWwindow *,
                                                         GrlGlfwMouseButtonFn);
 extern GrlGlfwFocusFn glfwSetWindowFocusCallback (GLFWwindow *, GrlGlfwFocusFn);
@@ -796,6 +799,8 @@ static guint   grl_focus_generation;
 static GrlGlfwKeyFn         grl_prev_key_cb;
 static GrlGlfwMouseButtonFn grl_prev_button_cb;
 static GrlGlfwFocusFn       grl_prev_focus_cb;
+static GrlGlfwCursorPosFn   grl_cursor_cb;   /* backend's, for injection */
+static GLFWwindow          *grl_hooked_win;
 static gboolean             grl_event_mods_armed;
 
 void
@@ -889,6 +894,111 @@ grl_input_event_mods_init (void)
     prev_focus = glfwSetWindowFocusCallback (win, grl_chain_focus_cb);
     if (prev_focus != grl_chain_focus_cb)
         grl_prev_focus_cb = prev_focus;
+    /* Grab (and restore) the backend's cursor-position callback so the
+       test injector below can synthesise motion through it.  */
+    grl_cursor_cb = glfwSetCursorPosCallback (win, NULL);
+    glfwSetCursorPosCallback (win, grl_cursor_cb);
+    grl_hooked_win = win;
     grl_event_mods_armed = TRUE;
     return TRUE;
+}
+
+/* Injection queue.  Injected events must be delivered INSIDE the poll
+   (grl_input_drain_injections, called by grl_window_poll_events right
+   after the backend's own pump): the backend detects press/release edges
+   by copying current->previous state at the START of its poll, so an
+   event applied between polls has its edge erased by that copy.  Real
+   window-system events arrive during the pump and never hit this.  */
+typedef struct
+{
+    gboolean is_button;
+    gdouble  x;
+    gdouble  y;
+    gint     button;
+    gboolean pressed;
+    guint    mods;
+} GrlInjectedEvent;
+
+#define GRL_INJECT_MAX 128
+static GrlInjectedEvent grl_inject_q[GRL_INJECT_MAX];
+static gint grl_inject_len;
+
+/**
+ * grl_input_inject_mouse_motion:
+ * @x: cursor x in window pixels
+ * @y: cursor y in window pixels
+ *
+ * TESTING: queue a synthetic pointer motion; the next poll delivers it
+ * through the backend's own GLFW cursor callback, exactly as if the
+ * window system had sent it.  Requires grl_input_event_mods_init().
+ *
+ * Returns: %TRUE when queued
+ */
+gboolean
+grl_input_inject_mouse_motion (gdouble x, gdouble y)
+{
+    GrlInjectedEvent *e;
+
+    if (!grl_event_mods_armed || grl_cursor_cb == NULL
+        || grl_inject_len >= GRL_INJECT_MAX)
+        return FALSE;
+    e = &grl_inject_q[grl_inject_len++];
+    e->is_button = FALSE;
+    e->x = x;
+    e->y = y;
+    return TRUE;
+}
+
+/**
+ * grl_input_inject_mouse_button:
+ * @button: GLFW button number (0 left, 1 right, 2 middle, ...)
+ * @pressed: %TRUE for press, %FALSE for release
+ * @mods: #GrlEventMods bits to carry on the event
+ *
+ * TESTING: queue a synthetic button event; the next poll delivers it
+ * through the full callback chain (event-mods recorder AND the
+ * backend's handler), so polled state, press/release edges and
+ * event-carried modifiers behave exactly as for a real click.
+ *
+ * Returns: %TRUE when queued
+ */
+gboolean
+grl_input_inject_mouse_button (gint button, gboolean pressed, guint mods)
+{
+    GrlInjectedEvent *e;
+
+    if (!grl_event_mods_armed || grl_inject_len >= GRL_INJECT_MAX)
+        return FALSE;
+    e = &grl_inject_q[grl_inject_len++];
+    e->is_button = TRUE;
+    e->button = button;
+    e->pressed = pressed;
+    e->mods = mods;
+    return TRUE;
+}
+
+/**
+ * grl_input_drain_injections: (skip)
+ *
+ * Deliver queued synthetic events through the backend callbacks.  Called
+ * by grl_window_poll_events() right after the real pump; not public API.
+ */
+void
+grl_input_drain_injections (void)
+{
+    gint i;
+
+    if (grl_inject_len == 0)
+        return;
+    for (i = 0; i < grl_inject_len; i++)
+      {
+        GrlInjectedEvent *e = &grl_inject_q[i];
+
+        if (e->is_button)
+            grl_chain_button_cb (grl_hooked_win, e->button,
+                                 e->pressed ? 1 : 0, (int) e->mods);
+        else if (grl_cursor_cb != NULL)
+            grl_cursor_cb (grl_hooked_win, e->x, e->y);
+      }
+    grl_inject_len = 0;
 }
