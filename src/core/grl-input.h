@@ -562,4 +562,97 @@ GrlVector2 *    grl_input_get_gesture_pinch_vector  (void);
 GRL_AVAILABLE_IN_ALL
 gfloat          grl_input_get_gesture_pinch_angle   (void);
 
+/**
+ * GrlEventMods:
+ * @GRL_EVENT_MOD_SHIFT: a Shift key was held
+ * @GRL_EVENT_MOD_CONTROL: a Control key was held
+ * @GRL_EVENT_MOD_ALT: an Alt key was held
+ * @GRL_EVENT_MOD_SUPER: a Super key was held
+ *
+ * Modifier bits carried by input events (values mirror GLFW's GLFW_MOD_*).
+ * Unlike polled key state, event-carried modifiers are authoritative: they
+ * come from the window system's own modifier tracking (xkb state on
+ * Wayland), so a modifier release swallowed by a compositor grab (e.g. a
+ * global screenshot shortcut) self-corrects on the next input event
+ * instead of latching a phantom modifier.
+ */
+typedef enum
+{
+    GRL_EVENT_MOD_SHIFT   = 0x0001,
+    GRL_EVENT_MOD_CONTROL = 0x0002,
+    GRL_EVENT_MOD_ALT     = 0x0004,
+    GRL_EVENT_MOD_SUPER   = 0x0008
+} GrlEventMods;
+
+/**
+ * grl_input_event_mods_init:
+ *
+ * Arms event-carried modifier tracking by chaining onto the window's GLFW
+ * key, mouse-button and focus callbacks (the previous callbacks keep
+ * running).  Idempotent -- safe to call every frame; re-arms itself if the
+ * backend re-installed its callbacks.  Requires an open window on a GLFW
+ * platform.
+ *
+ * Returns: %TRUE when the hooks are (already) installed
+ */
+GRL_AVAILABLE_IN_ALL
+gboolean        grl_input_event_mods_init           (void);
+
+/**
+ * grl_input_get_event_mods:
+ *
+ * The #GrlEventMods bitmask carried by the most recent key or mouse-button
+ * event.  0 before any event was recorded (see
+ * grl_input_get_event_mods_serial() to distinguish "no events yet").
+ *
+ * Returns: the most recent event's modifier bits
+ */
+GRL_AVAILABLE_IN_ALL
+guint           grl_input_get_event_mods            (void);
+
+/**
+ * grl_input_get_event_mods_serial:
+ *
+ * Increments every time an input event records its modifiers.  0 means no
+ * event has been seen (callers should fall back to polled key state).
+ *
+ * Returns: the event counter
+ */
+GRL_AVAILABLE_IN_ALL
+guint64         grl_input_get_event_mods_serial     (void);
+
+/**
+ * grl_input_get_focus_generation:
+ *
+ * Increments on every window focus change (gained or lost).  Polling this
+ * catches a focus loss + regain that both happen between two polls of
+ * grl_window_is_focused() -- e.g. a compositor global-shortcut grab.
+ *
+ * Returns: the focus-change counter
+ */
+GRL_AVAILABLE_IN_ALL
+guint           grl_input_get_focus_generation      (void);
+
+/**
+ * grl_input_record_event_mods:
+ * @mods: the #GrlEventMods bits of an input event
+ *
+ * Records an input event's modifier bits (bumps the serial).  Called by the
+ * chained GLFW callbacks; exposed so tests and alternative backends can
+ * drive the tracker directly.
+ */
+GRL_AVAILABLE_IN_ALL
+void            grl_input_record_event_mods         (guint mods);
+
+/**
+ * grl_input_record_focus:
+ * @focused: whether the window gained focus
+ *
+ * Records a window focus change (bumps the focus generation).  Called by
+ * the chained GLFW focus callback; exposed for tests and alternative
+ * backends.
+ */
+GRL_AVAILABLE_IN_ALL
+void            grl_input_record_focus              (gboolean focused);
+
 G_END_DECLS

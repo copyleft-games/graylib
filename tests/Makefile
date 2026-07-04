@@ -24,6 +24,7 @@ TEST_SOURCES := \
 	test-quaternion.c \
 	test-bounding-box.c \
 	test-color.c \
+	test-input-event-mods.c \
 	test-rectangle.c \
 	test-collision.c \
 	test-camera2d.c \

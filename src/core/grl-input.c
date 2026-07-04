@@ -754,3 +754,124 @@ grl_input_get_gesture_pinch_angle (void)
 {
     return GetGesturePinchAngle ();
 }
+
+/* ------------------------------------------------------------------------
+ * Event-carried modifiers (authoritative, GDK-style).
+ *
+ * raylib only exposes POLLED key state; a modifier release swallowed by a
+ * compositor grab (e.g. GNOME's Super+Shift+S screenshot chord) leaves that
+ * cache latched "down" with no event ever clearing it.  GLFW, however,
+ * passes the window system's own modifier bitmask (xkb state on Wayland)
+ * with every key and mouse-button callback -- exactly what GTK reads.  We
+ * chain onto raylib's installed GLFW callbacks, record that bitmask, and
+ * expose it; the previous (raylib) callbacks keep running unchanged.
+ *
+ * The GLFW API is declared locally (same pattern as grl-window.c's
+ * glfwInit probe) so no GLFW headers are needed: raylib's vendored GLFW is
+ * already linked into the binary.  All of this is desktop/GLFW-only;
+ * grl_input_event_mods_init() reports failure elsewhere and callers fall
+ * back to polled state.
+ * ---------------------------------------------------------------------- */
+
+typedef struct GLFWwindow GLFWwindow;
+typedef void (*GrlGlfwKeyFn) (GLFWwindow *, int, int, int, int);
+typedef void (*GrlGlfwMouseButtonFn) (GLFWwindow *, int, int, int);
+typedef void (*GrlGlfwFocusFn) (GLFWwindow *, int);
+extern GrlGlfwKeyFn glfwSetKeyCallback (GLFWwindow *, GrlGlfwKeyFn);
+extern GrlGlfwMouseButtonFn glfwSetMouseButtonCallback (GLFWwindow *,
+                                                        GrlGlfwMouseButtonFn);
+extern GrlGlfwFocusFn glfwSetWindowFocusCallback (GLFWwindow *, GrlGlfwFocusFn);
+
+static guint   grl_event_mods;
+static guint64 grl_event_mods_serial;
+static guint   grl_focus_generation;
+
+static GrlGlfwKeyFn         grl_prev_key_cb;
+static GrlGlfwMouseButtonFn grl_prev_button_cb;
+static GrlGlfwFocusFn       grl_prev_focus_cb;
+
+void
+grl_input_record_event_mods (guint mods)
+{
+    grl_event_mods = mods;
+    grl_event_mods_serial++;
+}
+
+void
+grl_input_record_focus (gboolean focused)
+{
+    (void) focused;
+    grl_focus_generation++;
+}
+
+guint
+grl_input_get_event_mods (void)
+{
+    return grl_event_mods;
+}
+
+guint64
+grl_input_get_event_mods_serial (void)
+{
+    return grl_event_mods_serial;
+}
+
+guint
+grl_input_get_focus_generation (void)
+{
+    return grl_focus_generation;
+}
+
+static void
+grl_chain_key_cb (GLFWwindow *window, int key, int scancode, int action,
+                  int mods)
+{
+    grl_input_record_event_mods ((guint) mods);
+    if (grl_prev_key_cb != NULL)
+        grl_prev_key_cb (window, key, scancode, action, mods);
+}
+
+static void
+grl_chain_button_cb (GLFWwindow *window, int button, int action, int mods)
+{
+    grl_input_record_event_mods ((guint) mods);
+    if (grl_prev_button_cb != NULL)
+        grl_prev_button_cb (window, button, action, mods);
+}
+
+static void
+grl_chain_focus_cb (GLFWwindow *window, int focused)
+{
+    grl_input_record_focus (focused != 0);
+    if (grl_prev_focus_cb != NULL)
+        grl_prev_focus_cb (window, focused);
+}
+
+gboolean
+grl_input_event_mods_init (void)
+{
+    GLFWwindow *win;
+    GrlGlfwKeyFn prev_key;
+    GrlGlfwMouseButtonFn prev_button;
+    GrlGlfwFocusFn prev_focus;
+
+    if (!IsWindowReady ())
+        return FALSE;
+    win = (GLFWwindow *) GetWindowHandle ();
+    if (win == NULL)
+        return FALSE;
+
+    /* Idempotent re-arm: if the backend re-installed its own callbacks
+       (window re-init), chain again; if ours are already in place, put
+       them straight back without re-chaining (avoid a self-call loop).  */
+    prev_key = glfwSetKeyCallback (win, grl_chain_key_cb);
+    if (prev_key != grl_chain_key_cb)
+        grl_prev_key_cb = prev_key;
+    prev_button = glfwSetMouseButtonCallback (win, grl_chain_button_cb);
+    if (prev_button != grl_chain_button_cb)
+        grl_prev_button_cb = prev_button;
+    prev_focus = glfwSetWindowFocusCallback (win, grl_chain_focus_cb);
+    if (prev_focus != grl_chain_focus_cb)
+        grl_prev_focus_cb = prev_focus;
+    return TRUE;
+}
