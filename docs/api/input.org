@@ -551,6 +551,53 @@ main (int argc, char *argv[])
 
 --------------
 
+** Event-Carried Modifiers (authoritative)
+:PROPERTIES:
+:CUSTOM_ID: event-carried-modifiers
+:END:
+
+Polled key state (=grl_input_is_key_down=) can LATCH: when a compositor
+global shortcut (e.g. GNOME's =Super+Shift+S= screenshot chord) swallows a
+modifier's key-release, raylib's cache reports the modifier held forever.
+GLFW, however, passes the window system's own modifier bitmask (xkb state
+on Wayland, the X event =state= under X11/XWayland) with every key and
+mouse-button callback — the same source GTK reads.
+
+=grl_input_event_mods_init()= chains onto the window's GLFW key,
+mouse-button and focus callbacks (idempotent; the previous callbacks keep
+running) and records that mask:
+
+#+begin_src c
+grl_input_event_mods_init ();                 /* arm once (or every frame) */
+
+if (grl_input_event_mods_armed ())            /* chain is live?            */
+  {
+    guint mods = grl_input_get_event_mods (); /* GRL_EVENT_MOD_* bits      */
+    guint64 n  = grl_input_get_event_mods_serial (); /* 0 = no event yet   */
+  }
+
+guint gen = grl_input_get_focus_generation ();/* bumps on BOTH focus edges */
+#+end_src
+
+- =GrlEventMods= mirrors =GLFW_MOD_*=: =SHIFT= 1, =CONTROL= 2, =ALT= 4,
+  =SUPER= 8.
+- A serial of 0 means no event has recorded yet — fall back to polled
+  state until it climbs.
+- The focus generation catches a focus loss + regain that both happen
+  between two polls of =grl_window_is_focused=.
+- =grl_input_record_event_mods()= / =grl_input_record_focus()= are the
+  recorder entry points, public so tests (see
+  =tests/test-input-event-mods.c=) and alternative backends can drive the
+  tracker headlessly.
+
+*Pitfall*: the GLFWwindow must be obtained via =glfwGetCurrentContext()=.
+raylib's =GetWindowHandle()= returns the NATIVE handle (an X11 =Window=
+XID cast to a pointer, or a =wl_surface*=) — passing that to
+=glfwSetKeyCallback= writes through garbage.  The init function handles
+this internally; the note is for anyone touching the implementation.
+
+--------------
+
 ** Implementation Notes: bool vs gboolean ABI
 :PROPERTIES:
 :CUSTOM_ID: implementation-notes-bool-vs-gboolean-abi
