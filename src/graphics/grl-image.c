@@ -731,6 +731,49 @@ grl_image_new_from_memory (const gchar  *file_type,
 }
 
 /**
+ * grl_image_new_from_pixels:
+ * @width: image width in pixels (must be > 0)
+ * @height: image height in pixels (must be > 0)
+ * @format: pixel format of @data; currently only
+ *   %GRL_PIXELFORMAT_UNCOMPRESSED_R8G8B8A8 is supported
+ * @data: (array): raw, tightly-packed pixel data (width*height*4 bytes for
+ *   RGBA8).  The buffer is copied into the new image.
+ *
+ * Creates an image from a raw, in-memory pixel buffer with no file decoding.
+ *
+ * Returns: (transfer full) (nullable): A new #GrlImage, or %NULL on error
+ */
+GrlImage *
+grl_image_new_from_pixels (gint            width,
+                           gint            height,
+                           GrlPixelFormat  format,
+                           const guint8   *data)
+{
+    Image handle;
+    gsize nbytes;
+
+    g_return_val_if_fail (width > 0, NULL);
+    g_return_val_if_fail (height > 0, NULL);
+    g_return_val_if_fail (data != NULL, NULL);
+    g_return_val_if_fail (format == GRL_PIXELFORMAT_UNCOMPRESSED_R8G8B8A8,
+                          NULL);
+
+    /* raylib owns Image.data and frees it via UnloadImage (RL_FREE == free by
+     * default), so allocate with the matching allocator and copy the pixels. */
+    nbytes = (gsize) width * (gsize) height * 4;
+    handle.data = malloc (nbytes);
+    if (handle.data == NULL)
+        return NULL;
+    memcpy (handle.data, data, nbytes);
+    handle.width = width;
+    handle.height = height;
+    handle.mipmaps = 1;
+    handle.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
+
+    return grl_image_new_from_handle (handle);
+}
+
+/**
  * grl_image_new_from_screen:
  *
  * Captures the current screen contents as an image.
@@ -3648,6 +3691,38 @@ grl_image_get_pixel (GrlImage *self,
 
     color = GetImageColor (self->handle, x, y);
     return grl_color_new (color.r, color.g, color.b, color.a);
+}
+
+/**
+ * grl_image_get_pixels:
+ * @self: a #GrlImage
+ * @out_size: (out) (optional): receives the buffer size in bytes
+ *
+ * Returns a pointer to the image's raw RGBA8 pixel buffer for direct
+ * read/write.  Converts the image to RGBA8 in place if needed.
+ *
+ * Returns: (transfer none) (nullable): the pixel buffer
+ */
+guint8 *
+grl_image_get_pixels (GrlImage *self,
+                      gsize    *out_size)
+{
+    g_return_val_if_fail (GRL_IS_IMAGE (self), NULL);
+
+    if (self->handle.data == NULL)
+    {
+        if (out_size != NULL)
+            *out_size = 0;
+        return NULL;
+    }
+
+    if (self->handle.format != PIXELFORMAT_UNCOMPRESSED_R8G8B8A8)
+        ImageFormat (&self->handle, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+
+    if (out_size != NULL)
+        *out_size = (gsize) self->handle.width * (gsize) self->handle.height * 4;
+
+    return (guint8 *) self->handle.data;
 }
 
 /*

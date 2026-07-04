@@ -40,6 +40,27 @@ GrlImage *          grl_image_new_from_memory   (const gchar        *file_type,
                                                  const guint8       *data,
                                                  gsize               data_size);
 
+/**
+ * grl_image_new_from_pixels:
+ * @width: image width in pixels (must be > 0)
+ * @height: image height in pixels (must be > 0)
+ * @format: pixel format of @data; currently only
+ *   %GRL_PIXELFORMAT_UNCOMPRESSED_R8G8B8A8 is supported
+ * @data: (array): raw, tightly-packed pixel data (width*height*4 bytes for
+ *   RGBA8).  The buffer is copied into the new image.
+ *
+ * Creates an image from a raw, in-memory pixel buffer with no file decoding.
+ * Useful for wrapping decoded video frames, screenshots, or clipboard image
+ * data as an editable / exportable #GrlImage.
+ *
+ * Returns: (transfer full) (nullable): A new #GrlImage, or %NULL on error
+ */
+GRL_AVAILABLE_IN_ALL
+GrlImage *          grl_image_new_from_pixels   (gint                width,
+                                                 gint                height,
+                                                 GrlPixelFormat      format,
+                                                 const guint8       *data);
+
 GRL_AVAILABLE_IN_ALL
 GrlImage *          grl_image_new_from_screen   (void);
 
@@ -555,6 +576,22 @@ GRL_AVAILABLE_IN_ALL
 GrlColor *          grl_image_get_pixel         (GrlImage           *self,
                                                  gint                x,
                                                  gint                y);
+
+/**
+ * grl_image_get_pixels:
+ * @self: a #GrlImage
+ * @out_size: (out) (optional): receives the buffer size in bytes
+ *
+ * Returns a pointer to the image's raw, tightly-packed RGBA8 pixel buffer
+ * (width*height*4 bytes) for direct read/write access.  The image is
+ * converted to RGBA8 in place if it is not already.  The pointer is owned by
+ * the image and stays valid until the image is resized, reformatted, or freed.
+ *
+ * Returns: (transfer none) (nullable) (array length=out_size): the pixel buffer
+ */
+GRL_AVAILABLE_IN_ALL
+guint8 *            grl_image_get_pixels        (GrlImage           *self,
+                                                 gsize              *out_size);
 
 /*
  * Porter-Duff compositing (whole-image)
