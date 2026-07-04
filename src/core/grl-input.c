@@ -781,6 +781,13 @@ extern GrlGlfwKeyFn glfwSetKeyCallback (GLFWwindow *, GrlGlfwKeyFn);
 extern GrlGlfwMouseButtonFn glfwSetMouseButtonCallback (GLFWwindow *,
                                                         GrlGlfwMouseButtonFn);
 extern GrlGlfwFocusFn glfwSetWindowFocusCallback (GLFWwindow *, GrlGlfwFocusFn);
+/* The GLFWwindow* whose GL context is current on this thread -- raylib
+   keeps its window current on the main thread.  This is the ONLY safe way
+   to reach the GLFWwindow from outside raylib: raylib's GetWindowHandle()
+   returns the NATIVE handle (an X11 Window XID cast to a pointer, or a
+   wl_surface*), and passing that to glfwSetKeyCallback would write the
+   callback pointer through garbage.  */
+extern GLFWwindow *glfwGetCurrentContext (void);
 
 static guint   grl_event_mods;
 static guint64 grl_event_mods_serial;
@@ -789,6 +796,7 @@ static guint   grl_focus_generation;
 static GrlGlfwKeyFn         grl_prev_key_cb;
 static GrlGlfwMouseButtonFn grl_prev_button_cb;
 static GrlGlfwFocusFn       grl_prev_focus_cb;
+static gboolean             grl_event_mods_armed;
 
 void
 grl_input_record_event_mods (guint mods)
@@ -848,6 +856,12 @@ grl_chain_focus_cb (GLFWwindow *window, int focused)
 }
 
 gboolean
+grl_input_event_mods_armed (void)
+{
+    return grl_event_mods_armed;
+}
+
+gboolean
 grl_input_event_mods_init (void)
 {
     GLFWwindow *win;
@@ -857,7 +871,9 @@ grl_input_event_mods_init (void)
 
     if (!IsWindowReady ())
         return FALSE;
-    win = (GLFWwindow *) GetWindowHandle ();
+    /* NOT GetWindowHandle(): that is the native X11 XID / wl_surface*,
+       not a GLFWwindow* (see the extern block above).  */
+    win = glfwGetCurrentContext ();
     if (win == NULL)
         return FALSE;
 
@@ -873,5 +889,6 @@ grl_input_event_mods_init (void)
     prev_focus = glfwSetWindowFocusCallback (win, grl_chain_focus_cb);
     if (prev_focus != grl_chain_focus_cb)
         grl_prev_focus_cb = prev_focus;
+    grl_event_mods_armed = TRUE;
     return TRUE;
 }

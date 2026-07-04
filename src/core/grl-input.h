@@ -634,6 +634,15 @@ GRL_AVAILABLE_IN_ALL
 guint           grl_input_get_focus_generation      (void);
 
 /**
+ * grl_input_event_mods_armed:
+ *
+ * Returns: %TRUE once grl_input_event_mods_init() has successfully chained
+ * the GLFW callbacks (i.e. events ARE being recorded, not just requested).
+ */
+GRL_AVAILABLE_IN_ALL
+gboolean        grl_input_event_mods_armed          (void);
+
+/**
  * grl_input_record_event_mods:
  * @mods: the #GrlEventMods bits of an input event
  *

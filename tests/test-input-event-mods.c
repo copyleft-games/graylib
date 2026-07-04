@@ -98,6 +98,7 @@ static void
 test_event_mods_init_headless (void)
 {
     g_assert_false (grl_input_event_mods_init ());
+    g_assert_false (grl_input_event_mods_armed ());
 }
 
 int
