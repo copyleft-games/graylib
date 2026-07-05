@@ -72,6 +72,7 @@
 #include "graphics/grl-path.h"
 #include "graphics/grl-svg.h"
 #include "graphics/grl-gif-writer.h"
+#include "graphics/grl-gif-quantize.h"
 #include "graphics/grl-image-accumulator.h"
 #include "graphics/grl-image-temporal.h"
 #include "graphics/grl-image-font.h"
