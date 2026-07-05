@@ -3900,8 +3900,18 @@ grl_image_save_as_png_indexed (GrlImage       *self,
         }
     }
 
-    /* Export image to RGBA if not already */
-    rgba_data = (guint8 *)ExportImageToMemory (self->handle, ".raw", NULL);
+    /* Use the RGBA pixels directly.  (ExportImageToMemory writes *dataSize
+       unconditionally, so it must not be called with a NULL size pointer --
+       that was an outright crash; and it does not support ".raw" anyway, so
+       it returns NULL and we fall through to the direct-data path below.)
+       NOTE: the indexed writer path (rpng_save_image_indexed) has further
+       issues and is not currently reliable; callers wanting colour reduction
+       should quantize + write a normal PNG. */
+    {
+        int export_size = 0;
+        rgba_data = (guint8 *)ExportImageToMemory (self->handle, ".raw",
+                                                   &export_size);
+    }
     if (rgba_data == NULL)
     {
         /* Fallback: Use image data directly if RGBA */
