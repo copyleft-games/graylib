@@ -116,4 +116,34 @@ void                grl_render_texture_end              (GrlRenderTexture   *sel
 GRL_AVAILABLE_IN_ALL
 GrlTexture *        grl_render_texture_get_texture      (GrlRenderTexture   *self);
 
+/**
+ * grl_render_texture_get_current_width:
+ *
+ * Gets the width of the render target currently being drawn to.
+ *
+ * When a render texture is active (between grl_render_texture_begin()
+ * and grl_render_texture_end()) this is that texture's width; otherwise
+ * it is the screen width. Use this in drawing code that must lay out
+ * against the surface it actually renders into (e.g. UI drawn inside a
+ * virtual-resolution render target).
+ *
+ * Returns: The current render target width in pixels
+ */
+GRL_AVAILABLE_IN_ALL
+gint                grl_render_texture_get_current_width  (void);
+
+/**
+ * grl_render_texture_get_current_height:
+ *
+ * Gets the height of the render target currently being drawn to.
+ *
+ * When a render texture is active (between grl_render_texture_begin()
+ * and grl_render_texture_end()) this is that texture's height; otherwise
+ * it is the screen height.
+ *
+ * Returns: The current render target height in pixels
+ */
+GRL_AVAILABLE_IN_ALL
+gint                grl_render_texture_get_current_height (void);
+
 G_END_DECLS

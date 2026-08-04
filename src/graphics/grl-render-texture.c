@@ -56,6 +56,17 @@ enum
 
 static GParamSpec *properties[N_PROPS];
 
+/*
+ * Active render target tracking for grl_render_texture_get_current_*().
+ * raylib texture modes do not truly nest, but a small stack keeps the
+ * bookkeeping correct if callers begin/end in a nested pattern.
+ */
+#define GRL_RENDER_TARGET_STACK_DEPTH 8
+
+static gint active_target_width[GRL_RENDER_TARGET_STACK_DEPTH];
+static gint active_target_height[GRL_RENDER_TARGET_STACK_DEPTH];
+static gint active_target_depth = 0;
+
 static void
 grl_render_texture_finalize (GObject *object)
 {
@@ -272,7 +283,16 @@ grl_render_texture_begin (GrlRenderTexture *self)
     priv = grl_render_texture_get_instance_private (self);
 
     if (priv->valid)
+    {
         BeginTextureMode (priv->render_texture);
+
+        if (active_target_depth < GRL_RENDER_TARGET_STACK_DEPTH)
+        {
+            active_target_width[active_target_depth] = priv->width;
+            active_target_height[active_target_depth] = priv->height;
+        }
+        active_target_depth++;
+    }
 }
 
 /**
@@ -284,9 +304,50 @@ grl_render_texture_begin (GrlRenderTexture *self)
 void
 grl_render_texture_end (GrlRenderTexture *self)
 {
+    GrlRenderTexturePrivate *priv;
+
     g_return_if_fail (GRL_IS_RENDER_TEXTURE (self));
 
+    priv = grl_render_texture_get_instance_private (self);
+
+    if (priv->valid && active_target_depth > 0)
+        active_target_depth--;
+
     EndTextureMode ();
+}
+
+/**
+ * grl_render_texture_get_current_width:
+ *
+ * Gets the width of the render target currently being drawn to.
+ *
+ * Returns: The current render target width in pixels
+ */
+gint
+grl_render_texture_get_current_width (void)
+{
+    if (active_target_depth > 0 &&
+        active_target_depth <= GRL_RENDER_TARGET_STACK_DEPTH)
+        return active_target_width[active_target_depth - 1];
+
+    return GetScreenWidth ();
+}
+
+/**
+ * grl_render_texture_get_current_height:
+ *
+ * Gets the height of the render target currently being drawn to.
+ *
+ * Returns: The current render target height in pixels
+ */
+gint
+grl_render_texture_get_current_height (void)
+{
+    if (active_target_depth > 0 &&
+        active_target_depth <= GRL_RENDER_TARGET_STACK_DEPTH)
+        return active_target_height[active_target_depth - 1];
+
+    return GetScreenHeight ();
 }
 
 /**
