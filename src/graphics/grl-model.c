@@ -253,6 +253,14 @@ grl_model_new_from_file (const gchar  *filename,
 
     if (model.meshCount == 0)
     {
+        /* A failed LoadModel() still allocates a default material and the
+         * mesh/material arrays; release them before reporting the error. */
+        RL_FREE (model.currentPose);
+        RL_FREE (model.boneMatrices);
+        model.currentPose = NULL;
+        model.boneMatrices = NULL;
+        UnloadModel (model);
+
         g_set_error (error,
                      G_IO_ERROR,
                      G_IO_ERROR_FAILED,
