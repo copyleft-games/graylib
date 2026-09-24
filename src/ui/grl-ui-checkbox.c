@@ -232,7 +232,7 @@ grl_ui_checkbox_init (GrlUiCheckBox *self)
     self->checked = FALSE;
 }
 
-/**
+/*
  * grl_ui_checkbox_new:
  * @text: (nullable): The checkbox label text
  *
@@ -248,7 +248,7 @@ grl_ui_checkbox_new (const gchar *text)
                          NULL);
 }
 
-/**
+/*
  * grl_ui_checkbox_new_with_bounds:
  * @x: X position
  * @y: Y position
@@ -279,7 +279,7 @@ grl_ui_checkbox_new_with_bounds (gfloat       x,
     return checkbox;
 }
 
-/**
+/*
  * grl_ui_checkbox_get_text:
  * @self: A #GrlUiCheckBox
  *
@@ -295,7 +295,7 @@ grl_ui_checkbox_get_text (GrlUiCheckBox *self)
     return self->text;
 }
 
-/**
+/*
  * grl_ui_checkbox_set_text:
  * @self: A #GrlUiCheckBox
  * @text: (nullable): The new text
@@ -317,7 +317,7 @@ grl_ui_checkbox_set_text (GrlUiCheckBox *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TEXT]);
 }
 
-/**
+/*
  * grl_ui_checkbox_get_checked:
  * @self: A #GrlUiCheckBox
  *
@@ -333,7 +333,7 @@ grl_ui_checkbox_get_checked (GrlUiCheckBox *self)
     return self->checked;
 }
 
-/**
+/*
  * grl_ui_checkbox_set_checked:
  * @self: A #GrlUiCheckBox
  * @checked: Whether the checkbox should be checked
@@ -356,7 +356,7 @@ grl_ui_checkbox_set_checked (GrlUiCheckBox *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_CHECKED]);
 }
 
-/**
+/*
  * grl_ui_checkbox_toggle:
  * @self: A #GrlUiCheckBox
  *

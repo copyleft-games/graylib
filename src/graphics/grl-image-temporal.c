@@ -95,7 +95,7 @@ draw_ghost (GrlImage       *current,
  * Public API
  * --------------------------------------------------------------------------- */
 
-/**
+/*
  * grl_image_onion_skin:
  * @current: The target frame that will be modified in place.
  * @prev: (nullable): The previous frame to ghost.
@@ -165,7 +165,7 @@ grl_image_onion_skin (GrlImage           *current,
     grl_image_set_blend_mode (current, saved_mode);
 }
 
-/**
+/*
  * grl_image_temporal_aa:
  * @acc: A #GrlImageAccumulator.
  * @samples: (array length=n_samples): Jittered sample images.

@@ -170,7 +170,7 @@ grl_render_texture_init (GrlRenderTexture *self)
     priv->valid = FALSE;
 }
 
-/**
+/*
  * grl_render_texture_new:
  * @width: Width of the render texture
  * @height: Height of the render texture
@@ -210,7 +210,7 @@ grl_render_texture_new (gint width,
     return self;
 }
 
-/**
+/*
  * grl_render_texture_is_valid:
  * @self: A #GrlRenderTexture
  *
@@ -229,7 +229,7 @@ grl_render_texture_is_valid (GrlRenderTexture *self)
     return priv->valid;
 }
 
-/**
+/*
  * grl_render_texture_get_width:
  * @self: A #GrlRenderTexture
  *
@@ -248,7 +248,7 @@ grl_render_texture_get_width (GrlRenderTexture *self)
     return priv->width;
 }
 
-/**
+/*
  * grl_render_texture_get_height:
  * @self: A #GrlRenderTexture
  *
@@ -267,7 +267,7 @@ grl_render_texture_get_height (GrlRenderTexture *self)
     return priv->height;
 }
 
-/**
+/*
  * grl_render_texture_begin:
  * @self: A #GrlRenderTexture
  *
@@ -295,7 +295,7 @@ grl_render_texture_begin (GrlRenderTexture *self)
     }
 }
 
-/**
+/*
  * grl_render_texture_end:
  * @self: A #GrlRenderTexture
  *
@@ -316,7 +316,7 @@ grl_render_texture_end (GrlRenderTexture *self)
     EndTextureMode ();
 }
 
-/**
+/*
  * grl_render_texture_get_current_width:
  *
  * Gets the width of the render target currently being drawn to.
@@ -333,7 +333,7 @@ grl_render_texture_get_current_width (void)
     return GetScreenWidth ();
 }
 
-/**
+/*
  * grl_render_texture_get_current_height:
  *
  * Gets the height of the render target currently being drawn to.
@@ -350,7 +350,7 @@ grl_render_texture_get_current_height (void)
     return GetScreenHeight ();
 }
 
-/**
+/*
  * grl_render_texture_get_texture:
  * @self: A #GrlRenderTexture
  *

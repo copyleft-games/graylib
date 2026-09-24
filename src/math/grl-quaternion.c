@@ -24,7 +24,7 @@
 G_DEFINE_BOXED_TYPE (GrlQuaternion, grl_quaternion,
                      grl_quaternion_copy, grl_quaternion_free)
 
-/**
+/*
  * grl_quaternion_new:
  * @x: X component
  * @y: Y component
@@ -52,7 +52,7 @@ grl_quaternion_new (gfloat x,
     return self;
 }
 
-/**
+/*
  * grl_quaternion_copy:
  * @self: (nullable): A #GrlQuaternion
  *
@@ -69,7 +69,7 @@ grl_quaternion_copy (const GrlQuaternion *self)
     return grl_quaternion_new (self->x, self->y, self->z, self->w);
 }
 
-/**
+/*
  * grl_quaternion_free:
  * @self: (nullable): A #GrlQuaternion
  *
@@ -81,7 +81,7 @@ grl_quaternion_free (GrlQuaternion *self)
     g_free (self);
 }
 
-/**
+/*
  * grl_quaternion_new_identity:
  *
  * Creates a new identity quaternion (0, 0, 0, 1).
@@ -94,7 +94,7 @@ grl_quaternion_new_identity (void)
     return grl_quaternion_new (0.0f, 0.0f, 0.0f, 1.0f);
 }
 
-/**
+/*
  * grl_quaternion_new_from_axis_angle:
  * @axis: The rotation axis (should be normalized)
  * @angle: The rotation angle in radians
@@ -151,7 +151,7 @@ grl_quaternion_new_from_axis_angle (const GrlVector3 *axis,
     return result;
 }
 
-/**
+/*
  * grl_quaternion_new_from_euler:
  * @pitch: Rotation around X axis in radians
  * @yaw: Rotation around Y axis in radians
@@ -183,7 +183,7 @@ grl_quaternion_new_from_euler (gfloat pitch,
     );
 }
 
-/**
+/*
  * grl_quaternion_new_from_matrix:
  * @matrix: A rotation matrix
  *
@@ -279,7 +279,7 @@ grl_quaternion_new_from_matrix (const GrlMatrix *matrix)
     return result;
 }
 
-/**
+/*
  * grl_quaternion_new_from_vectors:
  * @from: Source direction vector
  * @to: Target direction vector
@@ -327,7 +327,7 @@ grl_quaternion_new_from_vectors (const GrlVector3 *from,
  * Arithmetic Operations
  */
 
-/**
+/*
  * grl_quaternion_add:
  * @a: First quaternion
  * @b: Second quaternion
@@ -346,7 +346,7 @@ grl_quaternion_add (const GrlQuaternion *a,
     return grl_quaternion_new (a->x + b->x, a->y + b->y, a->z + b->z, a->w + b->w);
 }
 
-/**
+/*
  * grl_quaternion_add_value:
  * @self: A quaternion
  * @value: Value to add to each component
@@ -365,7 +365,7 @@ grl_quaternion_add_value (const GrlQuaternion *self,
                                self->z + value, self->w + value);
 }
 
-/**
+/*
  * grl_quaternion_subtract:
  * @a: First quaternion
  * @b: Second quaternion
@@ -384,7 +384,7 @@ grl_quaternion_subtract (const GrlQuaternion *a,
     return grl_quaternion_new (a->x - b->x, a->y - b->y, a->z - b->z, a->w - b->w);
 }
 
-/**
+/*
  * grl_quaternion_subtract_value:
  * @self: A quaternion
  * @value: Value to subtract from each component
@@ -403,7 +403,7 @@ grl_quaternion_subtract_value (const GrlQuaternion *self,
                                self->z - value, self->w - value);
 }
 
-/**
+/*
  * grl_quaternion_multiply:
  * @a: First quaternion
  * @b: Second quaternion
@@ -427,7 +427,7 @@ grl_quaternion_multiply (const GrlQuaternion *a,
     );
 }
 
-/**
+/*
  * grl_quaternion_scale:
  * @self: A quaternion
  * @scale: Scale factor
@@ -446,7 +446,7 @@ grl_quaternion_scale (const GrlQuaternion *self,
                                self->z * scale, self->w * scale);
 }
 
-/**
+/*
  * grl_quaternion_divide:
  * @a: First quaternion
  * @b: Second quaternion
@@ -465,7 +465,7 @@ grl_quaternion_divide (const GrlQuaternion *a,
     return grl_quaternion_new (a->x / b->x, a->y / b->y, a->z / b->z, a->w / b->w);
 }
 
-/**
+/*
  * grl_quaternion_negate:
  * @self: A quaternion
  *
@@ -485,7 +485,7 @@ grl_quaternion_negate (const GrlQuaternion *self)
  * Quaternion Operations
  */
 
-/**
+/*
  * grl_quaternion_length:
  * @self: A quaternion
  *
@@ -502,7 +502,7 @@ grl_quaternion_length (const GrlQuaternion *self)
                   self->z * self->z + self->w * self->w);
 }
 
-/**
+/*
  * grl_quaternion_normalize:
  * @self: A quaternion
  *
@@ -530,7 +530,7 @@ grl_quaternion_normalize (const GrlQuaternion *self)
     return result;
 }
 
-/**
+/*
  * grl_quaternion_invert:
  * @self: A quaternion
  *
@@ -566,7 +566,7 @@ grl_quaternion_invert (const GrlQuaternion *self)
  * Interpolation
  */
 
-/**
+/*
  * grl_quaternion_lerp:
  * @a: Start quaternion
  * @b: End quaternion
@@ -592,7 +592,7 @@ grl_quaternion_lerp (const GrlQuaternion *a,
     );
 }
 
-/**
+/*
  * grl_quaternion_nlerp:
  * @a: Start quaternion
  * @b: End quaternion
@@ -617,7 +617,7 @@ grl_quaternion_nlerp (const GrlQuaternion *a,
     return grl_quaternion_normalize (lerped);
 }
 
-/**
+/*
  * grl_quaternion_slerp:
  * @a: Start quaternion
  * @b: End quaternion
@@ -691,7 +691,7 @@ grl_quaternion_slerp (const GrlQuaternion *a,
     return result;
 }
 
-/**
+/*
  * grl_quaternion_cubic_hermite_spline:
  * @q1: First control point
  * @out_tangent1: Outgoing tangent at @q1
@@ -751,7 +751,7 @@ grl_quaternion_cubic_hermite_spline (const GrlQuaternion *q1,
  * Conversions
  */
 
-/**
+/*
  * grl_quaternion_to_matrix:
  * @self: A quaternion
  *
@@ -805,7 +805,7 @@ grl_quaternion_to_matrix (const GrlQuaternion *self)
     return result;
 }
 
-/**
+/*
  * grl_quaternion_to_euler:
  * @self: A quaternion
  * @pitch: (out): Rotation around X axis in radians
@@ -844,7 +844,7 @@ grl_quaternion_to_euler (const GrlQuaternion *self,
     *roll = atan2f (z0, z1);
 }
 
-/**
+/*
  * grl_quaternion_to_axis_angle:
  * @self: A quaternion
  * @axis: (out): The rotation axis
@@ -904,7 +904,7 @@ grl_quaternion_to_axis_angle (const GrlQuaternion *self,
  * Transformation
  */
 
-/**
+/*
  * grl_quaternion_transform:
  * @self: A quaternion
  * @matrix: A transformation matrix
@@ -936,7 +936,7 @@ grl_quaternion_transform (const GrlQuaternion *self,
  * Comparison
  */
 
-/**
+/*
  * grl_quaternion_equal:
  * @a: First quaternion
  * @b: Second quaternion

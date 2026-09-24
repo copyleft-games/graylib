@@ -348,7 +348,7 @@ grl_software_renderer_init (GrlSoftwareRenderer *self)
  * =============================================================================
  */
 
-/**
+/*
  * grl_software_renderer_new:
  * @width: Framebuffer width in pixels (must be > 0)
  * @height: Framebuffer height in pixels (must be > 0)
@@ -394,7 +394,7 @@ grl_software_renderer_new (gint width,
     return self;
 }
 
-/**
+/*
  * grl_software_renderer_resize:
  * @self: A #GrlSoftwareRenderer
  * @width: New framebuffer width in pixels (must be > 0)
@@ -426,7 +426,7 @@ grl_software_renderer_resize (GrlSoftwareRenderer *self,
     return TRUE;
 }
 
-/**
+/*
  * grl_software_renderer_get_width:
  * @self: A #GrlSoftwareRenderer
  *
@@ -442,7 +442,7 @@ grl_software_renderer_get_width (GrlSoftwareRenderer *self)
     return self->width;
 }
 
-/**
+/*
  * grl_software_renderer_get_height:
  * @self: A #GrlSoftwareRenderer
  *
@@ -464,7 +464,7 @@ grl_software_renderer_get_height (GrlSoftwareRenderer *self)
  * =============================================================================
  */
 
-/**
+/*
  * grl_software_renderer_enable:
  * @self: A #GrlSoftwareRenderer
  * @state: The #GrlSwState capability to enable
@@ -480,7 +480,7 @@ grl_software_renderer_enable (GrlSoftwareRenderer *self,
     swEnable ((SWstate)state);
 }
 
-/**
+/*
  * grl_software_renderer_disable:
  * @self: A #GrlSoftwareRenderer
  * @state: The #GrlSwState capability to disable
@@ -496,7 +496,7 @@ grl_software_renderer_disable (GrlSoftwareRenderer *self,
     swDisable ((SWstate)state);
 }
 
-/**
+/*
  * grl_software_renderer_viewport:
  * @self: A #GrlSoftwareRenderer
  * @x: Lower-left viewport X origin
@@ -518,7 +518,7 @@ grl_software_renderer_viewport (GrlSoftwareRenderer *self,
     swViewport ((int)x, (int)y, (int)width, (int)height);
 }
 
-/**
+/*
  * grl_software_renderer_scissor:
  * @self: A #GrlSoftwareRenderer
  * @x: Lower-left scissor X origin
@@ -540,7 +540,7 @@ grl_software_renderer_scissor (GrlSoftwareRenderer *self,
     swScissor ((int)x, (int)y, (int)width, (int)height);
 }
 
-/**
+/*
  * grl_software_renderer_clear_color:
  * @self: A #GrlSoftwareRenderer
  * @r: Red component in [0, 1]
@@ -562,7 +562,7 @@ grl_software_renderer_clear_color (GrlSoftwareRenderer *self,
     swClearColor ((float)r, (float)g, (float)b, (float)a);
 }
 
-/**
+/*
  * grl_software_renderer_clear_depth:
  * @self: A #GrlSoftwareRenderer
  * @depth: Depth value in [0, 1]
@@ -578,7 +578,7 @@ grl_software_renderer_clear_depth (GrlSoftwareRenderer *self,
     swClearDepth ((float)depth);
 }
 
-/**
+/*
  * grl_software_renderer_clear:
  * @self: A #GrlSoftwareRenderer
  * @mask: A #GrlSwBuffer bitmask
@@ -594,7 +594,7 @@ grl_software_renderer_clear (GrlSoftwareRenderer *self,
     swClear ((uint32_t)mask);
 }
 
-/**
+/*
  * grl_software_renderer_blend_func:
  * @self: A #GrlSoftwareRenderer
  * @src_factor: The source #GrlSwFactor
@@ -612,7 +612,7 @@ grl_software_renderer_blend_func (GrlSoftwareRenderer *self,
     swBlendFunc ((SWfactor)src_factor, (SWfactor)dst_factor);
 }
 
-/**
+/*
  * grl_software_renderer_polygon_mode:
  * @self: A #GrlSoftwareRenderer
  * @mode: The #GrlSwPolygonMode rasterization mode
@@ -628,7 +628,7 @@ grl_software_renderer_polygon_mode (GrlSoftwareRenderer *self,
     swPolygonMode ((SWpoly)mode);
 }
 
-/**
+/*
  * grl_software_renderer_cull_face:
  * @self: A #GrlSoftwareRenderer
  * @face: The #GrlSwFace to cull
@@ -644,7 +644,7 @@ grl_software_renderer_cull_face (GrlSoftwareRenderer *self,
     swCullFace ((SWface)face);
 }
 
-/**
+/*
  * grl_software_renderer_point_size:
  * @self: A #GrlSoftwareRenderer
  * @size: Point diameter in pixels
@@ -660,7 +660,7 @@ grl_software_renderer_point_size (GrlSoftwareRenderer *self,
     swPointSize ((float)size);
 }
 
-/**
+/*
  * grl_software_renderer_line_width:
  * @self: A #GrlSoftwareRenderer
  * @width: Line width in pixels
@@ -682,7 +682,7 @@ grl_software_renderer_line_width (GrlSoftwareRenderer *self,
  * =============================================================================
  */
 
-/**
+/*
  * grl_software_renderer_matrix_mode:
  * @self: A #GrlSoftwareRenderer
  * @mode: The #GrlSwMatrixMode stack to make current
@@ -698,7 +698,7 @@ grl_software_renderer_matrix_mode (GrlSoftwareRenderer *self,
     swMatrixMode ((SWmatrix)mode);
 }
 
-/**
+/*
  * grl_software_renderer_push_matrix:
  * @self: A #GrlSoftwareRenderer
  *
@@ -712,7 +712,7 @@ grl_software_renderer_push_matrix (GrlSoftwareRenderer *self)
     swPushMatrix ();
 }
 
-/**
+/*
  * grl_software_renderer_pop_matrix:
  * @self: A #GrlSoftwareRenderer
  *
@@ -726,7 +726,7 @@ grl_software_renderer_pop_matrix (GrlSoftwareRenderer *self)
     swPopMatrix ();
 }
 
-/**
+/*
  * grl_software_renderer_load_identity:
  * @self: A #GrlSoftwareRenderer
  *
@@ -740,7 +740,7 @@ grl_software_renderer_load_identity (GrlSoftwareRenderer *self)
     swLoadIdentity ();
 }
 
-/**
+/*
  * grl_software_renderer_translate:
  * @self: A #GrlSoftwareRenderer
  * @x: X translation
@@ -760,7 +760,7 @@ grl_software_renderer_translate (GrlSoftwareRenderer *self,
     swTranslatef ((float)x, (float)y, (float)z);
 }
 
-/**
+/*
  * grl_software_renderer_rotate:
  * @self: A #GrlSoftwareRenderer
  * @angle: Rotation angle in degrees
@@ -782,7 +782,7 @@ grl_software_renderer_rotate (GrlSoftwareRenderer *self,
     swRotatef ((float)angle, (float)x, (float)y, (float)z);
 }
 
-/**
+/*
  * grl_software_renderer_scale:
  * @self: A #GrlSoftwareRenderer
  * @x: X scale factor
@@ -802,7 +802,7 @@ grl_software_renderer_scale (GrlSoftwareRenderer *self,
     swScalef ((float)x, (float)y, (float)z);
 }
 
-/**
+/*
  * grl_software_renderer_mult_matrix:
  * @self: A #GrlSoftwareRenderer
  * @matrix: (array fixed-size=16) (element-type gfloat): 16 floats, column-major
@@ -819,7 +819,7 @@ grl_software_renderer_mult_matrix (GrlSoftwareRenderer *self,
     swMultMatrixf ((const float *)matrix);
 }
 
-/**
+/*
  * grl_software_renderer_frustum:
  * @self: A #GrlSoftwareRenderer
  * @left: Left clipping plane
@@ -846,7 +846,7 @@ grl_software_renderer_frustum (GrlSoftwareRenderer *self,
                (double)znear, (double)zfar);
 }
 
-/**
+/*
  * grl_software_renderer_ortho:
  * @self: A #GrlSoftwareRenderer
  * @left: Left clipping plane
@@ -879,7 +879,7 @@ grl_software_renderer_ortho (GrlSoftwareRenderer *self,
  * =============================================================================
  */
 
-/**
+/*
  * grl_software_renderer_begin:
  * @self: A #GrlSoftwareRenderer
  * @mode: The #GrlSwDrawMode primitive type
@@ -895,7 +895,7 @@ grl_software_renderer_begin (GrlSoftwareRenderer *self,
     swBegin ((SWdraw)mode);
 }
 
-/**
+/*
  * grl_software_renderer_end:
  * @self: A #GrlSoftwareRenderer
  *
@@ -909,7 +909,7 @@ grl_software_renderer_end (GrlSoftwareRenderer *self)
     swEnd ();
 }
 
-/**
+/*
  * grl_software_renderer_vertex2f:
  * @self: A #GrlSoftwareRenderer
  * @x: X coordinate
@@ -927,7 +927,7 @@ grl_software_renderer_vertex2f (GrlSoftwareRenderer *self,
     swVertex2f ((float)x, (float)y);
 }
 
-/**
+/*
  * grl_software_renderer_vertex3f:
  * @self: A #GrlSoftwareRenderer
  * @x: X coordinate
@@ -947,7 +947,7 @@ grl_software_renderer_vertex3f (GrlSoftwareRenderer *self,
     swVertex3f ((float)x, (float)y, (float)z);
 }
 
-/**
+/*
  * grl_software_renderer_color3ub:
  * @self: A #GrlSoftwareRenderer
  * @r: Red component in [0, 255]
@@ -967,7 +967,7 @@ grl_software_renderer_color3ub (GrlSoftwareRenderer *self,
     swColor3ub ((uint8_t)r, (uint8_t)g, (uint8_t)b);
 }
 
-/**
+/*
  * grl_software_renderer_color4ub:
  * @self: A #GrlSoftwareRenderer
  * @r: Red component in [0, 255]
@@ -989,7 +989,7 @@ grl_software_renderer_color4ub (GrlSoftwareRenderer *self,
     swColor4ub ((uint8_t)r, (uint8_t)g, (uint8_t)b, (uint8_t)a);
 }
 
-/**
+/*
  * grl_software_renderer_color3f:
  * @self: A #GrlSoftwareRenderer
  * @r: Red component in [0, 1]
@@ -1009,7 +1009,7 @@ grl_software_renderer_color3f (GrlSoftwareRenderer *self,
     swColor3f ((float)r, (float)g, (float)b);
 }
 
-/**
+/*
  * grl_software_renderer_color4f:
  * @self: A #GrlSoftwareRenderer
  * @r: Red component in [0, 1]
@@ -1031,7 +1031,7 @@ grl_software_renderer_color4f (GrlSoftwareRenderer *self,
     swColor4f ((float)r, (float)g, (float)b, (float)a);
 }
 
-/**
+/*
  * grl_software_renderer_tex_coord2f:
  * @self: A #GrlSoftwareRenderer
  * @u: Horizontal texture coordinate
@@ -1055,7 +1055,7 @@ grl_software_renderer_tex_coord2f (GrlSoftwareRenderer *self,
  * =============================================================================
  */
 
-/**
+/*
  * grl_software_renderer_gen_texture:
  * @self: A #GrlSoftwareRenderer
  *
@@ -1075,7 +1075,7 @@ grl_software_renderer_gen_texture (GrlSoftwareRenderer *self)
     return (guint32)id;
 }
 
-/**
+/*
  * grl_software_renderer_delete_texture:
  * @self: A #GrlSoftwareRenderer
  * @texture: The texture name (id) to delete
@@ -1094,7 +1094,7 @@ grl_software_renderer_delete_texture (GrlSoftwareRenderer *self,
     swDeleteTextures (1, &id);
 }
 
-/**
+/*
  * grl_software_renderer_bind_texture:
  * @self: A #GrlSoftwareRenderer
  * @texture: The texture name (id) to bind, or 0 to unbind
@@ -1110,7 +1110,7 @@ grl_software_renderer_bind_texture (GrlSoftwareRenderer *self,
     swBindTexture ((uint32_t)texture);
 }
 
-/**
+/*
  * grl_software_renderer_tex_image_2d:
  * @self: A #GrlSoftwareRenderer
  * @width: Texture width in pixels
@@ -1135,7 +1135,7 @@ grl_software_renderer_tex_image_2d (GrlSoftwareRenderer *self,
                   (const void *)data);
 }
 
-/**
+/*
  * grl_software_renderer_tex_parameteri:
  * @self: A #GrlSoftwareRenderer
  * @param: The #GrlSwTexParam parameter name
@@ -1159,7 +1159,7 @@ grl_software_renderer_tex_parameteri (GrlSoftwareRenderer *self,
  * =============================================================================
  */
 
-/**
+/*
  * grl_software_renderer_read_to_image:
  * @self: A #GrlSoftwareRenderer
  * @x: Lower-left X origin of the region to read

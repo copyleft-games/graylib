@@ -282,7 +282,7 @@ grl_audio_stream_init (GrlAudioStream *self)
     self->channels = 0;
 }
 
-/**
+/*
  * grl_audio_stream_new:
  * @sample_rate: Sample rate in Hz (e.g., 44100, 48000)
  * @sample_size: Bits per sample (8, 16, or 32)
@@ -329,7 +329,7 @@ grl_audio_stream_new (guint sample_rate,
     return self;
 }
 
-/**
+/*
  * grl_audio_stream_play:
  * @self: A #GrlAudioStream
  *
@@ -346,7 +346,7 @@ grl_audio_stream_play (GrlAudioStream *self)
     PlayAudioStream (self->stream);
 }
 
-/**
+/*
  * grl_audio_stream_stop:
  * @self: A #GrlAudioStream
  *
@@ -363,7 +363,7 @@ grl_audio_stream_stop (GrlAudioStream *self)
     StopAudioStream (self->stream);
 }
 
-/**
+/*
  * grl_audio_stream_pause:
  * @self: A #GrlAudioStream
  *
@@ -380,7 +380,7 @@ grl_audio_stream_pause (GrlAudioStream *self)
     PauseAudioStream (self->stream);
 }
 
-/**
+/*
  * grl_audio_stream_resume:
  * @self: A #GrlAudioStream
  *
@@ -397,7 +397,7 @@ grl_audio_stream_resume (GrlAudioStream *self)
     ResumeAudioStream (self->stream);
 }
 
-/**
+/*
  * grl_audio_stream_is_playing:
  * @self: A #GrlAudioStream
  *
@@ -420,7 +420,7 @@ grl_audio_stream_is_playing (GrlAudioStream *self)
     return raw != 0;
 }
 
-/**
+/*
  * grl_audio_stream_is_valid:
  * @self: A #GrlAudioStream
  *
@@ -443,7 +443,7 @@ grl_audio_stream_is_valid (GrlAudioStream *self)
     return raw != 0;
 }
 
-/**
+/*
  * grl_audio_stream_update:
  * @self: A #GrlAudioStream
  * @data: (array length=frame_count): Audio sample data
@@ -470,7 +470,7 @@ grl_audio_stream_update (GrlAudioStream *self,
     UpdateAudioStream (self->stream, data, frame_count);
 }
 
-/**
+/*
  * grl_audio_stream_is_processed:
  * @self: A #GrlAudioStream
  *
@@ -495,7 +495,7 @@ grl_audio_stream_is_processed (GrlAudioStream *self)
     return raw != 0;
 }
 
-/**
+/*
  * grl_audio_stream_get_sample_rate:
  * @self: A #GrlAudioStream
  *
@@ -511,7 +511,7 @@ grl_audio_stream_get_sample_rate (GrlAudioStream *self)
     return self->sample_rate;
 }
 
-/**
+/*
  * grl_audio_stream_get_sample_size:
  * @self: A #GrlAudioStream
  *
@@ -527,7 +527,7 @@ grl_audio_stream_get_sample_size (GrlAudioStream *self)
     return self->sample_size;
 }
 
-/**
+/*
  * grl_audio_stream_get_channels:
  * @self: A #GrlAudioStream
  *
@@ -543,7 +543,7 @@ grl_audio_stream_get_channels (GrlAudioStream *self)
     return self->channels;
 }
 
-/**
+/*
  * grl_audio_stream_set_volume:
  * @self: A #GrlAudioStream
  * @volume: Volume level (0.0 to 1.0)
@@ -569,7 +569,7 @@ grl_audio_stream_set_volume (GrlAudioStream *self,
     }
 }
 
-/**
+/*
  * grl_audio_stream_get_volume:
  * @self: A #GrlAudioStream
  *
@@ -585,7 +585,7 @@ grl_audio_stream_get_volume (GrlAudioStream *self)
     return self->volume;
 }
 
-/**
+/*
  * grl_audio_stream_set_pitch:
  * @self: A #GrlAudioStream
  * @pitch: Pitch multiplier (1.0 = normal pitch)
@@ -611,7 +611,7 @@ grl_audio_stream_set_pitch (GrlAudioStream *self,
     }
 }
 
-/**
+/*
  * grl_audio_stream_get_pitch:
  * @self: A #GrlAudioStream
  *
@@ -627,7 +627,7 @@ grl_audio_stream_get_pitch (GrlAudioStream *self)
     return self->pitch;
 }
 
-/**
+/*
  * grl_audio_stream_set_pan:
  * @self: A #GrlAudioStream
  * @pan: Pan position (-1.0 = left, 0.0 = center, 1.0 = right)
@@ -653,7 +653,7 @@ grl_audio_stream_set_pan (GrlAudioStream *self,
     }
 }
 
-/**
+/*
  * grl_audio_stream_get_pan:
  * @self: A #GrlAudioStream
  *
@@ -669,7 +669,7 @@ grl_audio_stream_get_pan (GrlAudioStream *self)
     return self->pan;
 }
 
-/**
+/*
  * grl_audio_stream_set_default_buffer_size:
  * @size: Default buffer size for new audio streams
  *

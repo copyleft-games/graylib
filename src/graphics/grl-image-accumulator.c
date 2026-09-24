@@ -140,7 +140,7 @@ grl_image_accumulator_init (GrlImageAccumulator *self)
  * Public API
  * --------------------------------------------------------------------------- */
 
-/**
+/*
  * grl_image_accumulator_new:
  * @width: Canvas width in pixels.
  * @height: Canvas height in pixels.
@@ -172,7 +172,7 @@ grl_image_accumulator_new (gint     width,
     return self;
 }
 
-/**
+/*
  * grl_image_accumulator_add:
  * @self: A #GrlImageAccumulator.
  * @frame: The source image.
@@ -244,7 +244,7 @@ grl_image_accumulator_add (GrlImageAccumulator *self,
         g_object_unref (src);
 }
 
-/**
+/*
  * grl_image_accumulator_resolve:
  * @self: A #GrlImageAccumulator.
  *
@@ -315,7 +315,7 @@ grl_image_accumulator_resolve (GrlImageAccumulator *self)
     return result;
 }
 
-/**
+/*
  * grl_image_accumulator_reset:
  * @self: A #GrlImageAccumulator.
  *

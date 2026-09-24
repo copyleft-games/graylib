@@ -348,7 +348,7 @@ grl_ui_control_init (GrlUiControl *self)
     priv->tooltip = NULL;
 }
 
-/**
+/*
  * grl_ui_control_get_bounds:
  * @self: A #GrlUiControl
  *
@@ -367,7 +367,7 @@ grl_ui_control_get_bounds (GrlUiControl *self)
     return grl_rectangle_copy (priv->bounds);
 }
 
-/**
+/*
  * grl_ui_control_set_bounds:
  * @self: A #GrlUiControl
  * @bounds: The new bounds
@@ -397,7 +397,7 @@ grl_ui_control_set_bounds (GrlUiControl *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_HEIGHT]);
 }
 
-/**
+/*
  * grl_ui_control_get_x:
  * @self: A #GrlUiControl
  *
@@ -416,7 +416,7 @@ grl_ui_control_get_x (GrlUiControl *self)
     return priv->bounds ? priv->bounds->x : 0.0f;
 }
 
-/**
+/*
  * grl_ui_control_set_x:
  * @self: A #GrlUiControl
  * @x: The new X position
@@ -443,7 +443,7 @@ grl_ui_control_set_x (GrlUiControl *self,
     }
 }
 
-/**
+/*
  * grl_ui_control_get_y:
  * @self: A #GrlUiControl
  *
@@ -462,7 +462,7 @@ grl_ui_control_get_y (GrlUiControl *self)
     return priv->bounds ? priv->bounds->y : 0.0f;
 }
 
-/**
+/*
  * grl_ui_control_set_y:
  * @self: A #GrlUiControl
  * @y: The new Y position
@@ -489,7 +489,7 @@ grl_ui_control_set_y (GrlUiControl *self,
     }
 }
 
-/**
+/*
  * grl_ui_control_get_width:
  * @self: A #GrlUiControl
  *
@@ -508,7 +508,7 @@ grl_ui_control_get_width (GrlUiControl *self)
     return priv->bounds ? priv->bounds->width : 0.0f;
 }
 
-/**
+/*
  * grl_ui_control_set_width:
  * @self: A #GrlUiControl
  * @width: The new width
@@ -536,7 +536,7 @@ grl_ui_control_set_width (GrlUiControl *self,
     }
 }
 
-/**
+/*
  * grl_ui_control_get_height:
  * @self: A #GrlUiControl
  *
@@ -555,7 +555,7 @@ grl_ui_control_get_height (GrlUiControl *self)
     return priv->bounds ? priv->bounds->height : 0.0f;
 }
 
-/**
+/*
  * grl_ui_control_set_height:
  * @self: A #GrlUiControl
  * @height: The new height
@@ -583,7 +583,7 @@ grl_ui_control_set_height (GrlUiControl *self,
     }
 }
 
-/**
+/*
  * grl_ui_control_get_enabled:
  * @self: A #GrlUiControl
  *
@@ -602,7 +602,7 @@ grl_ui_control_get_enabled (GrlUiControl *self)
     return priv->enabled;
 }
 
-/**
+/*
  * grl_ui_control_set_enabled:
  * @self: A #GrlUiControl
  * @enabled: Whether the control should be enabled
@@ -634,7 +634,7 @@ grl_ui_control_set_enabled (GrlUiControl *self,
     }
 }
 
-/**
+/*
  * grl_ui_control_get_visible:
  * @self: A #GrlUiControl
  *
@@ -653,7 +653,7 @@ grl_ui_control_get_visible (GrlUiControl *self)
     return priv->visible;
 }
 
-/**
+/*
  * grl_ui_control_set_visible:
  * @self: A #GrlUiControl
  * @visible: Whether the control should be visible
@@ -677,7 +677,7 @@ grl_ui_control_set_visible (GrlUiControl *self,
     }
 }
 
-/**
+/*
  * grl_ui_control_get_state:
  * @self: A #GrlUiControl
  *
@@ -696,7 +696,7 @@ grl_ui_control_get_state (GrlUiControl *self)
     return priv->state;
 }
 
-/**
+/*
  * grl_ui_control_get_tooltip:
  * @self: A #GrlUiControl
  *
@@ -715,7 +715,7 @@ grl_ui_control_get_tooltip (GrlUiControl *self)
     return priv->tooltip;
 }
 
-/**
+/*
  * grl_ui_control_set_tooltip:
  * @self: A #GrlUiControl
  * @tooltip: (nullable): The tooltip text, or %NULL
@@ -740,7 +740,7 @@ grl_ui_control_set_tooltip (GrlUiControl *self,
     }
 }
 
-/**
+/*
  * grl_ui_control_draw:
  * @self: A #GrlUiControl
  *
@@ -765,7 +765,7 @@ grl_ui_control_draw (GrlUiControl *self)
         klass->draw (self);
 }
 
-/**
+/*
  * grl_ui_control_handle_input:
  * @self: A #GrlUiControl
  *
@@ -794,7 +794,7 @@ grl_ui_control_handle_input (GrlUiControl *self)
     return FALSE;
 }
 
-/**
+/*
  * grl_ui_control_get_preferred_size:
  * @self: A #GrlUiControl
  * @width: (out) (nullable): Return location for preferred width
@@ -816,7 +816,7 @@ grl_ui_control_get_preferred_size (GrlUiControl *self,
         klass->get_preferred_size (self, width, height);
 }
 
-/**
+/*
  * grl_ui_control_contains_point:
  * @self: A #GrlUiControl
  * @x: X coordinate to test

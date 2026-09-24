@@ -194,7 +194,7 @@ grl_model_animation_from_raylib (ModelAnimation anim,
     return self;
 }
 
-/**
+/*
  * grl_model_animation_load:
  * @filename: (type filename): Path to animation file
  * @count: (out): Return location for animation count
@@ -248,7 +248,7 @@ grl_model_animation_load (const gchar  *filename,
     return result;
 }
 
-/**
+/*
  * grl_model_animation_get_name:
  * @self: A #GrlModelAnimation
  *
@@ -268,7 +268,7 @@ grl_model_animation_get_name (GrlModelAnimation *self)
     return priv->valid ? priv->animation.name : "";
 }
 
-/**
+/*
  * grl_model_animation_get_frame_count:
  * @self: A #GrlModelAnimation
  *
@@ -288,7 +288,7 @@ grl_model_animation_get_frame_count (GrlModelAnimation *self)
     return priv->valid ? priv->animation.keyframeCount : 0;
 }
 
-/**
+/*
  * grl_model_animation_get_bone_count:
  * @self: A #GrlModelAnimation
  *
@@ -308,7 +308,7 @@ grl_model_animation_get_bone_count (GrlModelAnimation *self)
     return priv->valid ? priv->animation.boneCount : 0;
 }
 
-/**
+/*
  * grl_model_animation_get_frame_pose:
  * @self: A #GrlModelAnimation
  * @frame: Keyframe index in range [0, frame_count)
@@ -352,7 +352,7 @@ grl_model_animation_get_frame_pose (GrlModelAnimation *self,
     return grl_transform_new (translation, rotation, scale);
 }
 
-/**
+/*
  * grl_model_animation_update:
  * @self: A #GrlModelAnimation
  * @model: The model to animate
@@ -381,7 +381,7 @@ grl_model_animation_update (GrlModelAnimation *self,
     UpdateModelAnimation (*rl_model, priv->animation, frame);
 }
 
-/**
+/*
  * grl_model_animation_blend:
  * @model: The model to animate
  * @anim_a: First animation
@@ -420,7 +420,7 @@ grl_model_animation_blend (GrlModel          *model,
                             priv_b->animation, frame_b, blend);
 }
 
-/**
+/*
  * grl_model_animation_is_valid:
  * @self: A #GrlModelAnimation
  * @model: The model to check against
@@ -450,7 +450,7 @@ grl_model_animation_is_valid (GrlModelAnimation *self,
     return IsModelAnimationValid (*rl_model, priv->animation);
 }
 
-/**
+/*
  * grl_model_animation_get_handle:
  * @self: A #GrlModelAnimation
  *

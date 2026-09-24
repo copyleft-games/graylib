@@ -19,7 +19,7 @@
 
 G_DEFINE_BOXED_TYPE (GrlBoundingBox, grl_bounding_box, grl_bounding_box_copy, grl_bounding_box_free)
 
-/**
+/*
  * grl_bounding_box_new:
  * @min: (transfer none): Minimum corner
  * @max: (transfer none): Maximum corner
@@ -48,7 +48,7 @@ grl_bounding_box_new (const GrlVector3 *min,
     return self;
 }
 
-/**
+/*
  * grl_bounding_box_new_xyz:
  * @min_x: Minimum X coordinate
  * @min_y: Minimum Y coordinate
@@ -82,7 +82,7 @@ grl_bounding_box_new_xyz (gfloat min_x,
     return self;
 }
 
-/**
+/*
  * grl_bounding_box_copy:
  * @self: (nullable): A #GrlBoundingBox
  *
@@ -104,7 +104,7 @@ grl_bounding_box_copy (const GrlBoundingBox *self)
     return copy;
 }
 
-/**
+/*
  * grl_bounding_box_free:
  * @self: (nullable): A #GrlBoundingBox
  *
@@ -117,7 +117,7 @@ grl_bounding_box_free (GrlBoundingBox *self)
         g_slice_free (GrlBoundingBox, self);
 }
 
-/**
+/*
  * grl_bounding_box_get_min:
  * @self: A #GrlBoundingBox
  *
@@ -133,7 +133,7 @@ grl_bounding_box_get_min (const GrlBoundingBox *self)
     return grl_vector3_new (self->min.x, self->min.y, self->min.z);
 }
 
-/**
+/*
  * grl_bounding_box_get_max:
  * @self: A #GrlBoundingBox
  *
@@ -149,7 +149,7 @@ grl_bounding_box_get_max (const GrlBoundingBox *self)
     return grl_vector3_new (self->max.x, self->max.y, self->max.z);
 }
 
-/**
+/*
  * grl_bounding_box_get_center:
  * @self: A #GrlBoundingBox
  *
@@ -167,7 +167,7 @@ grl_bounding_box_get_center (const GrlBoundingBox *self)
                             (self->min.z + self->max.z) * 0.5f);
 }
 
-/**
+/*
  * grl_bounding_box_get_size:
  * @self: A #GrlBoundingBox
  *
@@ -185,7 +185,7 @@ grl_bounding_box_get_size (const GrlBoundingBox *self)
                             self->max.z - self->min.z);
 }
 
-/**
+/*
  * grl_bounding_box_contains_point:
  * @self: A #GrlBoundingBox
  * @point: The point to check
@@ -206,7 +206,7 @@ grl_bounding_box_contains_point (const GrlBoundingBox *self,
             point->z >= self->min.z && point->z <= self->max.z);
 }
 
-/**
+/*
  * grl_bounding_box_intersects:
  * @a: First bounding box
  * @b: Second bounding box
@@ -233,7 +233,7 @@ grl_bounding_box_intersects (const GrlBoundingBox *a,
     return TRUE;
 }
 
-/**
+/*
  * grl_bounding_box_expand:
  * @self: A #GrlBoundingBox
  * @point: Point to include
@@ -270,7 +270,7 @@ grl_bounding_box_expand (const GrlBoundingBox *self,
     return result;
 }
 
-/**
+/*
  * grl_bounding_box_merge:
  * @a: First bounding box
  * @b: Second bounding box

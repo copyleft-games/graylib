@@ -1297,7 +1297,7 @@ grl_window_focus (GrlWindow *self)
     SetWindowFocused ();
 }
 
-/**
+/*
  * grl_window_set_icon:
  * @self: A #GrlWindow
  * @icon: A #GrlImage to use as the window icon (RGBA 32-bit)
@@ -1318,7 +1318,7 @@ grl_window_set_icon (GrlWindow *self,
     SetWindowIcon (*handle);
 }
 
-/**
+/*
  * grl_window_set_icons:
  * @self: A #GrlWindow
  * @icons: (array length=count): Array of #GrlImage icons (RGBA 32-bit)
@@ -1835,7 +1835,7 @@ static const GrlKey grl_polled_keys[] =
 
 #define GRL_NUM_POLLED_KEYS (sizeof(grl_polled_keys) / sizeof(grl_polled_keys[0]))
 
-/**
+/*
  * grl_window_poll_input:
  * @self: A #GrlWindow.
  *

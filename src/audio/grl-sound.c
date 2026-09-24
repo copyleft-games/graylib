@@ -247,7 +247,7 @@ grl_sound_init (GrlSound *self)
     self->filename = NULL;
 }
 
-/**
+/*
  * grl_sound_new_from_file:
  * @filename: Path to the audio file
  * @error: (nullable): Return location for error, or %NULL
@@ -301,7 +301,7 @@ grl_sound_new_from_file (const gchar  *filename,
     return self;
 }
 
-/**
+/*
  * grl_sound_new_from_wave:
  * @data: (array length=data_size): Raw wave data
  * @data_size: Size of @data in bytes
@@ -350,7 +350,7 @@ grl_sound_new_from_wave (const guint8 *data,
     return self;
 }
 
-/**
+/*
  * grl_sound_new_from_memory:
  * @file_type: File type extension (e.g., ".wav", ".ogg")
  * @data: (array length=data_size): Audio file data in memory
@@ -397,7 +397,7 @@ grl_sound_new_from_memory (const gchar  *file_type,
     return self;
 }
 
-/**
+/*
  * grl_sound_new_from_resource:
  * @pack: A #GrlResourcePack
  * @resource_id: The resource ID to load
@@ -459,7 +459,7 @@ grl_sound_new_from_resource (GrlResourcePack *pack,
     return sound;
 }
 
-/**
+/*
  * grl_sound_new_from_grl_wave:
  * @wave: A #GrlWave containing the audio data
  *
@@ -494,7 +494,7 @@ grl_sound_new_from_grl_wave (GrlWave *wave)
     return self;
 }
 
-/**
+/*
  * grl_sound_new_alias:
  * @source: A #GrlSound to create an alias from
  *
@@ -529,7 +529,7 @@ grl_sound_new_alias (GrlSound *source)
     return self;
 }
 
-/**
+/*
  * grl_sound_play:
  * @self: A #GrlSound
  *
@@ -547,7 +547,7 @@ grl_sound_play (GrlSound *self)
     PlaySound (self->sound);
 }
 
-/**
+/*
  * grl_sound_stop:
  * @self: A #GrlSound
  *
@@ -564,7 +564,7 @@ grl_sound_stop (GrlSound *self)
     StopSound (self->sound);
 }
 
-/**
+/*
  * grl_sound_pause:
  * @self: A #GrlSound
  *
@@ -581,7 +581,7 @@ grl_sound_pause (GrlSound *self)
     PauseSound (self->sound);
 }
 
-/**
+/*
  * grl_sound_resume:
  * @self: A #GrlSound
  *
@@ -598,7 +598,7 @@ grl_sound_resume (GrlSound *self)
     ResumeSound (self->sound);
 }
 
-/**
+/*
  * grl_sound_is_playing:
  * @self: A #GrlSound
  *
@@ -621,7 +621,7 @@ grl_sound_is_playing (GrlSound *self)
     return raw != 0;
 }
 
-/**
+/*
  * grl_sound_is_alias:
  * @self: A #GrlSound
  *
@@ -637,7 +637,7 @@ grl_sound_is_alias (GrlSound *self)
     return self->is_alias;
 }
 
-/**
+/*
  * grl_sound_update:
  * @self: A #GrlSound
  * @data: (array length=sample_count): New sample data
@@ -664,7 +664,7 @@ grl_sound_update (GrlSound      *self,
     UpdateSound (self->sound, data, sample_count);
 }
 
-/**
+/*
  * grl_sound_set_volume:
  * @self: A #GrlSound
  * @volume: Volume level (0.0 to 1.0)
@@ -690,7 +690,7 @@ grl_sound_set_volume (GrlSound *self,
     }
 }
 
-/**
+/*
  * grl_sound_get_volume:
  * @self: A #GrlSound
  *
@@ -706,7 +706,7 @@ grl_sound_get_volume (GrlSound *self)
     return self->volume;
 }
 
-/**
+/*
  * grl_sound_set_pitch:
  * @self: A #GrlSound
  * @pitch: Pitch multiplier (1.0 = normal pitch)
@@ -733,7 +733,7 @@ grl_sound_set_pitch (GrlSound *self,
     }
 }
 
-/**
+/*
  * grl_sound_get_pitch:
  * @self: A #GrlSound
  *
@@ -749,7 +749,7 @@ grl_sound_get_pitch (GrlSound *self)
     return self->pitch;
 }
 
-/**
+/*
  * grl_sound_set_pan:
  * @self: A #GrlSound
  * @pan: Pan position (-1.0 = left, 0.0 = center, 1.0 = right)
@@ -775,7 +775,7 @@ grl_sound_set_pan (GrlSound *self,
     }
 }
 
-/**
+/*
  * grl_sound_get_pan:
  * @self: A #GrlSound
  *
@@ -791,7 +791,7 @@ grl_sound_get_pan (GrlSound *self)
     return self->pan;
 }
 
-/**
+/*
  * grl_sound_play_multi:
  * @self: A #GrlSound
  *
@@ -809,7 +809,7 @@ grl_sound_play_multi (GrlSound *self)
     PlaySound (self->sound);
 }
 
-/**
+/*
  * grl_sound_stop_multi:
  * @self: A #GrlSound
  *
@@ -826,7 +826,7 @@ grl_sound_stop_multi (GrlSound *self)
     StopSound (self->sound);
 }
 
-/**
+/*
  * grl_sound_get_sounds_playing:
  * @self: A #GrlSound
  *

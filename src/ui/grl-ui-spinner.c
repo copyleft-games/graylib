@@ -388,7 +388,7 @@ grl_ui_spinner_init (GrlUiSpinner *self)
  * Public API
  */
 
-/**
+/*
  * grl_ui_spinner_new:
  * @min_value: Minimum value
  * @max_value: Maximum value
@@ -407,7 +407,7 @@ grl_ui_spinner_new (gint min_value,
                          NULL);
 }
 
-/**
+/*
  * grl_ui_spinner_new_with_bounds:
  * @x: X position
  * @y: Y position
@@ -439,7 +439,7 @@ grl_ui_spinner_new_with_bounds (gfloat x,
                          NULL);
 }
 
-/**
+/*
  * grl_ui_spinner_get_value:
  * @self: A #GrlUiSpinner
  *
@@ -455,7 +455,7 @@ grl_ui_spinner_get_value (GrlUiSpinner *self)
     return self->value;
 }
 
-/**
+/*
  * grl_ui_spinner_set_value:
  * @self: A #GrlUiSpinner
  * @value: The new value
@@ -482,7 +482,7 @@ grl_ui_spinner_set_value (GrlUiSpinner *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_VALUE]);
 }
 
-/**
+/*
  * grl_ui_spinner_get_min_value:
  * @self: A #GrlUiSpinner
  *
@@ -498,7 +498,7 @@ grl_ui_spinner_get_min_value (GrlUiSpinner *self)
     return self->min_value;
 }
 
-/**
+/*
  * grl_ui_spinner_set_min_value:
  * @self: A #GrlUiSpinner
  * @min_value: The new minimum value
@@ -526,7 +526,7 @@ grl_ui_spinner_set_min_value (GrlUiSpinner *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_MIN_VALUE]);
 }
 
-/**
+/*
  * grl_ui_spinner_get_max_value:
  * @self: A #GrlUiSpinner
  *
@@ -542,7 +542,7 @@ grl_ui_spinner_get_max_value (GrlUiSpinner *self)
     return self->max_value;
 }
 
-/**
+/*
  * grl_ui_spinner_set_max_value:
  * @self: A #GrlUiSpinner
  * @max_value: The new maximum value
@@ -570,7 +570,7 @@ grl_ui_spinner_set_max_value (GrlUiSpinner *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_MAX_VALUE]);
 }
 
-/**
+/*
  * grl_ui_spinner_get_text:
  * @self: A #GrlUiSpinner
  *
@@ -586,7 +586,7 @@ grl_ui_spinner_get_text (GrlUiSpinner *self)
     return self->text;
 }
 
-/**
+/*
  * grl_ui_spinner_set_text:
  * @self: A #GrlUiSpinner
  * @text: (nullable): The new label text
@@ -608,7 +608,7 @@ grl_ui_spinner_set_text (GrlUiSpinner *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TEXT]);
 }
 
-/**
+/*
  * grl_ui_spinner_get_edit_mode:
  * @self: A #GrlUiSpinner
  *
@@ -624,7 +624,7 @@ grl_ui_spinner_get_edit_mode (GrlUiSpinner *self)
     return self->edit_mode;
 }
 
-/**
+/*
  * grl_ui_spinner_set_edit_mode:
  * @self: A #GrlUiSpinner
  * @edit_mode: Whether to enter edit mode
@@ -647,7 +647,7 @@ grl_ui_spinner_set_edit_mode (GrlUiSpinner *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_EDIT_MODE]);
 }
 
-/**
+/*
  * grl_ui_spinner_increment:
  * @self: A #GrlUiSpinner
  *
@@ -666,7 +666,7 @@ grl_ui_spinner_increment (GrlUiSpinner *self)
     }
 }
 
-/**
+/*
  * grl_ui_spinner_decrement:
  * @self: A #GrlUiSpinner
  *

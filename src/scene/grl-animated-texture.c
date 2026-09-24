@@ -411,7 +411,7 @@ grl_animated_texture_init (GrlAnimatedTexture *self)
  * Public API
  */
 
-/**
+/*
  * grl_animated_texture_new:
  * @texture: (transfer none): The spritesheet texture
  * @frame_width: Width of each frame
@@ -438,7 +438,7 @@ grl_animated_texture_new (GrlTexture *texture,
                          NULL);
 }
 
-/**
+/*
  * grl_animated_texture_new_from_file:
  * @filename: Path to the spritesheet file
  * @frame_width: Width of each frame
@@ -476,7 +476,7 @@ grl_animated_texture_new_from_file (const gchar  *filename,
     return grl_animated_texture_new (texture, frame_width, frame_height);
 }
 
-/**
+/*
  * grl_animated_texture_get_texture:
  * @self: A #GrlAnimatedTexture
  *
@@ -492,7 +492,7 @@ grl_animated_texture_get_texture (GrlAnimatedTexture *self)
     return self->texture;
 }
 
-/**
+/*
  * grl_animated_texture_get_frame_count:
  * @self: A #GrlAnimatedTexture
  *
@@ -508,7 +508,7 @@ grl_animated_texture_get_frame_count (GrlAnimatedTexture *self)
     return self->frame_count;
 }
 
-/**
+/*
  * grl_animated_texture_get_frame_width:
  * @self: A #GrlAnimatedTexture
  *
@@ -524,7 +524,7 @@ grl_animated_texture_get_frame_width (GrlAnimatedTexture *self)
     return self->frame_width;
 }
 
-/**
+/*
  * grl_animated_texture_get_frame_height:
  * @self: A #GrlAnimatedTexture
  *
@@ -540,7 +540,7 @@ grl_animated_texture_get_frame_height (GrlAnimatedTexture *self)
     return self->frame_height;
 }
 
-/**
+/*
  * grl_animated_texture_set_frame_count:
  * @self: A #GrlAnimatedTexture
  * @count: The number of frames to use
@@ -573,7 +573,7 @@ grl_animated_texture_set_frame_count (GrlAnimatedTexture *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_FRAME_COUNT]);
 }
 
-/**
+/*
  * grl_animated_texture_get_current_frame:
  * @self: A #GrlAnimatedTexture
  *
@@ -589,7 +589,7 @@ grl_animated_texture_get_current_frame (GrlAnimatedTexture *self)
     return self->current_frame;
 }
 
-/**
+/*
  * grl_animated_texture_set_current_frame:
  * @self: A #GrlAnimatedTexture
  * @frame: The frame index to set
@@ -622,7 +622,7 @@ grl_animated_texture_set_current_frame (GrlAnimatedTexture *self,
     g_signal_emit (self, signals[SIGNAL_FRAME_CHANGED], 0, frame);
 }
 
-/**
+/*
  * grl_animated_texture_get_frame_rect:
  * @self: A #GrlAnimatedTexture
  * @frame: The frame index
@@ -656,7 +656,7 @@ grl_animated_texture_get_frame_rect (GrlAnimatedTexture *self,
                               (gfloat)self->frame_height);
 }
 
-/**
+/*
  * grl_animated_texture_get_current_rect:
  * @self: A #GrlAnimatedTexture
  *
@@ -672,7 +672,7 @@ grl_animated_texture_get_current_rect (GrlAnimatedTexture *self)
     return grl_animated_texture_get_frame_rect (self, self->current_frame);
 }
 
-/**
+/*
  * grl_animated_texture_get_fps:
  * @self: A #GrlAnimatedTexture
  *
@@ -688,7 +688,7 @@ grl_animated_texture_get_fps (GrlAnimatedTexture *self)
     return self->fps;
 }
 
-/**
+/*
  * grl_animated_texture_set_fps:
  * @self: A #GrlAnimatedTexture
  * @fps: Frames per second
@@ -710,7 +710,7 @@ grl_animated_texture_set_fps (GrlAnimatedTexture *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_FPS]);
 }
 
-/**
+/*
  * grl_animated_texture_get_looping:
  * @self: A #GrlAnimatedTexture
  *
@@ -726,7 +726,7 @@ grl_animated_texture_get_looping (GrlAnimatedTexture *self)
     return self->looping;
 }
 
-/**
+/*
  * grl_animated_texture_set_looping:
  * @self: A #GrlAnimatedTexture
  * @looping: Whether to loop
@@ -749,7 +749,7 @@ grl_animated_texture_set_looping (GrlAnimatedTexture *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_LOOPING]);
 }
 
-/**
+/*
  * grl_animated_texture_get_playing:
  * @self: A #GrlAnimatedTexture
  *
@@ -765,7 +765,7 @@ grl_animated_texture_get_playing (GrlAnimatedTexture *self)
     return self->playing;
 }
 
-/**
+/*
  * grl_animated_texture_play:
  * @self: A #GrlAnimatedTexture
  *
@@ -785,7 +785,7 @@ grl_animated_texture_play (GrlAnimatedTexture *self)
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_PLAYING]);
 }
 
-/**
+/*
  * grl_animated_texture_pause:
  * @self: A #GrlAnimatedTexture
  *
@@ -804,7 +804,7 @@ grl_animated_texture_pause (GrlAnimatedTexture *self)
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_PLAYING]);
 }
 
-/**
+/*
  * grl_animated_texture_stop:
  * @self: A #GrlAnimatedTexture
  *
@@ -824,7 +824,7 @@ grl_animated_texture_stop (GrlAnimatedTexture *self)
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_CURRENT_FRAME]);
 }
 
-/**
+/*
  * grl_animated_texture_update:
  * @self: A #GrlAnimatedTexture
  * @delta: Time delta in seconds
@@ -886,7 +886,7 @@ grl_animated_texture_update (GrlAnimatedTexture *self,
     }
 }
 
-/**
+/*
  * grl_animated_texture_is_finished:
  * @self: A #GrlAnimatedTexture
  *

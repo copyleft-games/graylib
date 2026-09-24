@@ -220,7 +220,7 @@ grl_ui_button_init (GrlUiButton *self)
     self->icon_id = -1;
 }
 
-/**
+/*
  * grl_ui_button_new:
  * @text: (nullable): The button text
  *
@@ -236,7 +236,7 @@ grl_ui_button_new (const gchar *text)
                          NULL);
 }
 
-/**
+/*
  * grl_ui_button_new_with_bounds:
  * @x: X position
  * @y: Y position
@@ -267,7 +267,7 @@ grl_ui_button_new_with_bounds (gfloat       x,
     return button;
 }
 
-/**
+/*
  * grl_ui_button_get_text:
  * @self: A #GrlUiButton
  *
@@ -283,7 +283,7 @@ grl_ui_button_get_text (GrlUiButton *self)
     return self->text;
 }
 
-/**
+/*
  * grl_ui_button_set_text:
  * @self: A #GrlUiButton
  * @text: (nullable): The new text
@@ -305,7 +305,7 @@ grl_ui_button_set_text (GrlUiButton *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TEXT]);
 }
 
-/**
+/*
  * grl_ui_button_get_icon:
  * @self: A #GrlUiButton
  *
@@ -321,7 +321,7 @@ grl_ui_button_get_icon (GrlUiButton *self)
     return self->icon_id;
 }
 
-/**
+/*
  * grl_ui_button_set_icon:
  * @self: A #GrlUiButton
  * @icon_id: The icon ID, or -1 for no icon

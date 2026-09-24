@@ -223,7 +223,7 @@ grl_texture_init (GrlTexture *self)
  * =============================================================================
  */
 
-/**
+/*
  * grl_texture_new_from_file:
  * @filename: Path to image file to load
  *
@@ -243,7 +243,7 @@ grl_texture_new_from_file (const gchar *filename)
     return grl_texture_new_internal (tex, TRUE);
 }
 
-/**
+/*
  * grl_texture_new_from_image:
  * @image: A #GrlImage to upload to GPU
  *
@@ -265,7 +265,7 @@ grl_texture_new_from_image (GrlImage *image)
     return grl_texture_new_internal (tex, TRUE);
 }
 
-/**
+/*
  * grl_texture_new_from_memory:
  * @file_type: Image format hint (e.g. ".png", ".jpg")
  * @data: (array length=data_size): Raw image file data
@@ -301,7 +301,7 @@ grl_texture_new_from_memory (const gchar  *file_type,
  * =============================================================================
  */
 
-/**
+/*
  * grl_texture_get_width:
  * @self: A #GrlTexture
  *
@@ -317,7 +317,7 @@ grl_texture_get_width (GrlTexture *self)
     return self->handle.width;
 }
 
-/**
+/*
  * grl_texture_get_height:
  * @self: A #GrlTexture
  *
@@ -333,7 +333,7 @@ grl_texture_get_height (GrlTexture *self)
     return self->handle.height;
 }
 
-/**
+/*
  * grl_texture_get_mipmaps:
  * @self: A #GrlTexture
  *
@@ -349,7 +349,7 @@ grl_texture_get_mipmaps (GrlTexture *self)
     return self->handle.mipmaps;
 }
 
-/**
+/*
  * grl_texture_get_format:
  * @self: A #GrlTexture
  *
@@ -365,7 +365,7 @@ grl_texture_get_format (GrlTexture *self)
     return (GrlPixelFormat)self->handle.format;
 }
 
-/**
+/*
  * grl_texture_is_valid:
  * @self: A #GrlTexture
  *
@@ -387,7 +387,7 @@ grl_texture_is_valid (GrlTexture *self)
  * =============================================================================
  */
 
-/**
+/*
  * grl_texture_gen_mipmaps:
  * @self: A #GrlTexture
  *
@@ -402,7 +402,7 @@ grl_texture_gen_mipmaps (GrlTexture *self)
     GenTextureMipmaps (&self->handle);
 }
 
-/**
+/*
  * grl_texture_set_filter:
  * @self: A #GrlTexture
  * @filter: The #GrlTextureFilter mode
@@ -419,7 +419,7 @@ grl_texture_set_filter (GrlTexture      *self,
     SetTextureFilter (self->handle, (int)filter);
 }
 
-/**
+/*
  * grl_texture_set_wrap:
  * @self: A #GrlTexture
  * @wrap: The #GrlTextureWrap mode
@@ -442,7 +442,7 @@ grl_texture_set_wrap (GrlTexture    *self,
  * =============================================================================
  */
 
-/**
+/*
  * grl_texture_update:
  * @self: A #GrlTexture
  * @image: A #GrlImage with new pixel data
@@ -464,7 +464,7 @@ grl_texture_update (GrlTexture *self,
     UpdateTexture (self->handle, img_handle->data);
 }
 
-/**
+/*
  * grl_texture_update_rec:
  * @self: A #GrlTexture
  * @rect: The region to update
@@ -491,7 +491,7 @@ grl_texture_update_rec (GrlTexture         *self,
  * =============================================================================
  */
 
-/**
+/*
  * grl_texture_to_image:
  * @self: A #GrlTexture
  *
@@ -535,7 +535,7 @@ grl_texture_get_handle (GrlTexture *self)
     return &self->handle;
 }
 
-/**
+/*
  * grl_texture_new_from_handle:
  * @handle: A pointer to a raylib Texture2D structure
  *

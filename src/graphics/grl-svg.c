@@ -43,7 +43,7 @@ G_DEFINE_QUARK (grl-svg-error-quark, grl_svg_error)
  * GrlVectorShape GBoxed
  * ========================================================================= */
 
-/**
+/*
  * grl_vector_shape_new:
  *
  * Allocates and zero-initialises a new #GrlVectorShape backed by an empty
@@ -63,7 +63,7 @@ grl_vector_shape_new (void)
     return shape;
 }
 
-/**
+/*
  * grl_vector_shape_copy:
  * @self: (nullable): A #GrlVectorShape.
  *
@@ -91,7 +91,7 @@ grl_vector_shape_copy (const GrlVectorShape *self)
     return copy;
 }
 
-/**
+/*
  * grl_vector_shape_free:
  * @self: (nullable): A #GrlVectorShape.
  *
@@ -107,7 +107,7 @@ grl_vector_shape_free (GrlVectorShape *self)
     g_free (self);
 }
 
-/**
+/*
  * grl_vector_shape_get_path:
  * @self: A #GrlVectorShape.
  *
@@ -1785,7 +1785,7 @@ ptr_array_to_shape_array (GPtrArray *arr,
  * Section 4: Public API
  * ========================================================================= */
 
-/**
+/*
  * grl_svg_load_from_memory:
  * @data: SVG source bytes.
  * @len: Length of @data.
@@ -1823,7 +1823,7 @@ grl_svg_load_from_memory (const gchar  *data,
     return result;
 }
 
-/**
+/*
  * grl_svg_load_from_file:
  * @filename: (type filename): Path to an SVG file.
  * @dpi: Device pixels per inch (0 → 96).
@@ -1866,7 +1866,7 @@ grl_svg_load_from_file (const gchar  *filename,
     return result;
 }
 
-/**
+/*
  * grl_path_new_from_svg_file:
  * @filename: (type filename): Path to an SVG file.
  * @dpi: Device pixels per inch (0 → 96).
@@ -2081,7 +2081,7 @@ build_svg_string (GrlVectorShape * const *shapes,
     return s;
 }
 
-/**
+/*
  * grl_svg_to_string:
  * @shapes: (array length=n_shapes): Shapes to serialise.
  * @n_shapes: Number of shapes.
@@ -2104,7 +2104,7 @@ grl_svg_to_string (GrlVectorShape * const *shapes,
     return g_string_free (s, FALSE);
 }
 
-/**
+/*
  * grl_svg_save_to_file:
  * @shapes: (array length=n_shapes): Shapes to serialise.
  * @n_shapes: Number of shapes.
@@ -2147,7 +2147,7 @@ grl_svg_save_to_file (GrlVectorShape * const *shapes,
     return ok;
 }
 
-/**
+/*
  * grl_path_to_svg_string:
  * @self: A #GrlPath.
  *
@@ -2165,7 +2165,7 @@ grl_path_to_svg_string (GrlPath *self)
     return g_string_free (s, FALSE);
 }
 
-/**
+/*
  * grl_image_draw_svg_shapes:
  * @self: A #GrlImage.
  * @shapes: (array length=n_shapes): Shapes to render.

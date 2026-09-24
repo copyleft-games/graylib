@@ -348,7 +348,7 @@ grl_sprite_init (GrlSprite *self)
  * Public API
  */
 
-/**
+/*
  * grl_sprite_new:
  *
  * Creates a new empty sprite.
@@ -361,7 +361,7 @@ grl_sprite_new (void)
     return g_object_new (GRL_TYPE_SPRITE, NULL);
 }
 
-/**
+/*
  * grl_sprite_new_from_texture:
  * @texture: (transfer none): A #GrlTexture
  *
@@ -390,7 +390,7 @@ grl_sprite_new_from_texture (GrlTexture *texture)
     return sprite;
 }
 
-/**
+/*
  * grl_sprite_new_from_file:
  * @filename: Path to the texture file
  * @error: (nullable): Return location for error, or %NULL
@@ -422,7 +422,7 @@ grl_sprite_new_from_file (const gchar  *filename,
     return grl_sprite_new_from_texture (texture);
 }
 
-/**
+/*
  * grl_sprite_get_texture:
  * @self: A #GrlSprite
  *
@@ -442,7 +442,7 @@ grl_sprite_get_texture (GrlSprite *self)
     return priv->texture;
 }
 
-/**
+/*
  * grl_sprite_set_texture:
  * @self: A #GrlSprite
  * @texture: (transfer none) (nullable): A #GrlTexture, or %NULL
@@ -483,7 +483,7 @@ grl_sprite_set_texture (GrlSprite  *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TEXTURE]);
 }
 
-/**
+/*
  * grl_sprite_get_source_rect:
  * @self: A #GrlSprite
  *
@@ -506,7 +506,7 @@ grl_sprite_get_source_rect (GrlSprite *self)
     return grl_rectangle_copy (priv->source_rect);
 }
 
-/**
+/*
  * grl_sprite_set_source_rect:
  * @self: A #GrlSprite
  * @rect: (nullable): The source rectangle, or %NULL for full texture
@@ -552,7 +552,7 @@ grl_sprite_set_source_rect (GrlSprite    *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_SOURCE_RECT]);
 }
 
-/**
+/*
  * grl_sprite_set_source_rect_values:
  * @self: A #GrlSprite
  * @x: X offset in texture
@@ -577,7 +577,7 @@ grl_sprite_set_source_rect_values (GrlSprite *self,
     grl_sprite_set_source_rect (self, rect);
 }
 
-/**
+/*
  * grl_sprite_get_tint:
  * @self: A #GrlSprite
  *
@@ -597,7 +597,7 @@ grl_sprite_get_tint (GrlSprite *self)
     return grl_color_copy (priv->tint);
 }
 
-/**
+/*
  * grl_sprite_set_tint:
  * @self: A #GrlSprite
  * @tint: The tint color
@@ -623,7 +623,7 @@ grl_sprite_set_tint (GrlSprite *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TINT]);
 }
 
-/**
+/*
  * grl_sprite_get_flip_h:
  * @self: A #GrlSprite
  *
@@ -643,7 +643,7 @@ grl_sprite_get_flip_h (GrlSprite *self)
     return priv->flip_h;
 }
 
-/**
+/*
  * grl_sprite_set_flip_h:
  * @self: A #GrlSprite
  * @flip: Whether to flip horizontally
@@ -670,7 +670,7 @@ grl_sprite_set_flip_h (GrlSprite *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_FLIP_H]);
 }
 
-/**
+/*
  * grl_sprite_get_flip_v:
  * @self: A #GrlSprite
  *
@@ -690,7 +690,7 @@ grl_sprite_get_flip_v (GrlSprite *self)
     return priv->flip_v;
 }
 
-/**
+/*
  * grl_sprite_set_flip_v:
  * @self: A #GrlSprite
  * @flip: Whether to flip vertically

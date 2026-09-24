@@ -56,7 +56,7 @@
  * =============================================================================
  */
 
-/**
+/*
  * grl_draw_fps:
  * @x: X position
  * @y: Y position
@@ -71,7 +71,7 @@ grl_draw_fps (gint x,
     DrawFPS (x, y);
 }
 
-/**
+/*
  * grl_draw_text:
  * @text: Text to draw
  * @x: X position
@@ -95,7 +95,7 @@ grl_draw_text (const gchar    *text,
     DrawText (text, x, y, font_size, GRL_TO_RAYLIB_COLOR (color));
 }
 
-/**
+/*
  * grl_draw_text_ex:
  * @font: Font to use
  * @text: Text to draw
@@ -130,7 +130,7 @@ grl_draw_text_ex (GrlFont          *font,
                 GRL_TO_RAYLIB_COLOR (tint));
 }
 
-/**
+/*
  * grl_draw_text_pro:
  * @font: Font to use
  * @text: Text to draw
@@ -173,7 +173,7 @@ grl_draw_text_pro (GrlFont          *font,
                  GRL_TO_RAYLIB_COLOR (tint));
 }
 
-/**
+/*
  * grl_draw_text_codepoint:
  * @font: Font to use
  * @codepoint: Unicode codepoint to draw
@@ -206,7 +206,7 @@ grl_draw_text_codepoint (GrlFont          *font,
                        GRL_TO_RAYLIB_COLOR (tint));
 }
 
-/**
+/*
  * grl_measure_text:
  * @text: Text to measure
  * @font_size: Font size in pixels

@@ -27,7 +27,7 @@ G_BEGIN_DECLS
  * signals, and are fully supported by GObject Introspection.
  */
 
-/**
+/*
  * GrlVector2:
  *
  * A 2D vector for positions, velocities, and other 2-component values.
@@ -36,7 +36,7 @@ G_BEGIN_DECLS
  */
 typedef struct _GrlVector2 GrlVector2;
 
-/**
+/*
  * GrlVector3:
  *
  * A 3D vector for positions, velocities, and other 3-component values.
@@ -45,7 +45,7 @@ typedef struct _GrlVector2 GrlVector2;
  */
 typedef struct _GrlVector3 GrlVector3;
 
-/**
+/*
  * GrlVector4:
  *
  * A 4D vector for homogeneous coordinates, quaternions, and other
@@ -55,7 +55,7 @@ typedef struct _GrlVector3 GrlVector3;
  */
 typedef struct _GrlVector4 GrlVector4;
 
-/**
+/*
  * GrlColor:
  *
  * An RGBA color with 8-bit components.
@@ -64,7 +64,7 @@ typedef struct _GrlVector4 GrlVector4;
  */
 typedef struct _GrlColor GrlColor;
 
-/**
+/*
  * GrlRectangle:
  *
  * A 2D axis-aligned rectangle defined by position and size.
@@ -73,7 +73,7 @@ typedef struct _GrlColor GrlColor;
  */
 typedef struct _GrlRectangle GrlRectangle;
 
-/**
+/*
  * GrlVectorShape:
  *
  * A vector shape: a #GrlPath plus fill/stroke paint (used by the SVG API).
@@ -82,7 +82,7 @@ typedef struct _GrlRectangle GrlRectangle;
  */
 typedef struct _GrlVectorShape GrlVectorShape;
 
-/**
+/*
  * GrlMatrix:
  *
  * A 4x4 transformation matrix in column-major order.
@@ -91,7 +91,7 @@ typedef struct _GrlVectorShape GrlVectorShape;
  */
 typedef struct _GrlMatrix GrlMatrix;
 
-/**
+/*
  * GrlQuaternion:
  *
  * A quaternion for representing 3D rotations and orientations.
@@ -100,7 +100,7 @@ typedef struct _GrlMatrix GrlMatrix;
  */
 typedef struct _GrlQuaternion GrlQuaternion;
 
-/**
+/*
  * GrlBoundingBox:
  *
  * A 3D axis-aligned bounding box defined by min and max corners.
@@ -109,7 +109,7 @@ typedef struct _GrlQuaternion GrlQuaternion;
  */
 typedef struct _GrlBoundingBox GrlBoundingBox;
 
-/**
+/*
  * GrlBoneInfo:
  *
  * Metadata for a single skeleton bone (name + parent index).
@@ -118,7 +118,7 @@ typedef struct _GrlBoundingBox GrlBoundingBox;
  */
 typedef struct _GrlBoneInfo GrlBoneInfo;
 
-/**
+/*
  * GrlTransform:
  *
  * A decomposed 3D transform (translation, rotation, scale).
@@ -127,7 +127,7 @@ typedef struct _GrlBoneInfo GrlBoneInfo;
  */
 typedef struct _GrlTransform GrlTransform;
 
-/**
+/*
  * GrlPngChunk:
  *
  * A PNG chunk containing metadata or image data.
@@ -136,7 +136,7 @@ typedef struct _GrlTransform GrlTransform;
  */
 typedef struct _GrlPngChunk GrlPngChunk;
 
-/**
+/*
  * GrlPngPalette:
  *
  * A color palette for indexed PNG images.
@@ -329,7 +329,7 @@ typedef struct _GrlCamera3DClass GrlCamera3DClass;
  * Audio Module
  */
 
-/**
+/*
  * GrlWave:
  *
  * Raw audio wave data for manipulation and processing.
@@ -634,7 +634,7 @@ typedef struct _GrlUiWindowBox GrlUiWindowBox;
  * Resources Module
  */
 
-/**
+/*
  * GrlResourceChunkInfo:
  *
  * Information about a resource chunk in an rres file.

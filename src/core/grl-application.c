@@ -576,7 +576,7 @@ grl_application_get_target_fps (GrlApplication *self)
     return priv->target_fps;
 }
 
-/**
+/*
  * grl_application_enable_event_waiting:
  * @self: A #GrlApplication
  *
@@ -591,7 +591,7 @@ grl_application_enable_event_waiting (GrlApplication *self)
     EnableEventWaiting ();
 }
 
-/**
+/*
  * grl_application_disable_event_waiting:
  * @self: A #GrlApplication
  *

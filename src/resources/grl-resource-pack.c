@@ -211,7 +211,7 @@ read_rres_header (const gchar  *filename,
     return TRUE;
 }
 
-/**
+/*
  * grl_resource_pack_new:
  * @filename: (type filename): Path to the rres file
  * @error: (nullable): Return location for error
@@ -252,7 +252,7 @@ grl_resource_pack_new (const gchar  *filename,
     return self;
 }
 
-/**
+/*
  * grl_resource_pack_get_filename:
  * @self: A #GrlResourcePack
  *
@@ -268,7 +268,7 @@ grl_resource_pack_get_filename (GrlResourcePack *self)
     return self->filename;
 }
 
-/**
+/*
  * grl_resource_pack_get_version:
  * @self: A #GrlResourcePack
  *
@@ -284,7 +284,7 @@ grl_resource_pack_get_version (GrlResourcePack *self)
     return self->version;
 }
 
-/**
+/*
  * grl_resource_pack_get_chunk_count:
  * @self: A #GrlResourcePack
  *
@@ -300,7 +300,7 @@ grl_resource_pack_get_chunk_count (GrlResourcePack *self)
     return self->chunk_count;
 }
 
-/**
+/*
  * grl_resource_pack_has_central_directory:
  * @self: A #GrlResourcePack
  *
@@ -316,7 +316,7 @@ grl_resource_pack_has_central_directory (GrlResourcePack *self)
     return self->has_central_dir;
 }
 
-/**
+/*
  * grl_resource_pack_get_entry_count:
  * @self: A #GrlResourcePack
  *
@@ -336,7 +336,7 @@ grl_resource_pack_get_entry_count (GrlResourcePack *self)
     return self->central_dir.count;
 }
 
-/**
+/*
  * grl_resource_pack_get_resource_id:
  * @self: A #GrlResourcePack
  * @filename: The filename to look up
@@ -362,7 +362,7 @@ grl_resource_pack_get_resource_id (GrlResourcePack *self,
     return (guint32)id;
 }
 
-/**
+/*
  * grl_resource_pack_get_entry_filename:
  * @self: A #GrlResourcePack
  * @index: The entry index
@@ -383,7 +383,7 @@ grl_resource_pack_get_entry_filename (GrlResourcePack *self,
     return g_strdup (self->central_dir.entries[index].fileName);
 }
 
-/**
+/*
  * grl_resource_pack_get_entry_id:
  * @self: A #GrlResourcePack
  * @index: The entry index
@@ -404,7 +404,7 @@ grl_resource_pack_get_entry_id (GrlResourcePack *self,
     return self->central_dir.entries[index].id;
 }
 
-/**
+/*
  * grl_resource_pack_get_chunk_info:
  * @self: A #GrlResourcePack
  * @resource_id: The resource ID
@@ -450,7 +450,7 @@ grl_resource_pack_get_chunk_info (GrlResourcePack *self,
     return info;
 }
 
-/**
+/*
  * grl_resource_pack_get_all_chunk_info:
  * @self: A #GrlResourcePack
  * @count: (out): Return location for chunk count
@@ -504,7 +504,7 @@ grl_resource_pack_get_all_chunk_info (GrlResourcePack *self,
     return infos;
 }
 
-/**
+/*
  * grl_resource_pack_load_raw:
  * @self: A #GrlResourcePack
  * @resource_id: The resource ID
@@ -581,7 +581,7 @@ grl_resource_pack_load_raw (GrlResourcePack *self,
     return data;
 }
 
-/**
+/*
  * grl_resource_pack_load_raw_by_name:
  * @self: A #GrlResourcePack
  * @filename: The filename to load
@@ -629,7 +629,7 @@ grl_resource_pack_load_raw_by_name (GrlResourcePack *self,
     return grl_resource_pack_load_raw (self, resource_id, size, error);
 }
 
-/**
+/*
  * grl_resource_pack_set_cipher_password:
  * @self: A #GrlResourcePack
  * @password: (nullable): The password for encrypted resources
@@ -649,7 +649,7 @@ grl_resource_pack_set_cipher_password (GrlResourcePack *self,
         self->password = g_strdup (password);
 }
 
-/**
+/*
  * grl_resource_pack_compute_crc32:
  * @data: (array length=size): Data to compute CRC32 for
  * @size: Size of data in bytes

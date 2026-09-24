@@ -274,7 +274,7 @@ grl_ui_colorpicker_init (GrlUiColorPicker *self)
  * Public API
  */
 
-/**
+/*
  * grl_ui_colorpicker_new:
  * @color: (nullable): Initial color, or %NULL for red
  *
@@ -295,7 +295,7 @@ grl_ui_colorpicker_new (GrlColor *color)
     return picker;
 }
 
-/**
+/*
  * grl_ui_colorpicker_new_with_bounds:
  * @x: X position
  * @y: Y position
@@ -329,7 +329,7 @@ grl_ui_colorpicker_new_with_bounds (gfloat    x,
     return picker;
 }
 
-/**
+/*
  * grl_ui_colorpicker_get_color:
  * @self: A #GrlUiColorPicker
  *
@@ -345,7 +345,7 @@ grl_ui_colorpicker_get_color (GrlUiColorPicker *self)
     return grl_color_copy (self->color);
 }
 
-/**
+/*
  * grl_ui_colorpicker_set_color:
  * @self: A #GrlUiColorPicker
  * @color: The color to set
@@ -368,7 +368,7 @@ grl_ui_colorpicker_set_color (GrlUiColorPicker *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_COLOR]);
 }
 
-/**
+/*
  * grl_ui_colorpicker_get_text:
  * @self: A #GrlUiColorPicker
  *
@@ -384,7 +384,7 @@ grl_ui_colorpicker_get_text (GrlUiColorPicker *self)
     return self->text;
 }
 
-/**
+/*
  * grl_ui_colorpicker_set_text:
  * @self: A #GrlUiColorPicker
  * @text: (nullable): The label text to display
@@ -406,7 +406,7 @@ grl_ui_colorpicker_set_text (GrlUiColorPicker *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TEXT]);
 }
 
-/**
+/*
  * grl_ui_colorpicker_get_rgb:
  * @self: A #GrlUiColorPicker
  * @r: (out): Red component (0-255)
@@ -431,7 +431,7 @@ grl_ui_colorpicker_get_rgb (GrlUiColorPicker *self,
         *b = self->color->b;
 }
 
-/**
+/*
  * grl_ui_colorpicker_set_rgb:
  * @self: A #GrlUiColorPicker
  * @r: Red component (0-255)
@@ -458,7 +458,7 @@ grl_ui_colorpicker_set_rgb (GrlUiColorPicker *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_COLOR]);
 }
 
-/**
+/*
  * grl_ui_colorpicker_get_rgba:
  * @self: A #GrlUiColorPicker
  * @r: (out): Red component (0-255)
@@ -487,7 +487,7 @@ grl_ui_colorpicker_get_rgba (GrlUiColorPicker *self,
         *a = self->color->a;
 }
 
-/**
+/*
  * grl_ui_colorpicker_set_rgba:
  * @self: A #GrlUiColorPicker
  * @r: Red component (0-255)

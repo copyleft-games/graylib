@@ -54,7 +54,7 @@
  * =============================================================================
  */
 
-/**
+/*
  * grl_draw_texture:
  * @texture: Texture to draw
  * @x: X position
@@ -78,7 +78,7 @@ grl_draw_texture (GrlTexture     *texture,
     DrawTexture (*tex, x, y, GRL_TO_RAYLIB_COLOR (tint));
 }
 
-/**
+/*
  * grl_draw_texture_v:
  * @texture: Texture to draw
  * @position: Position vector
@@ -101,7 +101,7 @@ grl_draw_texture_v (GrlTexture       *texture,
     DrawTextureV (*tex, GRL_TO_RAYLIB_VECTOR2 (position), GRL_TO_RAYLIB_COLOR (tint));
 }
 
-/**
+/*
  * grl_draw_texture_ex:
  * @texture: Texture to draw
  * @position: Position vector
@@ -128,7 +128,7 @@ grl_draw_texture_ex (GrlTexture       *texture,
     DrawTextureEx (*tex, GRL_TO_RAYLIB_VECTOR2 (position), rotation, scale, GRL_TO_RAYLIB_COLOR (tint));
 }
 
-/**
+/*
  * grl_draw_texture_rec:
  * @texture: Texture to draw
  * @source: Source rectangle (region of texture to draw)
@@ -158,7 +158,7 @@ grl_draw_texture_rec (GrlTexture         *texture,
                     GRL_TO_RAYLIB_COLOR (tint));
 }
 
-/**
+/*
  * grl_draw_texture_pro:
  * @texture: Texture to draw
  * @source: Source rectangle (region of texture)

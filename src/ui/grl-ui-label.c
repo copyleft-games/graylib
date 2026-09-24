@@ -176,7 +176,7 @@ grl_ui_label_init (GrlUiLabel *self)
     self->text_alignment = GRL_UI_TEXT_ALIGN_LEFT;
 }
 
-/**
+/*
  * grl_ui_label_new:
  * @text: (nullable): The label text
  *
@@ -192,7 +192,7 @@ grl_ui_label_new (const gchar *text)
                          NULL);
 }
 
-/**
+/*
  * grl_ui_label_new_with_bounds:
  * @x: X position
  * @y: Y position
@@ -223,7 +223,7 @@ grl_ui_label_new_with_bounds (gfloat       x,
     return label;
 }
 
-/**
+/*
  * grl_ui_label_get_text:
  * @self: A #GrlUiLabel
  *
@@ -239,7 +239,7 @@ grl_ui_label_get_text (GrlUiLabel *self)
     return self->text;
 }
 
-/**
+/*
  * grl_ui_label_set_text:
  * @self: A #GrlUiLabel
  * @text: (nullable): The new text
@@ -261,7 +261,7 @@ grl_ui_label_set_text (GrlUiLabel  *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TEXT]);
 }
 
-/**
+/*
  * grl_ui_label_get_text_alignment:
  * @self: A #GrlUiLabel
  *
@@ -277,7 +277,7 @@ grl_ui_label_get_text_alignment (GrlUiLabel *self)
     return self->text_alignment;
 }
 
-/**
+/*
  * grl_ui_label_set_text_alignment:
  * @self: A #GrlUiLabel
  * @alignment: The horizontal text alignment

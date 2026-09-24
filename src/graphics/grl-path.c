@@ -388,7 +388,7 @@ grl_path_init (GrlPath *self)
  * =============================================================================
  */
 
-/**
+/*
  * grl_path_new:
  *
  * Creates a new, empty #GrlPath with no subpaths.
@@ -401,7 +401,7 @@ grl_path_new (void)
     return g_object_new (GRL_TYPE_PATH, NULL);
 }
 
-/**
+/*
  * grl_path_copy:
  * @self: A #GrlPath.
  *
@@ -436,7 +436,7 @@ grl_path_copy (GrlPath *self)
  * =============================================================================
  */
 
-/**
+/*
  * grl_path_move_to:
  * @self: A #GrlPath.
  * @x: X coordinate.
@@ -458,7 +458,7 @@ grl_path_move_to (GrlPath *self,
     g_array_append_val (self->subpaths, sp);
 }
 
-/**
+/*
  * grl_path_line_to:
  * @self: A #GrlPath.
  * @x: X coordinate of the line endpoint.
@@ -489,7 +489,7 @@ grl_path_line_to (GrlPath *self,
     sp->cur_y = y;
 }
 
-/**
+/*
  * grl_path_cubic_to:
  * @self: A #GrlPath.
  * @c1x: X coordinate of the first control point.
@@ -533,7 +533,7 @@ grl_path_cubic_to (GrlPath *self,
     sp->cur_y = y;
 }
 
-/**
+/*
  * grl_path_quad_to:
  * @self: A #GrlPath.
  * @cx: X coordinate of the control point.
@@ -571,7 +571,7 @@ grl_path_quad_to (GrlPath *self,
     sp->cur_y = y;
 }
 
-/**
+/*
  * grl_path_close:
  * @self: A #GrlPath.
  *
@@ -606,7 +606,7 @@ grl_path_close (GrlPath *self)
 /* Kappa constant for circle approximation with cubics */
 #define GRL_PATH_KAPPA 0.5522847498f
 
-/**
+/*
  * grl_path_add_rect:
  * @self: A #GrlPath.
  * @rect: The rectangle to add.
@@ -634,7 +634,7 @@ grl_path_add_rect (GrlPath            *self,
     grl_path_close (self);
 }
 
-/**
+/*
  * grl_path_add_circle:
  * @self: A #GrlPath.
  * @cx: X coordinate of the centre.
@@ -652,7 +652,7 @@ grl_path_add_circle (GrlPath *self,
     grl_path_add_ellipse (self, cx, cy, r, r);
 }
 
-/**
+/*
  * grl_path_add_ellipse:
  * @self: A #GrlPath.
  * @cx: X coordinate of the centre.
@@ -691,7 +691,7 @@ grl_path_add_ellipse (GrlPath *self,
  * =============================================================================
  */
 
-/**
+/*
  * grl_path_is_empty:
  * @self: A #GrlPath.
  *
@@ -705,7 +705,7 @@ grl_path_is_empty (GrlPath *self)
     return self->subpaths->len == 0;
 }
 
-/**
+/*
  * grl_path_get_subpath_count:
  * @self: A #GrlPath.
  *
@@ -719,7 +719,7 @@ grl_path_get_subpath_count (GrlPath *self)
     return self->subpaths->len;
 }
 
-/**
+/*
  * grl_path_get_bounds:
  * @self: A #GrlPath.
  * @out: (out): Return location for the bounding rectangle.
@@ -833,7 +833,7 @@ grl_path_rebuild_flat (GrlPath *self, gfloat tolerance)
     self->flat.valid     = TRUE;
 }
 
-/**
+/*
  * grl_path_get_flattened:
  * @self: A #GrlPath.
  * @tolerance: Maximum chord deviation in pixels.
@@ -888,7 +888,7 @@ grl_path_get_flattened (GrlPath *self,
  * =============================================================================
  */
 
-/**
+/*
  * grl_path_transform:
  * @self: A #GrlPath.
  * @matrix: The 4x4 matrix to apply (only the 2D affine part is used).
@@ -933,7 +933,7 @@ grl_path_transform (GrlPath          *self,
     }
 }
 
-/**
+/*
  * grl_path_translate:
  * @self: A #GrlPath.
  * @dx: X translation.
@@ -970,7 +970,7 @@ grl_path_translate (GrlPath *self,
     }
 }
 
-/**
+/*
  * grl_path_scale:
  * @self: A #GrlPath.
  * @sx: X scale factor.
@@ -1007,7 +1007,7 @@ grl_path_scale (GrlPath *self,
     }
 }
 
-/**
+/*
  * grl_path_rotate:
  * @self: A #GrlPath.
  * @degrees: Rotation angle in degrees, clockwise.
@@ -1311,7 +1311,7 @@ grl_path_bool_op (GrlPath    *a,
     return result;
 }
 
-/**
+/*
  * grl_path_union:
  * @a: First operand path.
  * @b: Second operand path.
@@ -1328,7 +1328,7 @@ grl_path_union (GrlPath *a,
     return grl_path_bool_op (a, b, GRL_BOOL_OP_UNION);
 }
 
-/**
+/*
  * grl_path_intersect:
  * @a: First operand path.
  * @b: Second operand path.
@@ -1345,7 +1345,7 @@ grl_path_intersect (GrlPath *a,
     return grl_path_bool_op (a, b, GRL_BOOL_OP_INTERSECT);
 }
 
-/**
+/*
  * grl_path_subtract:
  * @a: First operand path (base).
  * @b: Second operand path (to subtract).
@@ -1362,7 +1362,7 @@ grl_path_subtract (GrlPath *a,
     return grl_path_bool_op (a, b, GRL_BOOL_OP_SUBTRACT);
 }
 
-/**
+/*
  * grl_path_xor:
  * @a: First operand path.
  * @b: Second operand path.

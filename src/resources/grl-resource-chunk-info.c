@@ -12,7 +12,7 @@
 G_DEFINE_BOXED_TYPE (GrlResourceChunkInfo, grl_resource_chunk_info,
                      grl_resource_chunk_info_copy, grl_resource_chunk_info_free)
 
-/**
+/*
  * grl_resource_chunk_info_new:
  *
  * Creates a new empty #GrlResourceChunkInfo.
@@ -29,7 +29,7 @@ grl_resource_chunk_info_new (void)
     return self;
 }
 
-/**
+/*
  * grl_resource_chunk_info_copy:
  * @self: A #GrlResourceChunkInfo
  *
@@ -50,7 +50,7 @@ grl_resource_chunk_info_copy (const GrlResourceChunkInfo *self)
     return copy;
 }
 
-/**
+/*
  * grl_resource_chunk_info_free:
  * @self: A #GrlResourceChunkInfo
  *
@@ -65,7 +65,7 @@ grl_resource_chunk_info_free (GrlResourceChunkInfo *self)
     g_free (self);
 }
 
-/**
+/*
  * grl_resource_chunk_info_get_type_string:
  * @self: A #GrlResourceChunkInfo
  *
@@ -87,7 +87,7 @@ grl_resource_chunk_info_get_type_string (GrlResourceChunkInfo *self)
     return type_str;
 }
 
-/**
+/*
  * grl_resource_chunk_info_get_data_type:
  * @self: A #GrlResourceChunkInfo
  *
@@ -122,7 +122,7 @@ grl_resource_chunk_info_get_data_type (GrlResourceChunkInfo *self)
     return GRL_RESOURCE_DATA_NULL;
 }
 
-/**
+/*
  * grl_resource_chunk_info_get_compression:
  * @self: A #GrlResourceChunkInfo
  *
@@ -138,7 +138,7 @@ grl_resource_chunk_info_get_compression (GrlResourceChunkInfo *self)
     return (GrlResourceCompressionType)self->compression_type;
 }
 
-/**
+/*
  * grl_resource_chunk_info_get_cipher:
  * @self: A #GrlResourceChunkInfo
  *
@@ -154,7 +154,7 @@ grl_resource_chunk_info_get_cipher (GrlResourceChunkInfo *self)
     return (GrlResourceCipherType)self->cipher_type;
 }
 
-/**
+/*
  * grl_resource_chunk_info_has_next:
  * @self: A #GrlResourceChunkInfo
  *
@@ -170,7 +170,7 @@ grl_resource_chunk_info_has_next (GrlResourceChunkInfo *self)
     return self->next_offset > 0;
 }
 
-/**
+/*
  * grl_resource_chunk_info_is_compressed:
  * @self: A #GrlResourceChunkInfo
  *
@@ -186,7 +186,7 @@ grl_resource_chunk_info_is_compressed (GrlResourceChunkInfo *self)
     return self->compression_type != GRL_RESOURCE_COMP_NONE;
 }
 
-/**
+/*
  * grl_resource_chunk_info_is_encrypted:
  * @self: A #GrlResourceChunkInfo
  *

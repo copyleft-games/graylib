@@ -387,7 +387,7 @@ grl_camera3d_init (GrlCamera3D *self)
     priv->projection = GRL_CAMERA_PERSPECTIVE;
 }
 
-/**
+/*
  * grl_camera3d_new:
  *
  * Creates a new 3D camera with default settings.
@@ -400,7 +400,7 @@ grl_camera3d_new (void)
     return g_object_new (GRL_TYPE_CAMERA3D, NULL);
 }
 
-/**
+/*
  * grl_camera3d_get_position:
  * @self: A #GrlCamera3D
  *
@@ -419,7 +419,7 @@ grl_camera3d_get_position (GrlCamera3D *self)
     return grl_vector3_new (priv->position_x, priv->position_y, priv->position_z);
 }
 
-/**
+/*
  * grl_camera3d_set_position:
  * @self: A #GrlCamera3D
  * @position: The new position
@@ -445,7 +445,7 @@ grl_camera3d_set_position (GrlCamera3D *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_POSITION_Z]);
 }
 
-/**
+/*
  * grl_camera3d_set_position_xyz:
  * @self: A #GrlCamera3D
  * @x: X position
@@ -474,7 +474,7 @@ grl_camera3d_set_position_xyz (GrlCamera3D *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_POSITION_Z]);
 }
 
-/**
+/*
  * grl_camera3d_get_target:
  * @self: A #GrlCamera3D
  *
@@ -493,7 +493,7 @@ grl_camera3d_get_target (GrlCamera3D *self)
     return grl_vector3_new (priv->target_x, priv->target_y, priv->target_z);
 }
 
-/**
+/*
  * grl_camera3d_set_target:
  * @self: A #GrlCamera3D
  * @target: The new target
@@ -519,7 +519,7 @@ grl_camera3d_set_target (GrlCamera3D *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TARGET_Z]);
 }
 
-/**
+/*
  * grl_camera3d_set_target_xyz:
  * @self: A #GrlCamera3D
  * @x: X target
@@ -548,7 +548,7 @@ grl_camera3d_set_target_xyz (GrlCamera3D *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TARGET_Z]);
 }
 
-/**
+/*
  * grl_camera3d_get_up:
  * @self: A #GrlCamera3D
  *
@@ -567,7 +567,7 @@ grl_camera3d_get_up (GrlCamera3D *self)
     return grl_vector3_new (priv->up_x, priv->up_y, priv->up_z);
 }
 
-/**
+/*
  * grl_camera3d_set_up:
  * @self: A #GrlCamera3D
  * @up: The new up vector
@@ -593,7 +593,7 @@ grl_camera3d_set_up (GrlCamera3D *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_UP_Z]);
 }
 
-/**
+/*
  * grl_camera3d_get_fovy:
  * @self: A #GrlCamera3D
  *
@@ -612,7 +612,7 @@ grl_camera3d_get_fovy (GrlCamera3D *self)
     return priv->fovy;
 }
 
-/**
+/*
  * grl_camera3d_set_fovy:
  * @self: A #GrlCamera3D
  * @fovy: The field of view in degrees
@@ -634,7 +634,7 @@ grl_camera3d_set_fovy (GrlCamera3D *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_FOVY]);
 }
 
-/**
+/*
  * grl_camera3d_get_projection:
  * @self: A #GrlCamera3D
  *
@@ -653,7 +653,7 @@ grl_camera3d_get_projection (GrlCamera3D *self)
     return priv->projection;
 }
 
-/**
+/*
  * grl_camera3d_set_projection:
  * @self: A #GrlCamera3D
  * @projection: The projection mode
@@ -674,7 +674,7 @@ grl_camera3d_set_projection (GrlCamera3D        *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_PROJECTION]);
 }
 
-/**
+/*
  * grl_camera3d_begin:
  * @self: A #GrlCamera3D
  *
@@ -691,7 +691,7 @@ grl_camera3d_begin (GrlCamera3D *self)
     BeginMode3D (camera);
 }
 
-/**
+/*
  * grl_camera3d_end:
  * @self: A #GrlCamera3D
  *

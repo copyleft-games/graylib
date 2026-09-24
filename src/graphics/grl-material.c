@@ -137,7 +137,7 @@ grl_material_init (GrlMaterial *self)
         priv->textures[i] = NULL;
 }
 
-/**
+/*
  * grl_material_new:
  *
  * Creates a new material with default values.
@@ -161,7 +161,7 @@ grl_material_new (void)
     return self;
 }
 
-/**
+/*
  * grl_material_new_default:
  *
  * Creates a new material with raylib's default material settings.
@@ -184,7 +184,7 @@ grl_material_new_default (void)
     return self;
 }
 
-/**
+/*
  * grl_material_set_shader:
  * @self: A #GrlMaterial
  * @shader: (nullable): Shader to use
@@ -220,7 +220,7 @@ grl_material_set_shader (GrlMaterial *self,
     }
 }
 
-/**
+/*
  * grl_material_get_shader:
  * @self: A #GrlMaterial
  *
@@ -240,7 +240,7 @@ grl_material_get_shader (GrlMaterial *self)
     return priv->shader;
 }
 
-/**
+/*
  * grl_material_set_texture:
  * @self: A #GrlMaterial
  * @map_type: Which texture map to set
@@ -279,7 +279,7 @@ grl_material_set_texture (GrlMaterial        *self,
     }
 }
 
-/**
+/*
  * grl_material_get_texture:
  * @self: A #GrlMaterial
  * @map_type: Which texture map to get
@@ -302,7 +302,7 @@ grl_material_get_texture (GrlMaterial        *self,
     return priv->textures[map_type];
 }
 
-/**
+/*
  * grl_material_set_map_color:
  * @self: A #GrlMaterial
  * @map_type: Which texture map to set color for
@@ -330,7 +330,7 @@ grl_material_set_map_color (GrlMaterial        *self,
     priv->material.maps[map_type].color.a = grl_color_get_a (color);
 }
 
-/**
+/*
  * grl_material_get_map_color:
  * @self: A #GrlMaterial
  * @map_type: Which texture map to get color for
@@ -355,7 +355,7 @@ grl_material_get_map_color (GrlMaterial        *self,
     return grl_color_new (c.r, c.g, c.b, c.a);
 }
 
-/**
+/*
  * grl_material_set_map_value:
  * @self: A #GrlMaterial
  * @map_type: Which texture map to set value for
@@ -379,7 +379,7 @@ grl_material_set_map_value (GrlMaterial        *self,
     priv->material.maps[map_type].value = value;
 }
 
-/**
+/*
  * grl_material_get_map_value:
  * @self: A #GrlMaterial
  * @map_type: Which texture map to get value for
@@ -402,7 +402,7 @@ grl_material_get_map_value (GrlMaterial        *self,
     return priv->material.maps[map_type].value;
 }
 
-/**
+/*
  * grl_material_is_valid:
  * @self: A #GrlMaterial
  *
@@ -422,7 +422,7 @@ grl_material_is_valid (GrlMaterial *self)
     return priv->valid;
 }
 
-/**
+/*
  * grl_material_get_handle:
  * @self: A #GrlMaterial
  *

@@ -335,7 +335,7 @@ grl_ui_textbox_init (GrlUiTextBox *self)
     self->read_only = FALSE;
 }
 
-/**
+/*
  * grl_ui_textbox_new:
  * @max_length: Maximum number of characters
  *
@@ -351,7 +351,7 @@ grl_ui_textbox_new (gint max_length)
                          NULL);
 }
 
-/**
+/*
  * grl_ui_textbox_new_with_bounds:
  * @x: X position
  * @y: Y position
@@ -382,7 +382,7 @@ grl_ui_textbox_new_with_bounds (gfloat x,
     return textbox;
 }
 
-/**
+/*
  * grl_ui_textbox_get_text:
  * @self: A #GrlUiTextBox
  *
@@ -398,7 +398,7 @@ grl_ui_textbox_get_text (GrlUiTextBox *self)
     return self->text;
 }
 
-/**
+/*
  * grl_ui_textbox_set_text:
  * @self: A #GrlUiTextBox
  * @text: (nullable): The new text content
@@ -434,7 +434,7 @@ grl_ui_textbox_set_text (GrlUiTextBox *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TEXT]);
 }
 
-/**
+/*
  * grl_ui_textbox_get_max_length:
  * @self: A #GrlUiTextBox
  *
@@ -450,7 +450,7 @@ grl_ui_textbox_get_max_length (GrlUiTextBox *self)
     return self->max_length;
 }
 
-/**
+/*
  * grl_ui_textbox_set_max_length:
  * @self: A #GrlUiTextBox
  * @max_length: The maximum number of characters
@@ -488,7 +488,7 @@ grl_ui_textbox_set_max_length (GrlUiTextBox *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_MAX_LENGTH]);
 }
 
-/**
+/*
  * grl_ui_textbox_get_edit_mode:
  * @self: A #GrlUiTextBox
  *
@@ -504,7 +504,7 @@ grl_ui_textbox_get_edit_mode (GrlUiTextBox *self)
     return self->edit_mode;
 }
 
-/**
+/*
  * grl_ui_textbox_set_edit_mode:
  * @self: A #GrlUiTextBox
  * @edit_mode: Whether to enter edit mode
@@ -536,7 +536,7 @@ grl_ui_textbox_set_edit_mode (GrlUiTextBox *self,
         g_signal_emit (self, signals[SIGNAL_EDITING_FINISHED], 0);
 }
 
-/**
+/*
  * grl_ui_textbox_get_read_only:
  * @self: A #GrlUiTextBox
  *
@@ -552,7 +552,7 @@ grl_ui_textbox_get_read_only (GrlUiTextBox *self)
     return self->read_only;
 }
 
-/**
+/*
  * grl_ui_textbox_set_read_only:
  * @self: A #GrlUiTextBox
  * @read_only: Whether the textbox should be read-only
@@ -575,7 +575,7 @@ grl_ui_textbox_set_read_only (GrlUiTextBox *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_READ_ONLY]);
 }
 
-/**
+/*
  * grl_ui_textbox_clear:
  * @self: A #GrlUiTextBox
  *
@@ -589,7 +589,7 @@ grl_ui_textbox_clear (GrlUiTextBox *self)
     grl_ui_textbox_set_text (self, "");
 }
 
-/**
+/*
  * grl_ui_textbox_get_text_length:
  * @self: A #GrlUiTextBox
  *

@@ -325,7 +325,7 @@ grl_ui_slider_init (GrlUiSlider *self)
     self->show_bar = FALSE;
 }
 
-/**
+/*
  * grl_ui_slider_new:
  * @min_value: Minimum value
  * @max_value: Maximum value
@@ -344,7 +344,7 @@ grl_ui_slider_new (gfloat min_value,
                          NULL);
 }
 
-/**
+/*
  * grl_ui_slider_new_with_bounds:
  * @x: X position
  * @y: Y position
@@ -378,7 +378,7 @@ grl_ui_slider_new_with_bounds (gfloat x,
     return slider;
 }
 
-/**
+/*
  * grl_ui_slider_get_value:
  * @self: A #GrlUiSlider
  *
@@ -394,7 +394,7 @@ grl_ui_slider_get_value (GrlUiSlider *self)
     return self->value;
 }
 
-/**
+/*
  * grl_ui_slider_set_value:
  * @self: A #GrlUiSlider
  * @value: The new value
@@ -422,7 +422,7 @@ grl_ui_slider_set_value (GrlUiSlider *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_VALUE]);
 }
 
-/**
+/*
  * grl_ui_slider_get_min_value:
  * @self: A #GrlUiSlider
  *
@@ -438,7 +438,7 @@ grl_ui_slider_get_min_value (GrlUiSlider *self)
     return self->min_value;
 }
 
-/**
+/*
  * grl_ui_slider_set_min_value:
  * @self: A #GrlUiSlider
  * @min_value: The new minimum value
@@ -466,7 +466,7 @@ grl_ui_slider_set_min_value (GrlUiSlider *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_MIN_VALUE]);
 }
 
-/**
+/*
  * grl_ui_slider_get_max_value:
  * @self: A #GrlUiSlider
  *
@@ -482,7 +482,7 @@ grl_ui_slider_get_max_value (GrlUiSlider *self)
     return self->max_value;
 }
 
-/**
+/*
  * grl_ui_slider_set_max_value:
  * @self: A #GrlUiSlider
  * @max_value: The new maximum value
@@ -510,7 +510,7 @@ grl_ui_slider_set_max_value (GrlUiSlider *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_MAX_VALUE]);
 }
 
-/**
+/*
  * grl_ui_slider_get_text_left:
  * @self: A #GrlUiSlider
  *
@@ -526,7 +526,7 @@ grl_ui_slider_get_text_left (GrlUiSlider *self)
     return self->text_left;
 }
 
-/**
+/*
  * grl_ui_slider_set_text_left:
  * @self: A #GrlUiSlider
  * @text: (nullable): The left label text
@@ -548,7 +548,7 @@ grl_ui_slider_set_text_left (GrlUiSlider *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TEXT_LEFT]);
 }
 
-/**
+/*
  * grl_ui_slider_get_text_right:
  * @self: A #GrlUiSlider
  *
@@ -564,7 +564,7 @@ grl_ui_slider_get_text_right (GrlUiSlider *self)
     return self->text_right;
 }
 
-/**
+/*
  * grl_ui_slider_set_text_right:
  * @self: A #GrlUiSlider
  * @text: (nullable): The right label text
@@ -586,7 +586,7 @@ grl_ui_slider_set_text_right (GrlUiSlider *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TEXT_RIGHT]);
 }
 
-/**
+/*
  * grl_ui_slider_get_show_bar:
  * @self: A #GrlUiSlider
  *
@@ -602,7 +602,7 @@ grl_ui_slider_get_show_bar (GrlUiSlider *self)
     return self->show_bar;
 }
 
-/**
+/*
  * grl_ui_slider_set_show_bar:
  * @self: A #GrlUiSlider
  * @show_bar: Whether to show as a bar

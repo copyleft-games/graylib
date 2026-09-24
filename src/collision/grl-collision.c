@@ -191,7 +191,7 @@ grl_ray_collision_from_raylib (RayCollision rc)
  * =============================================================================
  */
 
-/**
+/*
  * grl_collision_point_rect:
  * @point: The point to test
  * @rect: The rectangle to test against
@@ -224,7 +224,7 @@ grl_collision_point_rect (const GrlVector2   *point,
     return raw != 0;
 }
 
-/**
+/*
  * grl_collision_point_circle:
  * @point: The point to test
  * @center: Center of the circle
@@ -255,7 +255,7 @@ grl_collision_point_circle (const GrlVector2 *point,
     return raw != 0;
 }
 
-/**
+/*
  * grl_collision_point_triangle:
  * @point: The point to test
  * @p1: First vertex of triangle
@@ -294,7 +294,7 @@ grl_collision_point_triangle (const GrlVector2 *point,
     return raw != 0;
 }
 
-/**
+/*
  * grl_collision_point_poly:
  * @point: The point to test
  * @points: (array length=point_count): Array of polygon vertices
@@ -339,7 +339,7 @@ grl_collision_point_poly (const GrlVector2 *point,
     return result;
 }
 
-/**
+/*
  * grl_collision_point_line:
  * @point: The point to test
  * @p1: Start of line segment
@@ -381,7 +381,7 @@ grl_collision_point_line (const GrlVector2 *point,
  * =============================================================================
  */
 
-/**
+/*
  * grl_collision_rects:
  * @rect1: First rectangle
  * @rect2: Second rectangle
@@ -415,7 +415,7 @@ grl_collision_rects (const GrlRectangle *rect1,
     return raw != 0;
 }
 
-/**
+/*
  * grl_collision_circles:
  * @center1: Center of first circle
  * @radius1: Radius of first circle
@@ -448,7 +448,7 @@ grl_collision_circles (const GrlVector2 *center1,
     return raw != 0;
 }
 
-/**
+/*
  * grl_collision_circle_rect:
  * @center: Center of circle
  * @radius: Radius of circle
@@ -483,7 +483,7 @@ grl_collision_circle_rect (const GrlVector2   *center,
     return raw != 0;
 }
 
-/**
+/*
  * grl_collision_circle_line:
  * @center: Center of circle
  * @radius: Radius of circle
@@ -519,7 +519,7 @@ grl_collision_circle_line (const GrlVector2 *center,
     return raw != 0;
 }
 
-/**
+/*
  * grl_collision_lines:
  * @start1: Start of first line segment
  * @end1: End of first line segment
@@ -576,7 +576,7 @@ grl_collision_lines (const GrlVector2 *start1,
  * =============================================================================
  */
 
-/**
+/*
  * grl_collision_get_rect_overlap:
  * @rect1: First rectangle
  * @rect2: Second rectangle
@@ -620,7 +620,7 @@ grl_collision_get_rect_overlap (const GrlRectangle *rect1,
  * =============================================================================
  */
 
-/**
+/*
  * grl_collision_point_sphere:
  * @point: The point to test
  * @center: Center of the sphere
@@ -648,7 +648,7 @@ grl_collision_point_sphere (const GrlVector3 *point,
     return dist_sq <= (radius * radius);
 }
 
-/**
+/*
  * grl_collision_point_box:
  * @point: The point to test
  * @box: The bounding box to test against
@@ -673,7 +673,7 @@ grl_collision_point_box (const GrlVector3     *point,
  * =============================================================================
  */
 
-/**
+/*
  * grl_collision_spheres:
  * @center1: Center of first sphere
  * @radius1: Radius of first sphere
@@ -709,7 +709,7 @@ grl_collision_spheres (const GrlVector3 *center1,
     return raw != 0;
 }
 
-/**
+/*
  * grl_collision_boxes:
  * @box1: First bounding box
  * @box2: Second bounding box
@@ -747,7 +747,7 @@ grl_collision_boxes (const GrlBoundingBox *box1,
     return raw != 0;
 }
 
-/**
+/*
  * grl_collision_box_sphere:
  * @box: Bounding box
  * @center: Center of sphere
@@ -791,7 +791,7 @@ grl_collision_box_sphere (const GrlBoundingBox *box,
  * =============================================================================
  */
 
-/**
+/*
  * grl_collision_ray_sphere:
  * @ray: The ray to test
  * @center: Center of sphere
@@ -829,7 +829,7 @@ grl_collision_ray_sphere (const GrlRay     *ray,
     return grl_ray_collision_from_raylib (rc);
 }
 
-/**
+/*
  * grl_collision_ray_box:
  * @ray: The ray to test
  * @box: Bounding box to test against
@@ -868,7 +868,7 @@ grl_collision_ray_box (const GrlRay         *ray,
     return grl_ray_collision_from_raylib (rc);
 }
 
-/**
+/*
  * grl_collision_ray_triangle:
  * @ray: The ray to test
  * @p1: First vertex of triangle
@@ -916,7 +916,7 @@ grl_collision_ray_triangle (const GrlRay     *ray,
     return grl_ray_collision_from_raylib (rc);
 }
 
-/**
+/*
  * grl_collision_ray_quad:
  * @ray: The ray to test
  * @p1: First vertex of quad
@@ -970,7 +970,7 @@ grl_collision_ray_quad (const GrlRay     *ray,
     return grl_ray_collision_from_raylib (rc);
 }
 
-/**
+/*
  * grl_collision_ray_plane:
  * @ray: The ray to test
  * @plane_normal: Normal vector of the plane
@@ -1042,7 +1042,7 @@ grl_collision_ray_plane (const GrlRay     *ray,
  * =============================================================================
  */
 
-/**
+/*
  * grl_collision_get_ray_from_screen:
  * @screen_pos: Screen position (mouse coordinates)
  * @camera_position: Camera position in world space

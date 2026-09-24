@@ -178,7 +178,7 @@ grl_ui_panel_init (GrlUiPanel *self)
  * Public API
  */
 
-/**
+/*
  * grl_ui_panel_new:
  * @text: (nullable): Optional header text
  *
@@ -194,7 +194,7 @@ grl_ui_panel_new (const gchar *text)
                          NULL);
 }
 
-/**
+/*
  * grl_ui_panel_new_with_bounds:
  * @x: X position
  * @y: Y position
@@ -223,7 +223,7 @@ grl_ui_panel_new_with_bounds (gfloat       x,
                          NULL);
 }
 
-/**
+/*
  * grl_ui_panel_get_text:
  * @self: A #GrlUiPanel
  *
@@ -239,7 +239,7 @@ grl_ui_panel_get_text (GrlUiPanel *self)
     return self->text;
 }
 
-/**
+/*
  * grl_ui_panel_set_text:
  * @self: A #GrlUiPanel
  * @text: (nullable): The header text to display
@@ -261,7 +261,7 @@ grl_ui_panel_set_text (GrlUiPanel  *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TEXT]);
 }
 
-/**
+/*
  * grl_ui_panel_get_content_bounds:
  * @self: A #GrlUiPanel
  *

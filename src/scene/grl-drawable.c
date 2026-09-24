@@ -59,7 +59,7 @@ grl_drawable_default_init (GrlDrawableInterface *iface)
     z_index_quark = g_quark_from_static_string ("grl-drawable-z-index");
 }
 
-/**
+/*
  * grl_drawable_draw:
  * @self: A #GrlDrawable
  *
@@ -83,7 +83,7 @@ grl_drawable_draw (GrlDrawable *self)
         iface->draw (self);
 }
 
-/**
+/*
  * grl_drawable_get_visible:
  * @self: A #GrlDrawable
  *
@@ -114,7 +114,7 @@ grl_drawable_get_visible (GrlDrawable *self)
     return GPOINTER_TO_INT (data) != 0;
 }
 
-/**
+/*
  * grl_drawable_set_visible:
  * @self: A #GrlDrawable
  * @visible: Whether the object should be visible
@@ -143,7 +143,7 @@ grl_drawable_set_visible (GrlDrawable *self,
                         GINT_TO_POINTER (visible ? 1 : 2));
 }
 
-/**
+/*
  * grl_drawable_get_z_index:
  * @self: A #GrlDrawable
  *
@@ -170,7 +170,7 @@ grl_drawable_get_z_index (GrlDrawable *self)
     return GPOINTER_TO_INT (data);
 }
 
-/**
+/*
  * grl_drawable_set_z_index:
  * @self: A #GrlDrawable
  * @z_index: The z-index value

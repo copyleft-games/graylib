@@ -73,7 +73,7 @@ grl_matrix_to_raylib (const GrlMatrix *self)
     return m;
 }
 
-/**
+/*
  * grl_matrix_new:
  *
  * Creates a new uninitialized matrix.
@@ -87,7 +87,7 @@ grl_matrix_new (void)
     return g_slice_new0 (GrlMatrix);
 }
 
-/**
+/*
  * grl_matrix_copy:
  * @self: (nullable): A #GrlMatrix
  *
@@ -109,7 +109,7 @@ grl_matrix_copy (const GrlMatrix *self)
     return copy;
 }
 
-/**
+/*
  * grl_matrix_free:
  * @self: (nullable): A #GrlMatrix
  *
@@ -122,7 +122,7 @@ grl_matrix_free (GrlMatrix *self)
         g_slice_free (GrlMatrix, self);
 }
 
-/**
+/*
  * grl_matrix_new_identity:
  *
  * Creates a new identity matrix.
@@ -136,7 +136,7 @@ grl_matrix_new_identity (void)
     return grl_matrix_from_raylib (MatrixIdentity ());
 }
 
-/**
+/*
  * grl_matrix_new_translate:
  * @x: X translation
  * @y: Y translation
@@ -154,7 +154,7 @@ grl_matrix_new_translate (gfloat x,
     return grl_matrix_from_raylib (MatrixTranslate (x, y, z));
 }
 
-/**
+/*
  * grl_matrix_new_rotate:
  * @axis: The axis to rotate around
  * @angle: The rotation angle in radians
@@ -178,7 +178,7 @@ grl_matrix_new_rotate (const GrlVector3 *axis,
     return grl_matrix_from_raylib (MatrixRotate (rl_axis, angle));
 }
 
-/**
+/*
  * grl_matrix_new_rotate_xyz:
  * @x: X rotation angle in radians
  * @y: Y rotation angle in radians
@@ -196,7 +196,7 @@ grl_matrix_new_rotate_xyz (gfloat x,
     return grl_matrix_from_raylib (MatrixRotateXYZ ((Vector3){ x, y, z }));
 }
 
-/**
+/*
  * grl_matrix_new_scale:
  * @x: X scale factor
  * @y: Y scale factor
@@ -214,7 +214,7 @@ grl_matrix_new_scale (gfloat x,
     return grl_matrix_from_raylib (MatrixScale (x, y, z));
 }
 
-/**
+/*
  * grl_matrix_new_frustum:
  * @left: Left clipping plane
  * @right: Right clipping plane
@@ -239,7 +239,7 @@ grl_matrix_new_frustum (gdouble left,
                                                   near_plane, far_plane));
 }
 
-/**
+/*
  * grl_matrix_new_perspective:
  * @fovy: Field of view Y in radians
  * @aspect: Aspect ratio (width / height)
@@ -260,7 +260,7 @@ grl_matrix_new_perspective (gdouble fovy,
                                                       near_plane, far_plane));
 }
 
-/**
+/*
  * grl_matrix_new_ortho:
  * @left: Left clipping plane
  * @right: Right clipping plane
@@ -285,7 +285,7 @@ grl_matrix_new_ortho (gdouble left,
                                                 near_plane, far_plane));
 }
 
-/**
+/*
  * grl_matrix_new_look_at:
  * @eye: Camera position
  * @target: Target position
@@ -321,7 +321,7 @@ grl_matrix_new_look_at (const GrlVector3 *eye,
     return grl_matrix_from_raylib (MatrixLookAt (rl_eye, rl_target, rl_up));
 }
 
-/**
+/*
  * grl_matrix_multiply:
  * @left: Left matrix
  * @right: Right matrix
@@ -345,7 +345,7 @@ grl_matrix_multiply (const GrlMatrix *left,
     return grl_matrix_from_raylib (MatrixMultiply (rl_left, rl_right));
 }
 
-/**
+/*
  * grl_matrix_invert:
  * @self: A matrix
  *
@@ -362,7 +362,7 @@ grl_matrix_invert (const GrlMatrix *self)
     return grl_matrix_from_raylib (MatrixInvert (grl_matrix_to_raylib (self)));
 }
 
-/**
+/*
  * grl_matrix_transpose:
  * @self: A matrix
  *
@@ -378,7 +378,7 @@ grl_matrix_transpose (const GrlMatrix *self)
     return grl_matrix_from_raylib (MatrixTranspose (grl_matrix_to_raylib (self)));
 }
 
-/**
+/*
  * grl_matrix_determinant:
  * @self: A matrix
  *
@@ -394,7 +394,7 @@ grl_matrix_determinant (const GrlMatrix *self)
     return MatrixDeterminant (grl_matrix_to_raylib (self));
 }
 
-/**
+/*
  * grl_matrix_trace:
  * @self: A matrix
  *

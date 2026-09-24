@@ -256,7 +256,7 @@ grl_ui_toggle_init (GrlUiToggle *self)
  * Public API
  */
 
-/**
+/*
  * grl_ui_toggle_new:
  * @text: (nullable): The toggle label text
  *
@@ -272,7 +272,7 @@ grl_ui_toggle_new (const gchar *text)
                          NULL);
 }
 
-/**
+/*
  * grl_ui_toggle_new_with_bounds:
  * @x: X position
  * @y: Y position
@@ -301,7 +301,7 @@ grl_ui_toggle_new_with_bounds (gfloat       x,
                          NULL);
 }
 
-/**
+/*
  * grl_ui_toggle_get_text:
  * @self: A #GrlUiToggle
  *
@@ -317,7 +317,7 @@ grl_ui_toggle_get_text (GrlUiToggle *self)
     return self->text;
 }
 
-/**
+/*
  * grl_ui_toggle_set_text:
  * @self: A #GrlUiToggle
  * @text: (nullable): The new label text
@@ -339,7 +339,7 @@ grl_ui_toggle_set_text (GrlUiToggle *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TEXT]);
 }
 
-/**
+/*
  * grl_ui_toggle_get_active:
  * @self: A #GrlUiToggle
  *
@@ -355,7 +355,7 @@ grl_ui_toggle_get_active (GrlUiToggle *self)
     return self->active;
 }
 
-/**
+/*
  * grl_ui_toggle_set_active:
  * @self: A #GrlUiToggle
  * @active: Whether the toggle should be active
@@ -378,7 +378,7 @@ grl_ui_toggle_set_active (GrlUiToggle *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_ACTIVE]);
 }
 
-/**
+/*
  * grl_ui_toggle_toggle:
  * @self: A #GrlUiToggle
  *

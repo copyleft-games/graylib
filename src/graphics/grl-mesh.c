@@ -181,7 +181,7 @@ grl_mesh_from_raylib (Mesh mesh)
     return self;
 }
 
-/**
+/*
  * grl_mesh_new_cube:
  * @width: Cube width
  * @height: Cube height
@@ -199,7 +199,7 @@ grl_mesh_new_cube (gfloat width,
     return grl_mesh_from_raylib (GenMeshCube (width, height, length));
 }
 
-/**
+/*
  * grl_mesh_new_sphere:
  * @radius: Sphere radius
  * @rings: Number of horizontal rings
@@ -217,7 +217,7 @@ grl_mesh_new_sphere (gfloat radius,
     return grl_mesh_from_raylib (GenMeshSphere (radius, rings, slices));
 }
 
-/**
+/*
  * grl_mesh_new_hemisphere:
  * @radius: Hemisphere radius
  * @rings: Number of horizontal rings
@@ -235,7 +235,7 @@ grl_mesh_new_hemisphere (gfloat radius,
     return grl_mesh_from_raylib (GenMeshHemiSphere (radius, rings, slices));
 }
 
-/**
+/*
  * grl_mesh_new_cylinder:
  * @radius: Cylinder radius
  * @height: Cylinder height
@@ -253,7 +253,7 @@ grl_mesh_new_cylinder (gfloat radius,
     return grl_mesh_from_raylib (GenMeshCylinder (radius, height, slices));
 }
 
-/**
+/*
  * grl_mesh_new_cone:
  * @radius: Base radius
  * @height: Cone height
@@ -271,7 +271,7 @@ grl_mesh_new_cone (gfloat radius,
     return grl_mesh_from_raylib (GenMeshCone (radius, height, slices));
 }
 
-/**
+/*
  * grl_mesh_new_torus:
  * @radius: Torus radius
  * @size: Tube size
@@ -291,7 +291,7 @@ grl_mesh_new_torus (gfloat radius,
     return grl_mesh_from_raylib (GenMeshTorus (radius, size, rad_seg, sides));
 }
 
-/**
+/*
  * grl_mesh_new_knot:
  * @radius: Knot radius
  * @size: Tube size
@@ -311,7 +311,7 @@ grl_mesh_new_knot (gfloat radius,
     return grl_mesh_from_raylib (GenMeshKnot (radius, size, rad_seg, sides));
 }
 
-/**
+/*
  * grl_mesh_new_plane:
  * @width: Plane width
  * @length: Plane length
@@ -331,7 +331,7 @@ grl_mesh_new_plane (gfloat width,
     return grl_mesh_from_raylib (GenMeshPlane (width, length, res_x, res_z));
 }
 
-/**
+/*
  * grl_mesh_new_heightmap:
  * @heightmap_path: (type filename): Path to heightmap image
  * @size: Size of the resulting mesh
@@ -376,7 +376,7 @@ grl_mesh_new_heightmap (const gchar      *heightmap_path,
     return grl_mesh_from_raylib (mesh);
 }
 
-/**
+/*
  * grl_mesh_new_polygon:
  * @sides: Number of sides
  * @radius: Polygon radius
@@ -479,7 +479,7 @@ compute_mesh_normals (float              *normals,
     }
 }
 
-/**
+/*
  * grl_mesh_new_custom:
  * @vertices: (array length=n_vertices): Vertex positions (x,y,z per vertex)
  * @n_vertices: Number of vertices
@@ -546,7 +546,7 @@ grl_mesh_new_custom (const gfloat  *vertices,
     return grl_mesh_from_raylib (mesh);
 }
 
-/**
+/*
  * grl_mesh_get_vertex_count:
  * @self: A #GrlMesh
  *
@@ -566,7 +566,7 @@ grl_mesh_get_vertex_count (GrlMesh *self)
     return priv->valid ? priv->mesh.vertexCount : 0;
 }
 
-/**
+/*
  * grl_mesh_get_triangle_count:
  * @self: A #GrlMesh
  *
@@ -586,7 +586,7 @@ grl_mesh_get_triangle_count (GrlMesh *self)
     return priv->valid ? priv->mesh.triangleCount : 0;
 }
 
-/**
+/*
  * grl_mesh_get_bone_count:
  * @self: A #GrlMesh
  *
@@ -607,7 +607,7 @@ grl_mesh_get_bone_count (GrlMesh *self)
     return priv->valid ? priv->mesh.boneCount : 0;
 }
 
-/**
+/*
  * grl_mesh_get_bounding_box:
  * @self: A #GrlMesh
  *
@@ -634,7 +634,7 @@ grl_mesh_get_bounding_box (GrlMesh *self)
                                      bb.max.x, bb.max.y, bb.max.z);
 }
 
-/**
+/*
  * grl_mesh_upload:
  * @self: A #GrlMesh
  * @dynamic: Whether to use dynamic buffers
@@ -671,7 +671,7 @@ grl_mesh_upload (GrlMesh  *self,
     priv->uploaded = TRUE;
 }
 
-/**
+/*
  * grl_mesh_is_valid:
  * @self: A #GrlMesh
  *
@@ -691,7 +691,7 @@ grl_mesh_is_valid (GrlMesh *self)
     return priv->valid;
 }
 
-/**
+/*
  * grl_mesh_get_handle:
  * @self: A #GrlMesh
  *

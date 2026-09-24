@@ -21,7 +21,7 @@
 #define GRL_RAD2DEG (57.29577951308232f)
 #define GRL_EPSILON (0.000001f)
 
-/**
+/*
  * grl_math_clamp:
  * @value: The value to clamp
  * @min: Minimum value
@@ -47,7 +47,7 @@ grl_math_clamp (gfloat value,
     return result;
 }
 
-/**
+/*
  * grl_math_clamp_int:
  * @value: The value to clamp
  * @min: Minimum value
@@ -73,7 +73,7 @@ grl_math_clamp_int (gint value,
     return result;
 }
 
-/**
+/*
  * grl_math_lerp:
  * @start: Start value
  * @end: End value
@@ -91,7 +91,7 @@ grl_math_lerp (gfloat start,
     return start + amount * (end - start);
 }
 
-/**
+/*
  * grl_math_normalize:
  * @value: The value to normalize
  * @start: Start of range
@@ -110,7 +110,7 @@ grl_math_normalize (gfloat value,
     return (value - start) / (end - start);
 }
 
-/**
+/*
  * grl_math_remap:
  * @value: The value to remap
  * @input_start: Start of input range
@@ -135,7 +135,7 @@ grl_math_remap (gfloat value,
     return output_start + normalized * (output_end - output_start);
 }
 
-/**
+/*
  * grl_math_wrap:
  * @value: The value to wrap
  * @min: Minimum of range
@@ -154,7 +154,7 @@ grl_math_wrap (gfloat value,
     return value - (max - min) * floorf ((value - min) / (max - min));
 }
 
-/**
+/*
  * grl_math_float_equals:
  * @x: First value
  * @y: Second value
@@ -174,7 +174,7 @@ grl_math_float_equals (gfloat x,
     return diff <= GRL_EPSILON * fmaxf (1.0f, fmaxf (fabsf (x), fabsf (y)));
 }
 
-/**
+/*
  * grl_math_deg_to_rad:
  * @degrees: Angle in degrees
  *
@@ -188,7 +188,7 @@ grl_math_deg_to_rad (gfloat degrees)
     return degrees * GRL_DEG2RAD;
 }
 
-/**
+/*
  * grl_math_rad_to_deg:
  * @radians: Angle in radians
  *

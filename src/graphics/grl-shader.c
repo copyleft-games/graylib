@@ -124,7 +124,7 @@ grl_shader_init (GrlShader *self)
     priv->shader.locs = NULL;
 }
 
-/**
+/*
  * grl_shader_new_from_file:
  * @vs_filename: (nullable) (type filename): Vertex shader file, or %NULL
  * @fs_filename: (nullable) (type filename): Fragment shader file, or %NULL
@@ -166,7 +166,7 @@ grl_shader_new_from_file (const gchar  *vs_filename,
     return self;
 }
 
-/**
+/*
  * grl_shader_new_from_memory:
  * @vs_code: (nullable): Vertex shader code, or %NULL
  * @fs_code: (nullable): Fragment shader code, or %NULL
@@ -206,7 +206,7 @@ grl_shader_new_from_memory (const gchar  *vs_code,
     return self;
 }
 
-/**
+/*
  * grl_shader_is_valid:
  * @self: A #GrlShader
  *
@@ -225,7 +225,7 @@ grl_shader_is_valid (GrlShader *self)
     return priv->valid;
 }
 
-/**
+/*
  * grl_shader_begin:
  * @self: A #GrlShader
  *
@@ -244,7 +244,7 @@ grl_shader_begin (GrlShader *self)
         BeginShaderMode (priv->shader);
 }
 
-/**
+/*
  * grl_shader_end:
  * @self: A #GrlShader
  *
@@ -258,7 +258,7 @@ grl_shader_end (GrlShader *self)
     EndShaderMode ();
 }
 
-/**
+/*
  * grl_shader_get_location:
  * @self: A #GrlShader
  * @uniform_name: The uniform name
@@ -284,7 +284,7 @@ grl_shader_get_location (GrlShader   *self,
     return GetShaderLocation (priv->shader, uniform_name);
 }
 
-/**
+/*
  * grl_shader_get_location_attrib:
  * @self: A #GrlShader
  * @attrib_name: The attribute name
@@ -310,7 +310,7 @@ grl_shader_get_location_attrib (GrlShader   *self,
     return GetShaderLocationAttrib (priv->shader, attrib_name);
 }
 
-/**
+/*
  * grl_shader_set_value_float:
  * @self: A #GrlShader
  * @loc_index: The uniform location
@@ -333,7 +333,7 @@ grl_shader_set_value_float (GrlShader *self,
         SetShaderValue (priv->shader, loc_index, &value, SHADER_UNIFORM_FLOAT);
 }
 
-/**
+/*
  * grl_shader_set_value_int:
  * @self: A #GrlShader
  * @loc_index: The uniform location
@@ -356,7 +356,7 @@ grl_shader_set_value_int (GrlShader *self,
         SetShaderValue (priv->shader, loc_index, &value, SHADER_UNIFORM_INT);
 }
 
-/**
+/*
  * grl_shader_set_value_vec2:
  * @self: A #GrlShader
  * @loc_index: The uniform location
@@ -386,7 +386,7 @@ grl_shader_set_value_vec2 (GrlShader *self,
     }
 }
 
-/**
+/*
  * grl_shader_set_value_vec3:
  * @self: A #GrlShader
  * @loc_index: The uniform location
@@ -419,7 +419,7 @@ grl_shader_set_value_vec3 (GrlShader *self,
     }
 }
 
-/**
+/*
  * grl_shader_set_value_vec4:
  * @self: A #GrlShader
  * @loc_index: The uniform location
@@ -455,7 +455,7 @@ grl_shader_set_value_vec4 (GrlShader *self,
     }
 }
 
-/**
+/*
  * grl_shader_set_value_texture:
  * @self: A #GrlShader
  * @loc_index: The uniform location
@@ -484,7 +484,7 @@ grl_shader_set_value_texture (GrlShader  *self,
     SetShaderValueTexture (priv->shader, loc_index, rl_texture);
 }
 
-/**
+/*
  * grl_shader_get_handle:
  * @self: A #GrlShader
  *

@@ -255,7 +255,7 @@ grl_ui_windowbox_init (GrlUiWindowBox *self)
  * Public API
  */
 
-/**
+/*
  * grl_ui_windowbox_new:
  * @title: (nullable): Window title
  *
@@ -271,7 +271,7 @@ grl_ui_windowbox_new (const gchar *title)
                          NULL);
 }
 
-/**
+/*
  * grl_ui_windowbox_new_with_bounds:
  * @x: X position
  * @y: Y position
@@ -300,7 +300,7 @@ grl_ui_windowbox_new_with_bounds (gfloat       x,
                          NULL);
 }
 
-/**
+/*
  * grl_ui_windowbox_get_title:
  * @self: A #GrlUiWindowBox
  *
@@ -316,7 +316,7 @@ grl_ui_windowbox_get_title (GrlUiWindowBox *self)
     return self->title;
 }
 
-/**
+/*
  * grl_ui_windowbox_set_title:
  * @self: A #GrlUiWindowBox
  * @title: (nullable): The window title
@@ -338,7 +338,7 @@ grl_ui_windowbox_set_title (GrlUiWindowBox *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TITLE]);
 }
 
-/**
+/*
  * grl_ui_windowbox_get_open:
  * @self: A #GrlUiWindowBox
  *
@@ -354,7 +354,7 @@ grl_ui_windowbox_get_open (GrlUiWindowBox *self)
     return self->open;
 }
 
-/**
+/*
  * grl_ui_windowbox_set_open:
  * @self: A #GrlUiWindowBox
  * @open: %TRUE to open the window, %FALSE to close it
@@ -382,7 +382,7 @@ grl_ui_windowbox_set_open (GrlUiWindowBox *self,
         g_signal_emit (self, signals[SIGNAL_CLOSED], 0);
 }
 
-/**
+/*
  * grl_ui_windowbox_close:
  * @self: A #GrlUiWindowBox
  *
@@ -396,7 +396,7 @@ grl_ui_windowbox_close (GrlUiWindowBox *self)
     grl_ui_windowbox_set_open (self, FALSE);
 }
 
-/**
+/*
  * grl_ui_windowbox_open:
  * @self: A #GrlUiWindowBox
  *
@@ -410,7 +410,7 @@ grl_ui_windowbox_open (GrlUiWindowBox *self)
     grl_ui_windowbox_set_open (self, TRUE);
 }
 
-/**
+/*
  * grl_ui_windowbox_toggle:
  * @self: A #GrlUiWindowBox
  *
@@ -424,7 +424,7 @@ grl_ui_windowbox_toggle (GrlUiWindowBox *self)
     grl_ui_windowbox_set_open (self, !self->open);
 }
 
-/**
+/*
  * grl_ui_windowbox_get_content_bounds:
  * @self: A #GrlUiWindowBox
  *

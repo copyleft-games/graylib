@@ -23,7 +23,7 @@
 #define GRL_TO_RAYLIB_COLOR(c) \
     ((Color){ .r = (c)->r, .g = (c)->g, .b = (c)->b, .a = (c)->a })
 
-/**
+/*
  * grl_draw_line_3d:
  * @start: Start position
  * @end: End position
@@ -45,7 +45,7 @@ grl_draw_line_3d (const GrlVector3 *start,
                 GRL_TO_RAYLIB_COLOR (color));
 }
 
-/**
+/*
  * grl_draw_point_3d:
  * @position: Point position
  * @color: Point color
@@ -63,7 +63,7 @@ grl_draw_point_3d (const GrlVector3 *position,
                  GRL_TO_RAYLIB_COLOR (color));
 }
 
-/**
+/*
  * grl_draw_circle_3d:
  * @center: Center position
  * @radius: Circle radius
@@ -91,7 +91,7 @@ grl_draw_circle_3d (const GrlVector3 *center,
                   GRL_TO_RAYLIB_COLOR (color));
 }
 
-/**
+/*
  * grl_draw_triangle_3d:
  * @v1: First vertex
  * @v2: Second vertex
@@ -117,7 +117,7 @@ grl_draw_triangle_3d (const GrlVector3 *v1,
                     GRL_TO_RAYLIB_COLOR (color));
 }
 
-/**
+/*
  * grl_draw_cube:
  * @position: Center position
  * @width: Width (X axis)
@@ -142,7 +142,7 @@ grl_draw_cube (const GrlVector3 *position,
               GRL_TO_RAYLIB_COLOR (color));
 }
 
-/**
+/*
  * grl_draw_cube_v:
  * @position: Center position
  * @size: Size vector
@@ -164,7 +164,7 @@ grl_draw_cube_v (const GrlVector3 *position,
                GRL_TO_RAYLIB_COLOR (color));
 }
 
-/**
+/*
  * grl_draw_cube_wires:
  * @position: Center position
  * @width: Width (X axis)
@@ -189,7 +189,7 @@ grl_draw_cube_wires (const GrlVector3 *position,
                    GRL_TO_RAYLIB_COLOR (color));
 }
 
-/**
+/*
  * grl_draw_sphere:
  * @center: Center position
  * @radius: Sphere radius
@@ -210,7 +210,7 @@ grl_draw_sphere (const GrlVector3 *center,
                 GRL_TO_RAYLIB_COLOR (color));
 }
 
-/**
+/*
  * grl_draw_sphere_ex:
  * @center: Center position
  * @radius: Sphere radius
@@ -236,7 +236,7 @@ grl_draw_sphere_ex (const GrlVector3 *center,
                   GRL_TO_RAYLIB_COLOR (color));
 }
 
-/**
+/*
  * grl_draw_sphere_wires:
  * @center: Center position
  * @radius: Sphere radius
@@ -262,7 +262,7 @@ grl_draw_sphere_wires (const GrlVector3 *center,
                      GRL_TO_RAYLIB_COLOR (color));
 }
 
-/**
+/*
  * grl_draw_cylinder:
  * @position: Base center position
  * @radius_top: Top radius
@@ -289,7 +289,7 @@ grl_draw_cylinder (const GrlVector3 *position,
                   GRL_TO_RAYLIB_COLOR (color));
 }
 
-/**
+/*
  * grl_draw_cylinder_wires:
  * @position: Base center position
  * @radius_top: Top radius
@@ -316,7 +316,7 @@ grl_draw_cylinder_wires (const GrlVector3 *position,
                        GRL_TO_RAYLIB_COLOR (color));
 }
 
-/**
+/*
  * grl_draw_plane:
  * @center: Center position
  * @size: Plane size (x = width, y = length)
@@ -338,7 +338,7 @@ grl_draw_plane (const GrlVector3 *center,
                GRL_TO_RAYLIB_COLOR (color));
 }
 
-/**
+/*
  * grl_draw_grid:
  * @slices: Number of grid divisions
  * @spacing: Spacing between grid lines

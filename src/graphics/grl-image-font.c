@@ -152,7 +152,7 @@ font_init_from_buffer (GrlImageFont  *self,
  * -------------------------------------------------------------------------
  */
 
-/**
+/*
  * grl_image_font_new_from_file:
  * @filename: (type filename): Path to a TTF or OTF font file.
  * @error: (nullable): Return location for error, or %NULL.
@@ -192,7 +192,7 @@ grl_image_font_new_from_file (const gchar  *filename,
     return self;
 }
 
-/**
+/*
  * grl_image_font_new_from_memory:
  * @data: (array length=len) (element-type guint8): Font file bytes.
  * @len: Number of bytes in @data.
@@ -230,7 +230,7 @@ grl_image_font_new_from_memory (const guint8 *data,
  * -------------------------------------------------------------------------
  */
 
-/**
+/*
  * grl_image_font_get_v_metrics:
  * @self: A #GrlImageFont.
  * @px_size: Desired pixel height (em height, > 0).
@@ -266,7 +266,7 @@ grl_image_font_get_v_metrics (GrlImageFont *self,
         *line_gap = (gfloat)raw_line_gap * scale;
 }
 
-/**
+/*
  * grl_image_font_has_glyph:
  * @self: A #GrlImageFont.
  * @codepoint: A Unicode codepoint.
@@ -380,7 +380,7 @@ font_measure_lines (GrlImageFont *self,
  * -------------------------------------------------------------------------
  */
 
-/**
+/*
  * grl_image_measure_text_ttf:
  * @font: A #GrlImageFont.
  * @text: (nullable): UTF-8 text to measure.
@@ -424,7 +424,7 @@ grl_image_measure_text_ttf (GrlImageFont *font,
  * -------------------------------------------------------------------------
  */
 
-/**
+/*
  * grl_image_draw_text_ttf:
  * @self: A #GrlImage to draw onto.
  * @font: The #GrlImageFont to use.

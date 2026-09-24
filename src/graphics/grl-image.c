@@ -730,7 +730,7 @@ grl_image_new_from_memory (const gchar  *file_type,
     return grl_image_new_from_handle (handle);
 }
 
-/**
+/*
  * grl_image_new_from_pixels:
  * @width: image width in pixels (must be > 0)
  * @height: image height in pixels (must be > 0)
@@ -790,7 +790,7 @@ grl_image_new_from_screen (void)
     return grl_image_new_from_handle (handle);
 }
 
-/**
+/*
  * grl_image_new_from_resource:
  * @pack: A #GrlResourcePack
  * @resource_id: The resource ID to load
@@ -3693,7 +3693,7 @@ grl_image_get_pixel (GrlImage *self,
     return grl_color_new (color.r, color.g, color.b, color.a);
 }
 
-/**
+/*
  * grl_image_get_pixels:
  * @self: a #GrlImage
  * @out_size: (out) (optional): receives the buffer size in bytes
@@ -3729,7 +3729,7 @@ grl_image_get_pixels (GrlImage *self,
  * Indexed PNG functions
  */
 
-/**
+/*
  * grl_image_new_from_png_indexed:
  * @filename: (type filename): Path to indexed PNG file
  * @palette_out: (out) (optional) (transfer full): Return location for palette
@@ -3841,7 +3841,7 @@ grl_image_new_from_png_indexed (const gchar    *filename,
     return self;
 }
 
-/**
+/*
  * grl_image_save_as_png_indexed:
  * @self: A #GrlImage
  * @filename: (type filename): Output filename
@@ -4873,7 +4873,7 @@ grl_image_fill_edges (const GrlDrawCtx *ctx,
  * =============================================================================
  */
 
-/**
+/*
  * grl_image_fill_path:
  * @self: A #GrlImage.
  * @path: The #GrlPath to fill.
@@ -4943,7 +4943,7 @@ grl_image_fill_path (GrlImage       *self,
     g_free (lengths);
 }
 
-/**
+/*
  * grl_image_stroke_path:
  * @self: A #GrlImage.
  * @path: The #GrlPath to stroke.

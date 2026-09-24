@@ -20,7 +20,7 @@
 G_DEFINE_BOXED_TYPE (GrlVector3, grl_vector3,
                      grl_vector3_copy, grl_vector3_free)
 
-/**
+/*
  * grl_vector3_new:
  * @x: X component
  * @y: Y component
@@ -45,7 +45,7 @@ grl_vector3_new (gfloat x,
     return self;
 }
 
-/**
+/*
  * grl_vector3_copy:
  * @self: (nullable): A #GrlVector3
  *
@@ -62,7 +62,7 @@ grl_vector3_copy (const GrlVector3 *self)
     return grl_vector3_new (self->x, self->y, self->z);
 }
 
-/**
+/*
  * grl_vector3_free:
  * @self: (nullable): A #GrlVector3
  *
@@ -74,7 +74,7 @@ grl_vector3_free (GrlVector3 *self)
     g_free (self);
 }
 
-/**
+/*
  * grl_vector3_new_zero:
  *
  * Creates a new zero vector.
@@ -87,7 +87,7 @@ grl_vector3_new_zero (void)
     return grl_vector3_new (0.0f, 0.0f, 0.0f);
 }
 
-/**
+/*
  * grl_vector3_new_one:
  *
  * Creates a new (1, 1, 1) vector.
@@ -100,7 +100,7 @@ grl_vector3_new_one (void)
     return grl_vector3_new (1.0f, 1.0f, 1.0f);
 }
 
-/**
+/*
  * grl_vector3_new_up:
  *
  * Creates a new up vector (0, 1, 0).
@@ -113,7 +113,7 @@ grl_vector3_new_up (void)
     return grl_vector3_new (0.0f, 1.0f, 0.0f);
 }
 
-/**
+/*
  * grl_vector3_new_forward:
  *
  * Creates a new forward vector (0, 0, -1).
@@ -126,7 +126,7 @@ grl_vector3_new_forward (void)
     return grl_vector3_new (0.0f, 0.0f, -1.0f);
 }
 
-/**
+/*
  * grl_vector3_new_right:
  *
  * Creates a new right vector (1, 0, 0).
@@ -139,7 +139,7 @@ grl_vector3_new_right (void)
     return grl_vector3_new (1.0f, 0.0f, 0.0f);
 }
 
-/**
+/*
  * grl_vector3_add:
  * @a: First vector
  * @b: Second vector
@@ -158,7 +158,7 @@ grl_vector3_add (const GrlVector3 *a,
     return grl_vector3_new (a->x + b->x, a->y + b->y, a->z + b->z);
 }
 
-/**
+/*
  * grl_vector3_subtract:
  * @a: First vector
  * @b: Second vector
@@ -177,7 +177,7 @@ grl_vector3_subtract (const GrlVector3 *a,
     return grl_vector3_new (a->x - b->x, a->y - b->y, a->z - b->z);
 }
 
-/**
+/*
  * grl_vector3_scale:
  * @self: A vector
  * @scale: Scale factor
@@ -195,7 +195,7 @@ grl_vector3_scale (const GrlVector3 *self,
     return grl_vector3_new (self->x * scale, self->y * scale, self->z * scale);
 }
 
-/**
+/*
  * grl_vector3_length:
  * @self: A vector
  *
@@ -211,7 +211,7 @@ grl_vector3_length (const GrlVector3 *self)
     return sqrtf (self->x * self->x + self->y * self->y + self->z * self->z);
 }
 
-/**
+/*
  * grl_vector3_length_sqr:
  * @self: A vector
  *
@@ -227,7 +227,7 @@ grl_vector3_length_sqr (const GrlVector3 *self)
     return self->x * self->x + self->y * self->y + self->z * self->z;
 }
 
-/**
+/*
  * grl_vector3_normalize:
  * @self: A vector
  *
@@ -250,7 +250,7 @@ grl_vector3_normalize (const GrlVector3 *self)
     return grl_vector3_new (self->x / len, self->y / len, self->z / len);
 }
 
-/**
+/*
  * grl_vector3_dot:
  * @a: First vector
  * @b: Second vector
@@ -269,7 +269,7 @@ grl_vector3_dot (const GrlVector3 *a,
     return a->x * b->x + a->y * b->y + a->z * b->z;
 }
 
-/**
+/*
  * grl_vector3_cross:
  * @a: First vector
  * @b: Second vector
@@ -292,7 +292,7 @@ grl_vector3_cross (const GrlVector3 *a,
     );
 }
 
-/**
+/*
  * grl_vector3_distance:
  * @a: First vector
  * @b: Second vector
@@ -317,7 +317,7 @@ grl_vector3_distance (const GrlVector3 *a,
     return sqrtf (dx * dx + dy * dy + dz * dz);
 }
 
-/**
+/*
  * grl_vector3_lerp:
  * @a: Start vector
  * @b: End vector
@@ -342,7 +342,7 @@ grl_vector3_lerp (const GrlVector3 *a,
     );
 }
 
-/**
+/*
  * grl_vector3_negate:
  * @self: A vector
  *
@@ -358,7 +358,7 @@ grl_vector3_negate (const GrlVector3 *self)
     return grl_vector3_new (-self->x, -self->y, -self->z);
 }
 
-/**
+/*
  * grl_vector3_equal:
  * @a: First vector
  * @b: Second vector

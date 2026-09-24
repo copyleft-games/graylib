@@ -201,7 +201,7 @@ grl_font_init (GrlFont *self)
  * =============================================================================
  */
 
-/**
+/*
  * grl_font_new_default:
  *
  * Gets the default raylib font.
@@ -218,7 +218,7 @@ grl_font_new_default (void)
     return grl_font_new_from_handle (font, TRUE);
 }
 
-/**
+/*
  * grl_font_new_from_file:
  * @filename: Path to font file
  *
@@ -238,7 +238,7 @@ grl_font_new_from_file (const gchar *filename)
     return grl_font_new_from_handle (font, FALSE);
 }
 
-/**
+/*
  * grl_font_new_from_file_ex:
  * @filename: Path to font file
  * @font_size: Desired font size in pixels
@@ -264,7 +264,7 @@ grl_font_new_from_file_ex (const gchar *filename,
     return grl_font_new_from_handle (font, FALSE);
 }
 
-/**
+/*
  * grl_font_new_from_image:
  * @image: Image containing font glyphs
  * @key: Color key for transparency
@@ -291,7 +291,7 @@ grl_font_new_from_image (GrlImage       *image,
     return grl_font_new_from_handle (font, FALSE);
 }
 
-/**
+/*
  * grl_font_new_from_memory:
  * @file_type: Font format hint (e.g. ".ttf")
  * @data: (array length=data_size): Raw font file data
@@ -328,7 +328,7 @@ grl_font_new_from_memory (const gchar  *file_type,
     return grl_font_new_from_handle (font, FALSE);
 }
 
-/**
+/*
  * grl_font_new_from_resource:
  * @pack: A #GrlResourcePack
  * @resource_id: The resource ID to load
@@ -390,7 +390,7 @@ grl_font_new_from_resource (GrlResourcePack *pack,
  * =============================================================================
  */
 
-/**
+/*
  * grl_font_get_base_size:
  * @self: A #GrlFont
  *
@@ -406,7 +406,7 @@ grl_font_get_base_size (GrlFont *self)
     return self->handle.baseSize;
 }
 
-/**
+/*
  * grl_font_get_glyph_count:
  * @self: A #GrlFont
  *
@@ -422,7 +422,7 @@ grl_font_get_glyph_count (GrlFont *self)
     return self->handle.glyphCount;
 }
 
-/**
+/*
  * grl_font_get_glyph_padding:
  * @self: A #GrlFont
  *
@@ -438,7 +438,7 @@ grl_font_get_glyph_padding (GrlFont *self)
     return self->handle.glyphPadding;
 }
 
-/**
+/*
  * grl_font_is_valid:
  * @self: A #GrlFont
  *
@@ -460,7 +460,7 @@ grl_font_is_valid (GrlFont *self)
  * =============================================================================
  */
 
-/**
+/*
  * grl_font_measure_text:
  * @self: A #GrlFont
  * @text: Text to measure
@@ -493,7 +493,7 @@ grl_font_measure_text (GrlFont     *self,
  * =============================================================================
  */
 
-/**
+/*
  * grl_font_get_glyph_index:
  * @self: A #GrlFont
  * @codepoint: Unicode codepoint
@@ -511,7 +511,7 @@ grl_font_get_glyph_index (GrlFont *self,
     return GetGlyphIndex (self->handle, codepoint);
 }
 
-/**
+/*
  * grl_font_get_glyph_atlas_rec:
  * @self: A #GrlFont
  * @codepoint: Unicode codepoint
@@ -533,7 +533,7 @@ grl_font_get_glyph_atlas_rec (GrlFont *self,
     return grl_rectangle_new (rec.x, rec.y, rec.width, rec.height);
 }
 
-/**
+/*
  * grl_font_set_filter:
  * @self: A #GrlFont
  * @filter: The #GrlTextureFilter mode to apply

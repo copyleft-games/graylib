@@ -56,7 +56,7 @@ grl_updatable_default_init (GrlUpdatableInterface *iface)
     active_quark = g_quark_from_static_string ("grl-updatable-active");
 }
 
-/**
+/*
  * grl_updatable_update:
  * @self: A #GrlUpdatable
  * @delta: Time elapsed since the last frame in seconds
@@ -81,7 +81,7 @@ grl_updatable_update (GrlUpdatable *self,
         iface->update (self, delta);
 }
 
-/**
+/*
  * grl_updatable_get_active:
  * @self: A #GrlUpdatable
  *
@@ -112,7 +112,7 @@ grl_updatable_get_active (GrlUpdatable *self)
     return GPOINTER_TO_INT (data) != 0;
 }
 
-/**
+/*
  * grl_updatable_set_active:
  * @self: A #GrlUpdatable
  * @active: Whether updates should be active

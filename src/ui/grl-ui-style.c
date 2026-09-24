@@ -163,7 +163,7 @@ grl_ui_style_init (GrlUiStyle *self)
     self->alpha = 1.0f;
 }
 
-/**
+/*
  * grl_ui_style_get_default:
  *
  * Gets the default UI style singleton instance.
@@ -181,7 +181,7 @@ grl_ui_style_get_default (void)
     return default_style;
 }
 
-/**
+/*
  * grl_ui_style_load_file:
  * @self: A #GrlUiStyle
  * @filename: (type filename): Path to a .rgs style file
@@ -215,7 +215,7 @@ grl_ui_style_load_file (GrlUiStyle   *self,
     return TRUE;
 }
 
-/**
+/*
  * grl_ui_style_load_default:
  * @self: A #GrlUiStyle
  *
@@ -229,7 +229,7 @@ grl_ui_style_load_default (GrlUiStyle *self)
     GuiLoadStyleDefault ();
 }
 
-/**
+/*
  * grl_ui_style_set_control_property:
  * @self: A #GrlUiStyle
  * @control: The control type
@@ -249,7 +249,7 @@ grl_ui_style_set_control_property (GrlUiStyle *self,
     GuiSetStyle (control, property, value);
 }
 
-/**
+/*
  * grl_ui_style_get_control_property:
  * @self: A #GrlUiStyle
  * @control: The control type
@@ -269,7 +269,7 @@ grl_ui_style_get_control_property (GrlUiStyle *self,
     return GuiGetStyle (control, property);
 }
 
-/**
+/*
  * grl_ui_style_set_font:
  * @self: A #GrlUiStyle
  * @font: (nullable): The font to use, or %NULL for default
@@ -295,7 +295,7 @@ grl_ui_style_set_font (GrlUiStyle *self,
     }
 }
 
-/**
+/*
  * grl_ui_style_enable:
  * @self: A #GrlUiStyle
  *
@@ -309,7 +309,7 @@ grl_ui_style_enable (GrlUiStyle *self)
     GuiEnable ();
 }
 
-/**
+/*
  * grl_ui_style_disable:
  * @self: A #GrlUiStyle
  *
@@ -323,7 +323,7 @@ grl_ui_style_disable (GrlUiStyle *self)
     GuiDisable ();
 }
 
-/**
+/*
  * grl_ui_style_lock:
  * @self: A #GrlUiStyle
  *
@@ -338,7 +338,7 @@ grl_ui_style_lock (GrlUiStyle *self)
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_LOCKED]);
 }
 
-/**
+/*
  * grl_ui_style_unlock:
  * @self: A #GrlUiStyle
  *
@@ -353,7 +353,7 @@ grl_ui_style_unlock (GrlUiStyle *self)
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_LOCKED]);
 }
 
-/**
+/*
  * grl_ui_style_is_locked:
  * @self: A #GrlUiStyle
  *
@@ -372,7 +372,7 @@ grl_ui_style_is_locked (GrlUiStyle *self)
     return raw != 0;
 }
 
-/**
+/*
  * grl_ui_style_set_alpha:
  * @self: A #GrlUiStyle
  * @alpha: Alpha value (0.0 = transparent, 1.0 = opaque)
@@ -395,7 +395,7 @@ grl_ui_style_set_alpha (GrlUiStyle *self,
     }
 }
 
-/**
+/*
  * grl_ui_style_get_alpha:
  * @self: A #GrlUiStyle
  *

@@ -63,7 +63,7 @@ grl_collidable_default_init (GrlCollidableInterface *iface)
     collision_enabled_quark = g_quark_from_static_string ("grl-collidable-enabled");
 }
 
-/**
+/*
  * grl_collidable_get_bounds:
  * @self: A #GrlCollidable
  *
@@ -87,7 +87,7 @@ grl_collidable_get_bounds (GrlCollidable *self)
     return grl_rectangle_new_empty ();
 }
 
-/**
+/*
  * grl_collidable_get_collision_enabled:
  * @self: A #GrlCollidable
  *
@@ -118,7 +118,7 @@ grl_collidable_get_collision_enabled (GrlCollidable *self)
     return GPOINTER_TO_INT (data) != 0;
 }
 
-/**
+/*
  * grl_collidable_set_collision_enabled:
  * @self: A #GrlCollidable
  * @enabled: Whether collision should be enabled
@@ -147,7 +147,7 @@ grl_collidable_set_collision_enabled (GrlCollidable *self,
                         GINT_TO_POINTER (enabled ? 1 : 2));
 }
 
-/**
+/*
  * grl_collidable_on_collision:
  * @self: A #GrlCollidable
  * @other: The other #GrlCollidable that was hit
@@ -170,7 +170,7 @@ grl_collidable_on_collision (GrlCollidable *self,
         iface->on_collision (self, other);
 }
 
-/**
+/*
  * grl_collidable_check_collision:
  * @self: A #GrlCollidable
  * @other: Another #GrlCollidable to check against

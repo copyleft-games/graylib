@@ -178,7 +178,7 @@ grl_ui_groupbox_init (GrlUiGroupBox *self)
  * Public API
  */
 
-/**
+/*
  * grl_ui_groupbox_new:
  * @text: (nullable): Label text for the group box
  *
@@ -194,7 +194,7 @@ grl_ui_groupbox_new (const gchar *text)
                          NULL);
 }
 
-/**
+/*
  * grl_ui_groupbox_new_with_bounds:
  * @x: X position
  * @y: Y position
@@ -223,7 +223,7 @@ grl_ui_groupbox_new_with_bounds (gfloat       x,
                          NULL);
 }
 
-/**
+/*
  * grl_ui_groupbox_get_text:
  * @self: A #GrlUiGroupBox
  *
@@ -239,7 +239,7 @@ grl_ui_groupbox_get_text (GrlUiGroupBox *self)
     return self->text;
 }
 
-/**
+/*
  * grl_ui_groupbox_set_text:
  * @self: A #GrlUiGroupBox
  * @text: (nullable): The label text to display
@@ -261,7 +261,7 @@ grl_ui_groupbox_set_text (GrlUiGroupBox *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TEXT]);
 }
 
-/**
+/*
  * grl_ui_groupbox_get_content_bounds:
  * @self: A #GrlUiGroupBox
  *

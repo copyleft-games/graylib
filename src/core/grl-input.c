@@ -71,7 +71,7 @@
  * =============================================================================
  */
 
-/**
+/*
  * grl_input_is_key_pressed:
  * @key: The #GrlKey to check
  *
@@ -86,7 +86,7 @@ grl_input_is_key_pressed (GrlKey key)
     return raw != 0;
 }
 
-/**
+/*
  * grl_input_is_key_pressed_repeat:
  * @key: The #GrlKey to check
  *
@@ -101,7 +101,7 @@ grl_input_is_key_pressed_repeat (GrlKey key)
     return raw != 0;
 }
 
-/**
+/*
  * grl_input_is_key_down:
  * @key: The #GrlKey to check
  *
@@ -119,7 +119,7 @@ grl_input_is_key_down (GrlKey key)
     return raw != 0;
 }
 
-/**
+/*
  * grl_input_is_key_released:
  * @key: The #GrlKey to check
  *
@@ -134,7 +134,7 @@ grl_input_is_key_released (GrlKey key)
     return raw != 0;
 }
 
-/**
+/*
  * grl_input_is_key_up:
  * @key: The #GrlKey to check
  *
@@ -149,7 +149,7 @@ grl_input_is_key_up (GrlKey key)
     return raw != 0;
 }
 
-/**
+/*
  * grl_input_get_key_pressed:
  *
  * Gets the last key pressed from the input queue.
@@ -162,7 +162,7 @@ grl_input_get_key_pressed (void)
     return (GrlKey)GetKeyPressed ();
 }
 
-/**
+/*
  * grl_input_get_char_pressed:
  *
  * Gets the last Unicode character pressed.
@@ -175,7 +175,7 @@ grl_input_get_char_pressed (void)
     return GetCharPressed ();
 }
 
-/**
+/*
  * grl_input_set_exit_key:
  * @key: The #GrlKey to use for exiting, or %GRL_KEY_NULL to disable
  *
@@ -194,7 +194,7 @@ grl_input_set_exit_key (GrlKey key)
  * =============================================================================
  */
 
-/**
+/*
  * grl_input_is_mouse_button_pressed:
  * @button: The #GrlMouseButton to check
  *
@@ -209,7 +209,7 @@ grl_input_is_mouse_button_pressed (GrlMouseButton button)
     return raw != 0;
 }
 
-/**
+/*
  * grl_input_is_mouse_button_down:
  * @button: The #GrlMouseButton to check
  *
@@ -224,7 +224,7 @@ grl_input_is_mouse_button_down (GrlMouseButton button)
     return raw != 0;
 }
 
-/**
+/*
  * grl_input_is_mouse_button_released:
  * @button: The #GrlMouseButton to check
  *
@@ -239,7 +239,7 @@ grl_input_is_mouse_button_released (GrlMouseButton button)
     return raw != 0;
 }
 
-/**
+/*
  * grl_input_is_mouse_button_up:
  * @button: The #GrlMouseButton to check
  *
@@ -254,7 +254,7 @@ grl_input_is_mouse_button_up (GrlMouseButton button)
     return raw != 0;
 }
 
-/**
+/*
  * grl_input_get_mouse_x:
  *
  * Gets the current mouse X position.
@@ -267,7 +267,7 @@ grl_input_get_mouse_x (void)
     return GetMouseX ();
 }
 
-/**
+/*
  * grl_input_get_mouse_y:
  *
  * Gets the current mouse Y position.
@@ -280,7 +280,7 @@ grl_input_get_mouse_y (void)
     return GetMouseY ();
 }
 
-/**
+/*
  * grl_input_get_mouse_position:
  *
  * Gets the current mouse position as a vector.
@@ -294,7 +294,7 @@ grl_input_get_mouse_position (void)
     return grl_vector2_new (pos.x, pos.y);
 }
 
-/**
+/*
  * grl_input_get_mouse_delta:
  *
  * Gets the mouse movement since last frame.
@@ -308,7 +308,7 @@ grl_input_get_mouse_delta (void)
     return grl_vector2_new (delta.x, delta.y);
 }
 
-/**
+/*
  * grl_input_set_mouse_position:
  * @x: New X position
  * @y: New Y position
@@ -322,7 +322,7 @@ grl_input_set_mouse_position (gint x,
     SetMousePosition (x, y);
 }
 
-/**
+/*
  * grl_input_set_mouse_offset:
  * @offset_x: X offset
  * @offset_y: Y offset
@@ -336,7 +336,7 @@ grl_input_set_mouse_offset (gint offset_x,
     SetMouseOffset (offset_x, offset_y);
 }
 
-/**
+/*
  * grl_input_set_mouse_scale:
  * @scale_x: X scale factor
  * @scale_y: Y scale factor
@@ -350,7 +350,7 @@ grl_input_set_mouse_scale (gfloat scale_x,
     SetMouseScale (scale_x, scale_y);
 }
 
-/**
+/*
  * grl_input_get_mouse_wheel_move:
  *
  * Gets mouse wheel movement.
@@ -363,7 +363,7 @@ grl_input_get_mouse_wheel_move (void)
     return GetMouseWheelMove ();
 }
 
-/**
+/*
  * grl_input_get_mouse_wheel_move_v:
  *
  * Gets mouse wheel movement for both axes.
@@ -377,7 +377,7 @@ grl_input_get_mouse_wheel_move_v (void)
     return grl_vector2_new (move.x, move.y);
 }
 
-/**
+/*
  * grl_input_set_mouse_cursor:
  * @cursor: The #GrlMouseCursor shape to use
  *
@@ -395,7 +395,7 @@ grl_input_set_mouse_cursor (GrlMouseCursor cursor)
  * =============================================================================
  */
 
-/**
+/*
  * grl_input_is_gamepad_available:
  * @gamepad: Gamepad index (0-3)
  *
@@ -410,7 +410,7 @@ grl_input_is_gamepad_available (gint gamepad)
     return raw != 0;
 }
 
-/**
+/*
  * grl_input_get_gamepad_name:
  * @gamepad: Gamepad index (0-3)
  *
@@ -424,7 +424,7 @@ grl_input_get_gamepad_name (gint gamepad)
     return GetGamepadName (gamepad);
 }
 
-/**
+/*
  * grl_input_is_gamepad_button_pressed:
  * @gamepad: Gamepad index (0-3)
  * @button: The #GrlGamepadButton to check
@@ -441,7 +441,7 @@ grl_input_is_gamepad_button_pressed (gint             gamepad,
     return raw != 0;
 }
 
-/**
+/*
  * grl_input_is_gamepad_button_down:
  * @gamepad: Gamepad index (0-3)
  * @button: The #GrlGamepadButton to check
@@ -458,7 +458,7 @@ grl_input_is_gamepad_button_down (gint             gamepad,
     return raw != 0;
 }
 
-/**
+/*
  * grl_input_is_gamepad_button_released:
  * @gamepad: Gamepad index (0-3)
  * @button: The #GrlGamepadButton to check
@@ -475,7 +475,7 @@ grl_input_is_gamepad_button_released (gint             gamepad,
     return raw != 0;
 }
 
-/**
+/*
  * grl_input_is_gamepad_button_up:
  * @gamepad: Gamepad index (0-3)
  * @button: The #GrlGamepadButton to check
@@ -492,7 +492,7 @@ grl_input_is_gamepad_button_up (gint             gamepad,
     return raw != 0;
 }
 
-/**
+/*
  * grl_input_get_gamepad_button_pressed:
  *
  * Gets the last gamepad button pressed.
@@ -505,7 +505,7 @@ grl_input_get_gamepad_button_pressed (void)
     return GetGamepadButtonPressed ();
 }
 
-/**
+/*
  * grl_input_get_gamepad_axis_count:
  * @gamepad: Gamepad index (0-3)
  *
@@ -519,7 +519,7 @@ grl_input_get_gamepad_axis_count (gint gamepad)
     return GetGamepadAxisCount (gamepad);
 }
 
-/**
+/*
  * grl_input_get_gamepad_axis_movement:
  * @gamepad: Gamepad index (0-3)
  * @axis: The #GrlGamepadAxis to query
@@ -535,7 +535,7 @@ grl_input_get_gamepad_axis_movement (gint           gamepad,
     return GetGamepadAxisMovement (gamepad, (int)axis);
 }
 
-/**
+/*
  * grl_input_set_gamepad_mappings:
  * @mappings: SDL_GameControllerDB format mappings string
  *
@@ -551,7 +551,7 @@ grl_input_set_gamepad_mappings (const gchar *mappings)
     return SetGamepadMappings (mappings);
 }
 
-/**
+/*
  * grl_input_set_gamepad_vibration:
  * @gamepad: Gamepad index (0-3)
  * @left_motor: Left motor intensity (0.0 to 1.0)
@@ -575,7 +575,7 @@ grl_input_set_gamepad_vibration (gint   gamepad,
  * =============================================================================
  */
 
-/**
+/*
  * grl_input_get_touch_x:
  *
  * Gets touch position X for touch point 0.
@@ -588,7 +588,7 @@ grl_input_get_touch_x (void)
     return GetTouchX ();
 }
 
-/**
+/*
  * grl_input_get_touch_y:
  *
  * Gets touch position Y for touch point 0.
@@ -601,7 +601,7 @@ grl_input_get_touch_y (void)
     return GetTouchY ();
 }
 
-/**
+/*
  * grl_input_get_touch_position:
  * @index: Touch point index
  *
@@ -616,7 +616,7 @@ grl_input_get_touch_position (gint index)
     return grl_vector2_new (pos.x, pos.y);
 }
 
-/**
+/*
  * grl_input_get_touch_point_id:
  * @index: Touch point index
  *
@@ -630,7 +630,7 @@ grl_input_get_touch_point_id (gint index)
     return GetTouchPointId (index);
 }
 
-/**
+/*
  * grl_input_get_touch_point_count:
  *
  * Gets the number of active touch points.
@@ -649,7 +649,7 @@ grl_input_get_touch_point_count (void)
  * =============================================================================
  */
 
-/**
+/*
  * grl_input_set_gestures_enabled:
  * @flags: Combination of #GrlGesture flags to enable
  *
@@ -661,7 +661,7 @@ grl_input_set_gestures_enabled (GrlGesture flags)
     SetGesturesEnabled ((unsigned int)flags);
 }
 
-/**
+/*
  * grl_input_is_gesture_detected:
  * @gesture: The #GrlGesture to check
  *
@@ -676,7 +676,7 @@ grl_input_is_gesture_detected (GrlGesture gesture)
     return raw != 0;
 }
 
-/**
+/*
  * grl_input_get_gesture_detected:
  *
  * Gets the latest detected gesture.
@@ -689,7 +689,7 @@ grl_input_get_gesture_detected (void)
     return (GrlGesture)GetGestureDetected ();
 }
 
-/**
+/*
  * grl_input_get_gesture_hold_duration:
  *
  * Gets how long a hold gesture has been held.
@@ -702,7 +702,7 @@ grl_input_get_gesture_hold_duration (void)
     return GetGestureHoldDuration ();
 }
 
-/**
+/*
  * grl_input_get_gesture_drag_vector:
  *
  * Gets the drag vector for drag gestures.
@@ -716,7 +716,7 @@ grl_input_get_gesture_drag_vector (void)
     return grl_vector2_new (vec.x, vec.y);
 }
 
-/**
+/*
  * grl_input_get_gesture_drag_angle:
  *
  * Gets the drag angle for drag gestures.
@@ -729,7 +729,7 @@ grl_input_get_gesture_drag_angle (void)
     return GetGestureDragAngle ();
 }
 
-/**
+/*
  * grl_input_get_gesture_pinch_vector:
  *
  * Gets the pinch delta vector for pinch gestures.
@@ -743,7 +743,7 @@ grl_input_get_gesture_pinch_vector (void)
     return grl_vector2_new (vec.x, vec.y);
 }
 
-/**
+/*
  * grl_input_get_gesture_pinch_angle:
  *
  * Gets the pinch angle for pinch gestures.
@@ -924,7 +924,7 @@ typedef struct
 static GrlInjectedEvent grl_inject_q[GRL_INJECT_MAX];
 static gint grl_inject_len;
 
-/**
+/*
  * grl_input_inject_mouse_motion:
  * @x: cursor x in window pixels
  * @y: cursor y in window pixels
@@ -950,7 +950,7 @@ grl_input_inject_mouse_motion (gdouble x, gdouble y)
     return TRUE;
 }
 
-/**
+/*
  * grl_input_inject_mouse_button:
  * @button: GLFW button number (0 left, 1 right, 2 middle, ...)
  * @pressed: %TRUE for press, %FALSE for release
@@ -978,7 +978,7 @@ grl_input_inject_mouse_button (gint button, gboolean pressed, guint mods)
     return TRUE;
 }
 
-/**
+/*
  * grl_input_drain_injections: (skip)
  *
  * Deliver queued synthetic events through the backend callbacks.  Called

@@ -164,7 +164,7 @@ grl_audio_device_init (GrlAudioDevice *self)
     priv->master_volume = 1.0f;
 }
 
-/**
+/*
  * grl_audio_device_get_default:
  *
  * Gets the default audio device singleton. The audio device is created
@@ -184,7 +184,7 @@ grl_audio_device_get_default (void)
     return default_audio_device;
 }
 
-/**
+/*
  * grl_audio_device_init_audio:
  * @self: A #GrlAudioDevice
  *
@@ -219,7 +219,7 @@ grl_audio_device_init_audio (GrlAudioDevice *self)
     return FALSE;
 }
 
-/**
+/*
  * grl_audio_device_close:
  * @self: A #GrlAudioDevice
  *
@@ -244,7 +244,7 @@ grl_audio_device_close (GrlAudioDevice *self)
     }
 }
 
-/**
+/*
  * grl_audio_device_is_ready:
  * @self: A #GrlAudioDevice
  *
@@ -264,7 +264,7 @@ grl_audio_device_is_ready (GrlAudioDevice *self)
     return priv->is_initialized && IsAudioDeviceReady ();
 }
 
-/**
+/*
  * grl_audio_device_set_master_volume:
  * @self: A #GrlAudioDevice
  * @volume: Master volume (0.0 to 1.0)
@@ -294,7 +294,7 @@ grl_audio_device_set_master_volume (GrlAudioDevice *self,
     }
 }
 
-/**
+/*
  * grl_audio_device_get_master_volume:
  * @self: A #GrlAudioDevice
  *
@@ -314,7 +314,7 @@ grl_audio_device_get_master_volume (GrlAudioDevice *self)
     return priv->master_volume;
 }
 
-/**
+/*
  * grl_audio_device_get_master_volume_actual:
  * @self: A #GrlAudioDevice
  *
@@ -337,7 +337,7 @@ grl_audio_device_get_master_volume_actual (GrlAudioDevice *self)
     return GetMasterVolume ();
 }
 
-/**
+/*
  * grl_audio_device_set_default_buffer_size:
  * @self: A #GrlAudioDevice
  * @size: The default buffer size in samples

@@ -321,7 +321,7 @@ grl_ui_listview_init (GrlUiListView *self)
  * Public API
  */
 
-/**
+/*
  * grl_ui_listview_new:
  * @items: (nullable): Semicolon-separated list of items
  *
@@ -337,7 +337,7 @@ grl_ui_listview_new (const gchar *items)
                          NULL);
 }
 
-/**
+/*
  * grl_ui_listview_new_with_bounds:
  * @x: X position
  * @y: Y position
@@ -366,7 +366,7 @@ grl_ui_listview_new_with_bounds (gfloat       x,
                          NULL);
 }
 
-/**
+/*
  * grl_ui_listview_get_items:
  * @self: A #GrlUiListView
  *
@@ -382,7 +382,7 @@ grl_ui_listview_get_items (GrlUiListView *self)
     return self->items;
 }
 
-/**
+/*
  * grl_ui_listview_set_items:
  * @self: A #GrlUiListView
  * @items: (nullable): Semicolon-separated list of items
@@ -419,7 +419,7 @@ grl_ui_listview_set_items (GrlUiListView *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_ITEMS]);
 }
 
-/**
+/*
  * grl_ui_listview_get_active:
  * @self: A #GrlUiListView
  *
@@ -435,7 +435,7 @@ grl_ui_listview_get_active (GrlUiListView *self)
     return self->active;
 }
 
-/**
+/*
  * grl_ui_listview_set_active:
  * @self: A #GrlUiListView
  * @active: The index of the item to select, or -1 for no selection
@@ -461,7 +461,7 @@ grl_ui_listview_set_active (GrlUiListView *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_ACTIVE]);
 }
 
-/**
+/*
  * grl_ui_listview_get_scroll_index:
  * @self: A #GrlUiListView
  *
@@ -477,7 +477,7 @@ grl_ui_listview_get_scroll_index (GrlUiListView *self)
     return self->scroll_index;
 }
 
-/**
+/*
  * grl_ui_listview_set_scroll_index:
  * @self: A #GrlUiListView
  * @scroll_index: The scroll position
@@ -501,7 +501,7 @@ grl_ui_listview_set_scroll_index (GrlUiListView *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_SCROLL_INDEX]);
 }
 
-/**
+/*
  * grl_ui_listview_get_item_count:
  * @self: A #GrlUiListView
  *
@@ -517,7 +517,7 @@ grl_ui_listview_get_item_count (GrlUiListView *self)
     return self->item_count;
 }
 
-/**
+/*
  * grl_ui_listview_get_active_text:
  * @self: A #GrlUiListView
  *
@@ -549,7 +549,7 @@ grl_ui_listview_get_active_text (GrlUiListView *self)
     return result;
 }
 
-/**
+/*
  * grl_ui_listview_scroll_to_active:
  * @self: A #GrlUiListView
  *
@@ -571,7 +571,7 @@ grl_ui_listview_scroll_to_active (GrlUiListView *self)
     }
 }
 
-/**
+/*
  * grl_ui_listview_clear_selection:
  * @self: A #GrlUiListView
  *

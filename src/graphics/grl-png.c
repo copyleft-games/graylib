@@ -35,7 +35,7 @@ grl_png_error_quark (void)
 G_DEFINE_BOXED_TYPE (GrlPngChunk, grl_png_chunk,
                      grl_png_chunk_copy, grl_png_chunk_free)
 
-/**
+/*
  * grl_png_chunk_new:
  * @type: Four-character chunk type (e.g., "tEXt")
  * @data: (array length=length): Chunk data
@@ -77,7 +77,7 @@ grl_png_chunk_new (const gchar  *type,
     return chunk;
 }
 
-/**
+/*
  * grl_png_chunk_copy:
  * @self: A #GrlPngChunk
  *
@@ -105,7 +105,7 @@ grl_png_chunk_copy (const GrlPngChunk *self)
     return copy;
 }
 
-/**
+/*
  * grl_png_chunk_free:
  * @self: A #GrlPngChunk
  *
@@ -121,7 +121,7 @@ grl_png_chunk_free (GrlPngChunk *self)
     g_free (self);
 }
 
-/**
+/*
  * grl_png_chunk_get_type_string:
  * @self: A #GrlPngChunk
  *
@@ -146,7 +146,7 @@ grl_png_chunk_get_type_string (GrlPngChunk *self)
 G_DEFINE_BOXED_TYPE (GrlPngPalette, grl_png_palette,
                      grl_png_palette_copy, grl_png_palette_free)
 
-/**
+/*
  * grl_png_palette_new:
  * @colors: (array length=count): Array of colors
  * @count: Number of colors
@@ -190,7 +190,7 @@ grl_png_palette_new (const GrlColor *colors,
     return palette;
 }
 
-/**
+/*
  * grl_png_palette_new_empty:
  * @count: Number of palette entries to allocate
  *
@@ -204,7 +204,7 @@ grl_png_palette_new_empty (gint count)
     return grl_png_palette_new (NULL, count);
 }
 
-/**
+/*
  * grl_png_palette_copy:
  * @self: A #GrlPngPalette
  *
@@ -220,7 +220,7 @@ grl_png_palette_copy (const GrlPngPalette *self)
     return grl_png_palette_new (self->colors, self->color_count);
 }
 
-/**
+/*
  * grl_png_palette_free:
  * @self: A #GrlPngPalette
  *
@@ -236,7 +236,7 @@ grl_png_palette_free (GrlPngPalette *self)
     g_free (self);
 }
 
-/**
+/*
  * grl_png_palette_get_color:
  * @self: A #GrlPngPalette
  * @index: Color index (0-255)
@@ -259,7 +259,7 @@ grl_png_palette_get_color (GrlPngPalette *self,
                           self->colors[index].a);
 }
 
-/**
+/*
  * grl_png_palette_set_color:
  * @self: A #GrlPngPalette
  * @index: Color index (0-255)
@@ -289,7 +289,7 @@ grl_png_palette_set_color (GrlPngPalette *self,
  * =============================================================================
  */
 
-/**
+/*
  * grl_png_chunk_count:
  * @filename: (type filename): Path to PNG file
  * @error: (nullable): Return location for error
@@ -321,7 +321,7 @@ grl_png_chunk_count (const gchar  *filename,
     return count;
 }
 
-/**
+/*
  * grl_png_chunk_read:
  * @filename: (type filename): Path to PNG file
  * @chunk_type: Four-character chunk type to read
@@ -368,7 +368,7 @@ grl_png_chunk_read (const gchar  *filename,
     return chunk;
 }
 
-/**
+/*
  * grl_png_chunk_read_all:
  * @filename: (type filename): Path to PNG file
  * @count: (out): Number of chunks read
@@ -431,7 +431,7 @@ grl_png_chunk_read_all (const gchar  *filename,
     return chunks;
 }
 
-/**
+/*
  * grl_png_chunk_write:
  * @filename: (type filename): Path to PNG file
  * @chunk: The chunk to write
@@ -461,7 +461,7 @@ grl_png_chunk_write (const gchar *filename,
     return TRUE;
 }
 
-/**
+/*
  * grl_png_chunk_remove:
  * @filename: (type filename): Path to PNG file
  * @chunk_type: Four-character chunk type to remove
@@ -484,7 +484,7 @@ grl_png_chunk_remove (const gchar *filename,
     return TRUE;
 }
 
-/**
+/*
  * grl_png_chunk_write_text:
  * @filename: (type filename): Path to PNG file
  * @keyword: Text keyword (max 79 characters)
@@ -510,7 +510,7 @@ grl_png_chunk_write_text (const gchar *filename,
     return TRUE;
 }
 
-/**
+/*
  * grl_png_chunk_write_gamma:
  * @filename: (type filename): Path to PNG file
  * @gamma: Gamma value (typically 2.2)
@@ -532,7 +532,7 @@ grl_png_chunk_write_gamma (const gchar *filename,
     return TRUE;
 }
 
-/**
+/*
  * grl_png_chunk_write_srgb:
  * @filename: (type filename): Path to PNG file
  * @rendering_intent: sRGB rendering intent (0-3)
@@ -556,7 +556,7 @@ grl_png_chunk_write_srgb (const gchar *filename,
     return TRUE;
 }
 
-/**
+/*
  * grl_png_chunk_write_time:
  * @filename: (type filename): Path to PNG file
  * @year: Year (e.g., 2025)
@@ -589,7 +589,7 @@ grl_png_chunk_write_time (const gchar *filename,
     return TRUE;
 }
 
-/**
+/*
  * grl_png_chunk_check_valid:
  * @filename: (type filename): Path to PNG file
  * @error: (nullable): Return location for error

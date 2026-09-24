@@ -229,7 +229,7 @@ grl_model_init (GrlModel *self)
     memset (&priv->model, 0, sizeof (Model));
 }
 
-/**
+/*
  * grl_model_new_from_file:
  * @filename: (type filename): Path to model file
  * @error: (nullable): Return location for error
@@ -278,7 +278,7 @@ grl_model_new_from_file (const gchar  *filename,
     return self;
 }
 
-/**
+/*
  * grl_model_new_from_mesh:
  * @mesh: A #GrlMesh to use
  *
@@ -314,7 +314,7 @@ grl_model_new_from_mesh (GrlMesh *mesh)
     return self;
 }
 
-/**
+/*
  * grl_model_is_valid:
  * @self: A #GrlModel
  *
@@ -334,7 +334,7 @@ grl_model_is_valid (GrlModel *self)
     return priv->valid;
 }
 
-/**
+/*
  * grl_model_get_mesh_count:
  * @self: A #GrlModel
  *
@@ -354,7 +354,7 @@ grl_model_get_mesh_count (GrlModel *self)
     return priv->valid ? priv->model.meshCount : 0;
 }
 
-/**
+/*
  * grl_model_get_material_count:
  * @self: A #GrlModel
  *
@@ -374,7 +374,7 @@ grl_model_get_material_count (GrlModel *self)
     return priv->valid ? priv->model.materialCount : 0;
 }
 
-/**
+/*
  * grl_model_get_bone_count:
  * @self: A #GrlModel
  *
@@ -395,7 +395,7 @@ grl_model_get_bone_count (GrlModel *self)
     return priv->valid ? priv->model.skeleton.boneCount : 0;
 }
 
-/**
+/*
  * grl_model_get_bone:
  * @self: A #GrlModel
  * @index: Bone index in range [0, grl_model_get_bone_count())
@@ -427,7 +427,7 @@ grl_model_get_bone (GrlModel *self,
     return grl_bone_info_new (bone.name, bone.parent);
 }
 
-/**
+/*
  * grl_model_get_bind_pose_transform:
  * @self: A #GrlModel
  * @bone: Bone index in range [0, grl_model_get_bone_count())
@@ -465,7 +465,7 @@ grl_model_get_bind_pose_transform (GrlModel *self,
     return grl_transform_new (translation, rotation, scale);
 }
 
-/**
+/*
  * grl_model_get_bounding_box:
  * @self: A #GrlModel
  *
@@ -492,7 +492,7 @@ grl_model_get_bounding_box (GrlModel *self)
                                      bb.max.x, bb.max.y, bb.max.z);
 }
 
-/**
+/*
  * grl_model_get_transform:
  * @self: A #GrlModel
  *
@@ -525,7 +525,7 @@ grl_model_get_transform (GrlModel *self)
     return matrix;
 }
 
-/**
+/*
  * grl_model_set_transform:
  * @self: A #GrlModel
  * @transform: The transformation matrix
@@ -564,7 +564,7 @@ grl_model_set_transform (GrlModel        *self,
     priv->model.transform.m15 = transform->m15;
 }
 
-/**
+/*
  * grl_model_set_material:
  * @self: A #GrlModel
  * @mesh_index: Index of the mesh
@@ -592,7 +592,7 @@ grl_model_set_material (GrlModel    *self,
         *(Material *)grl_material_get_handle (material);
 }
 
-/**
+/*
  * grl_model_set_texture:
  * @self: A #GrlModel
  * @material_index: Index of the material
@@ -623,7 +623,7 @@ grl_model_set_texture (GrlModel           *self,
                         *(Texture2D *)grl_texture_get_handle (texture));
 }
 
-/**
+/*
  * grl_model_draw:
  * @self: A #GrlModel
  * @position: World position to draw at
@@ -663,7 +663,7 @@ grl_model_draw (GrlModel         *self,
     DrawModel (priv->model, pos, scale, color);
 }
 
-/**
+/*
  * grl_model_draw_ex:
  * @self: A #GrlModel
  * @position: World position
@@ -717,7 +717,7 @@ grl_model_draw_ex (GrlModel         *self,
     DrawModelEx (priv->model, pos, axis, rotation_angle, scl, color);
 }
 
-/**
+/*
  * grl_model_draw_wires:
  * @self: A #GrlModel
  * @position: World position
@@ -757,7 +757,7 @@ grl_model_draw_wires (GrlModel         *self,
     DrawModelWires (priv->model, pos, scale, color);
 }
 
-/**
+/*
  * grl_model_draw_wires_ex:
  * @self: A #GrlModel
  * @position: World position
@@ -811,7 +811,7 @@ grl_model_draw_wires_ex (GrlModel         *self,
     DrawModelWiresEx (priv->model, pos, axis, rotation_angle, scl, color);
 }
 
-/**
+/*
  * grl_model_get_handle:
  * @self: A #GrlModel
  *

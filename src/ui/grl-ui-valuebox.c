@@ -388,7 +388,7 @@ grl_ui_valuebox_init (GrlUiValueBox *self)
  * Public API
  */
 
-/**
+/*
  * grl_ui_valuebox_new:
  * @min_value: Minimum value
  * @max_value: Maximum value
@@ -407,7 +407,7 @@ grl_ui_valuebox_new (gint min_value,
                          NULL);
 }
 
-/**
+/*
  * grl_ui_valuebox_new_with_bounds:
  * @x: X position
  * @y: Y position
@@ -439,7 +439,7 @@ grl_ui_valuebox_new_with_bounds (gfloat x,
                          NULL);
 }
 
-/**
+/*
  * grl_ui_valuebox_get_value:
  * @self: A #GrlUiValueBox
  *
@@ -455,7 +455,7 @@ grl_ui_valuebox_get_value (GrlUiValueBox *self)
     return self->value;
 }
 
-/**
+/*
  * grl_ui_valuebox_set_value:
  * @self: A #GrlUiValueBox
  * @value: The new value
@@ -482,7 +482,7 @@ grl_ui_valuebox_set_value (GrlUiValueBox *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_VALUE]);
 }
 
-/**
+/*
  * grl_ui_valuebox_get_min_value:
  * @self: A #GrlUiValueBox
  *
@@ -498,7 +498,7 @@ grl_ui_valuebox_get_min_value (GrlUiValueBox *self)
     return self->min_value;
 }
 
-/**
+/*
  * grl_ui_valuebox_set_min_value:
  * @self: A #GrlUiValueBox
  * @min_value: The new minimum value
@@ -526,7 +526,7 @@ grl_ui_valuebox_set_min_value (GrlUiValueBox *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_MIN_VALUE]);
 }
 
-/**
+/*
  * grl_ui_valuebox_get_max_value:
  * @self: A #GrlUiValueBox
  *
@@ -542,7 +542,7 @@ grl_ui_valuebox_get_max_value (GrlUiValueBox *self)
     return self->max_value;
 }
 
-/**
+/*
  * grl_ui_valuebox_set_max_value:
  * @self: A #GrlUiValueBox
  * @max_value: The new maximum value
@@ -570,7 +570,7 @@ grl_ui_valuebox_set_max_value (GrlUiValueBox *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_MAX_VALUE]);
 }
 
-/**
+/*
  * grl_ui_valuebox_get_text:
  * @self: A #GrlUiValueBox
  *
@@ -586,7 +586,7 @@ grl_ui_valuebox_get_text (GrlUiValueBox *self)
     return self->text;
 }
 
-/**
+/*
  * grl_ui_valuebox_set_text:
  * @self: A #GrlUiValueBox
  * @text: (nullable): The new label text
@@ -608,7 +608,7 @@ grl_ui_valuebox_set_text (GrlUiValueBox *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TEXT]);
 }
 
-/**
+/*
  * grl_ui_valuebox_get_edit_mode:
  * @self: A #GrlUiValueBox
  *
@@ -624,7 +624,7 @@ grl_ui_valuebox_get_edit_mode (GrlUiValueBox *self)
     return self->edit_mode;
 }
 
-/**
+/*
  * grl_ui_valuebox_set_edit_mode:
  * @self: A #GrlUiValueBox
  * @edit_mode: Whether to enter edit mode

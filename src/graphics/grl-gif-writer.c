@@ -809,7 +809,7 @@ grl_gif_writer_close (GrlGifWriter *self,
  * Setters — must be called before the first add_frame().
  */
 
-/**
+/*
  * grl_gif_writer_set_quantizer:
  * @self: A #GrlGifWriter.
  * @quantizer: The palette-building strategy.
@@ -826,7 +826,7 @@ grl_gif_writer_set_quantizer (GrlGifWriter    *self,
     self->quantizer = quantizer;
 }
 
-/**
+/*
  * grl_gif_writer_set_dither:
  * @self: A #GrlGifWriter.
  * @dither: The dithering mode.
@@ -843,7 +843,7 @@ grl_gif_writer_set_dither (GrlGifWriter *self,
     self->dither = dither;
 }
 
-/**
+/*
  * grl_gif_writer_set_palette_scope:
  * @self: A #GrlGifWriter.
  * @scope: Global or per-frame palette.
@@ -885,7 +885,7 @@ grl_gif_writer_set_palette_scope (GrlGifWriter      *self,
     self->palette_scope = scope;
 }
 
-/**
+/*
  * grl_gif_writer_set_max_colors:
  * @self: A #GrlGifWriter.
  * @max_colors: Maximum palette entries. Clamped to [2, 256].
@@ -904,7 +904,7 @@ grl_gif_writer_set_max_colors (GrlGifWriter *self,
     self->max_colors = max_colors;
 }
 
-/**
+/*
  * grl_gif_writer_set_transparency:
  * @self: A #GrlGifWriter.
  * @enabled: %TRUE to enable transparency.

@@ -22,7 +22,7 @@
 
 G_DEFINE_BOXED_TYPE (GrlVector4, grl_vector4, grl_vector4_copy, grl_vector4_free)
 
-/**
+/*
  * grl_vector4_new:
  * @x: X component
  * @y: Y component
@@ -50,7 +50,7 @@ grl_vector4_new (gfloat x,
     return self;
 }
 
-/**
+/*
  * grl_vector4_copy:
  * @self: (nullable): A #GrlVector4
  *
@@ -67,7 +67,7 @@ grl_vector4_copy (const GrlVector4 *self)
     return grl_vector4_new (self->x, self->y, self->z, self->w);
 }
 
-/**
+/*
  * grl_vector4_free:
  * @self: (nullable): A #GrlVector4
  *
@@ -80,7 +80,7 @@ grl_vector4_free (GrlVector4 *self)
         g_slice_free (GrlVector4, self);
 }
 
-/**
+/*
  * grl_vector4_new_zero:
  *
  * Creates a new zero vector (0, 0, 0, 0).
@@ -93,7 +93,7 @@ grl_vector4_new_zero (void)
     return grl_vector4_new (0.0f, 0.0f, 0.0f, 0.0f);
 }
 
-/**
+/*
  * grl_vector4_new_one:
  *
  * Creates a new vector with all components set to 1.
@@ -106,7 +106,7 @@ grl_vector4_new_one (void)
     return grl_vector4_new (1.0f, 1.0f, 1.0f, 1.0f);
 }
 
-/**
+/*
  * grl_vector4_new_identity:
  *
  * Creates a new identity quaternion (0, 0, 0, 1).
@@ -120,7 +120,7 @@ grl_vector4_new_identity (void)
     return grl_vector4_new (0.0f, 0.0f, 0.0f, 1.0f);
 }
 
-/**
+/*
  * grl_vector4_add:
  * @a: First vector
  * @b: Second vector
@@ -139,7 +139,7 @@ grl_vector4_add (const GrlVector4 *a,
     return grl_vector4_new (a->x + b->x, a->y + b->y, a->z + b->z, a->w + b->w);
 }
 
-/**
+/*
  * grl_vector4_subtract:
  * @a: First vector
  * @b: Second vector
@@ -158,7 +158,7 @@ grl_vector4_subtract (const GrlVector4 *a,
     return grl_vector4_new (a->x - b->x, a->y - b->y, a->z - b->z, a->w - b->w);
 }
 
-/**
+/*
  * grl_vector4_scale:
  * @self: A vector
  * @scale: Scale factor
@@ -177,7 +177,7 @@ grl_vector4_scale (const GrlVector4 *self,
                             self->z * scale, self->w * scale);
 }
 
-/**
+/*
  * grl_vector4_length:
  * @self: A vector
  *
@@ -194,7 +194,7 @@ grl_vector4_length (const GrlVector4 *self)
                   self->z * self->z + self->w * self->w);
 }
 
-/**
+/*
  * grl_vector4_length_sqr:
  * @self: A vector
  *
@@ -212,7 +212,7 @@ grl_vector4_length_sqr (const GrlVector4 *self)
            self->z * self->z + self->w * self->w;
 }
 
-/**
+/*
  * grl_vector4_normalize:
  * @self: A vector
  *
@@ -240,7 +240,7 @@ grl_vector4_normalize (const GrlVector4 *self)
                             self->z * inv_length, self->w * inv_length);
 }
 
-/**
+/*
  * grl_vector4_dot:
  * @a: First vector
  * @b: Second vector
@@ -259,7 +259,7 @@ grl_vector4_dot (const GrlVector4 *a,
     return a->x * b->x + a->y * b->y + a->z * b->z + a->w * b->w;
 }
 
-/**
+/*
  * grl_vector4_lerp:
  * @a: Start vector
  * @b: End vector
@@ -284,7 +284,7 @@ grl_vector4_lerp (const GrlVector4 *a,
                             a->w + amount * (b->w - a->w));
 }
 
-/**
+/*
  * grl_vector4_negate:
  * @self: A vector
  *
@@ -300,7 +300,7 @@ grl_vector4_negate (const GrlVector4 *self)
     return grl_vector4_new (-self->x, -self->y, -self->z, -self->w);
 }
 
-/**
+/*
  * grl_vector4_equal:
  * @a: First vector
  * @b: Second vector

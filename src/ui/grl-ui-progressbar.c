@@ -278,7 +278,7 @@ grl_ui_progressbar_init (GrlUiProgressBar *self)
  * Public API
  */
 
-/**
+/*
  * grl_ui_progressbar_new:
  * @min_value: Minimum value
  * @max_value: Maximum value
@@ -297,7 +297,7 @@ grl_ui_progressbar_new (gfloat min_value,
                          NULL);
 }
 
-/**
+/*
  * grl_ui_progressbar_new_with_bounds:
  * @x: X position
  * @y: Y position
@@ -329,7 +329,7 @@ grl_ui_progressbar_new_with_bounds (gfloat x,
                          NULL);
 }
 
-/**
+/*
  * grl_ui_progressbar_get_value:
  * @self: A #GrlUiProgressBar
  *
@@ -345,7 +345,7 @@ grl_ui_progressbar_get_value (GrlUiProgressBar *self)
     return self->value;
 }
 
-/**
+/*
  * grl_ui_progressbar_set_value:
  * @self: A #GrlUiProgressBar
  * @value: The new value
@@ -366,7 +366,7 @@ grl_ui_progressbar_set_value (GrlUiProgressBar *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_VALUE]);
 }
 
-/**
+/*
  * grl_ui_progressbar_get_min_value:
  * @self: A #GrlUiProgressBar
  *
@@ -382,7 +382,7 @@ grl_ui_progressbar_get_min_value (GrlUiProgressBar *self)
     return self->min_value;
 }
 
-/**
+/*
  * grl_ui_progressbar_set_min_value:
  * @self: A #GrlUiProgressBar
  * @min_value: The new minimum value
@@ -403,7 +403,7 @@ grl_ui_progressbar_set_min_value (GrlUiProgressBar *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_MIN_VALUE]);
 }
 
-/**
+/*
  * grl_ui_progressbar_get_max_value:
  * @self: A #GrlUiProgressBar
  *
@@ -419,7 +419,7 @@ grl_ui_progressbar_get_max_value (GrlUiProgressBar *self)
     return self->max_value;
 }
 
-/**
+/*
  * grl_ui_progressbar_set_max_value:
  * @self: A #GrlUiProgressBar
  * @max_value: The new maximum value
@@ -440,7 +440,7 @@ grl_ui_progressbar_set_max_value (GrlUiProgressBar *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_MAX_VALUE]);
 }
 
-/**
+/*
  * grl_ui_progressbar_get_text_left:
  * @self: A #GrlUiProgressBar
  *
@@ -456,7 +456,7 @@ grl_ui_progressbar_get_text_left (GrlUiProgressBar *self)
     return self->text_left;
 }
 
-/**
+/*
  * grl_ui_progressbar_set_text_left:
  * @self: A #GrlUiProgressBar
  * @text: (nullable): The new left text label
@@ -478,7 +478,7 @@ grl_ui_progressbar_set_text_left (GrlUiProgressBar *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TEXT_LEFT]);
 }
 
-/**
+/*
  * grl_ui_progressbar_get_text_right:
  * @self: A #GrlUiProgressBar
  *
@@ -494,7 +494,7 @@ grl_ui_progressbar_get_text_right (GrlUiProgressBar *self)
     return self->text_right;
 }
 
-/**
+/*
  * grl_ui_progressbar_set_text_right:
  * @self: A #GrlUiProgressBar
  * @text: (nullable): The new right text label
@@ -516,7 +516,7 @@ grl_ui_progressbar_set_text_right (GrlUiProgressBar *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TEXT_RIGHT]);
 }
 
-/**
+/*
  * grl_ui_progressbar_get_progress:
  * @self: A #GrlUiProgressBar
  *
@@ -538,7 +538,7 @@ grl_ui_progressbar_get_progress (GrlUiProgressBar *self)
     return (self->value - self->min_value) / range;
 }
 
-/**
+/*
  * grl_ui_progressbar_set_progress:
  * @self: A #GrlUiProgressBar
  * @progress: The progress as a percentage (0.0 to 1.0)

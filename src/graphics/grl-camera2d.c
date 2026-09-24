@@ -265,7 +265,7 @@ grl_camera2d_init (GrlCamera2D *self)
     priv->zoom = 1.0f;
 }
 
-/**
+/*
  * grl_camera2d_new:
  *
  * Creates a new 2D camera with default settings.
@@ -278,7 +278,7 @@ grl_camera2d_new (void)
     return g_object_new (GRL_TYPE_CAMERA2D, NULL);
 }
 
-/**
+/*
  * grl_camera2d_get_offset:
  * @self: A #GrlCamera2D
  *
@@ -297,7 +297,7 @@ grl_camera2d_get_offset (GrlCamera2D *self)
     return grl_vector2_new (priv->offset_x, priv->offset_y);
 }
 
-/**
+/*
  * grl_camera2d_set_offset:
  * @self: A #GrlCamera2D
  * @offset: The new offset
@@ -321,7 +321,7 @@ grl_camera2d_set_offset (GrlCamera2D *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_OFFSET_Y]);
 }
 
-/**
+/*
  * grl_camera2d_set_offset_xy:
  * @self: A #GrlCamera2D
  * @x: X offset
@@ -346,7 +346,7 @@ grl_camera2d_set_offset_xy (GrlCamera2D *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_OFFSET_Y]);
 }
 
-/**
+/*
  * grl_camera2d_get_target:
  * @self: A #GrlCamera2D
  *
@@ -365,7 +365,7 @@ grl_camera2d_get_target (GrlCamera2D *self)
     return grl_vector2_new (priv->target_x, priv->target_y);
 }
 
-/**
+/*
  * grl_camera2d_set_target:
  * @self: A #GrlCamera2D
  * @target: The new target position
@@ -389,7 +389,7 @@ grl_camera2d_set_target (GrlCamera2D *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TARGET_Y]);
 }
 
-/**
+/*
  * grl_camera2d_set_target_xy:
  * @self: A #GrlCamera2D
  * @x: X target
@@ -414,7 +414,7 @@ grl_camera2d_set_target_xy (GrlCamera2D *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TARGET_Y]);
 }
 
-/**
+/*
  * grl_camera2d_get_rotation:
  * @self: A #GrlCamera2D
  *
@@ -433,7 +433,7 @@ grl_camera2d_get_rotation (GrlCamera2D *self)
     return priv->rotation;
 }
 
-/**
+/*
  * grl_camera2d_set_rotation:
  * @self: A #GrlCamera2D
  * @rotation: The rotation in degrees
@@ -454,7 +454,7 @@ grl_camera2d_set_rotation (GrlCamera2D *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_ROTATION]);
 }
 
-/**
+/*
  * grl_camera2d_get_zoom:
  * @self: A #GrlCamera2D
  *
@@ -473,7 +473,7 @@ grl_camera2d_get_zoom (GrlCamera2D *self)
     return priv->zoom;
 }
 
-/**
+/*
  * grl_camera2d_set_zoom:
  * @self: A #GrlCamera2D
  * @zoom: The zoom level (must be > 0)
@@ -495,7 +495,7 @@ grl_camera2d_set_zoom (GrlCamera2D *self,
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_ZOOM]);
 }
 
-/**
+/*
  * grl_camera2d_begin:
  * @self: A #GrlCamera2D
  *
@@ -512,7 +512,7 @@ grl_camera2d_begin (GrlCamera2D *self)
     BeginMode2D (camera);
 }
 
-/**
+/*
  * grl_camera2d_end:
  * @self: A #GrlCamera2D
  *
@@ -526,7 +526,7 @@ grl_camera2d_end (GrlCamera2D *self)
     EndMode2D ();
 }
 
-/**
+/*
  * grl_camera2d_get_world_to_screen:
  * @self: A #GrlCamera2D
  * @world_pos: A world position
@@ -554,7 +554,7 @@ grl_camera2d_get_world_to_screen (GrlCamera2D *self,
     return grl_vector2_new (screen.x, screen.y);
 }
 
-/**
+/*
  * grl_camera2d_get_screen_to_world:
  * @self: A #GrlCamera2D
  * @screen_pos: A screen position

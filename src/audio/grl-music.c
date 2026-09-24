@@ -313,7 +313,7 @@ grl_music_init (GrlMusic *self)
     self->memory_size = 0;
 }
 
-/**
+/*
  * grl_music_new_from_file:
  * @filename: Path to the music file
  * @error: (nullable): Return location for error, or %NULL
@@ -368,7 +368,7 @@ grl_music_new_from_file (const gchar  *filename,
     return self;
 }
 
-/**
+/*
  * grl_music_new_from_memory:
  * @file_type: Music file type extension (e.g., ".ogg", ".mp3", ".wav")
  * @data: (array length=data_size): Music file data in memory
@@ -438,7 +438,7 @@ grl_music_new_from_memory (const gchar  *file_type,
     return self;
 }
 
-/**
+/*
  * grl_music_play:
  * @self: A #GrlMusic
  *
@@ -456,7 +456,7 @@ grl_music_play (GrlMusic *self)
     PlayMusicStream (self->music);
 }
 
-/**
+/*
  * grl_music_stop:
  * @self: A #GrlMusic
  *
@@ -473,7 +473,7 @@ grl_music_stop (GrlMusic *self)
     StopMusicStream (self->music);
 }
 
-/**
+/*
  * grl_music_pause:
  * @self: A #GrlMusic
  *
@@ -490,7 +490,7 @@ grl_music_pause (GrlMusic *self)
     PauseMusicStream (self->music);
 }
 
-/**
+/*
  * grl_music_resume:
  * @self: A #GrlMusic
  *
@@ -507,7 +507,7 @@ grl_music_resume (GrlMusic *self)
     ResumeMusicStream (self->music);
 }
 
-/**
+/*
  * grl_music_update:
  * @self: A #GrlMusic
  *
@@ -525,7 +525,7 @@ grl_music_update (GrlMusic *self)
     UpdateMusicStream (self->music);
 }
 
-/**
+/*
  * grl_music_is_playing:
  * @self: A #GrlMusic
  *
@@ -548,7 +548,7 @@ grl_music_is_playing (GrlMusic *self)
     return raw != 0;
 }
 
-/**
+/*
  * grl_music_set_looping:
  * @self: A #GrlMusic
  * @looping: Whether to loop the music
@@ -572,7 +572,7 @@ grl_music_set_looping (GrlMusic *self,
     }
 }
 
-/**
+/*
  * grl_music_get_looping:
  * @self: A #GrlMusic
  *
@@ -588,7 +588,7 @@ grl_music_get_looping (GrlMusic *self)
     return self->looping;
 }
 
-/**
+/*
  * grl_music_seek:
  * @self: A #GrlMusic
  * @position: Position in seconds
@@ -607,7 +607,7 @@ grl_music_seek (GrlMusic *self,
     SeekMusicStream (self->music, position);
 }
 
-/**
+/*
  * grl_music_get_time_length:
  * @self: A #GrlMusic
  *
@@ -626,7 +626,7 @@ grl_music_get_time_length (GrlMusic *self)
     return GetMusicTimeLength (self->music);
 }
 
-/**
+/*
  * grl_music_get_time_played:
  * @self: A #GrlMusic
  *
@@ -645,7 +645,7 @@ grl_music_get_time_played (GrlMusic *self)
     return GetMusicTimePlayed (self->music);
 }
 
-/**
+/*
  * grl_music_set_volume:
  * @self: A #GrlMusic
  * @volume: Volume level (0.0 to 1.0)
@@ -671,7 +671,7 @@ grl_music_set_volume (GrlMusic *self,
     }
 }
 
-/**
+/*
  * grl_music_get_volume:
  * @self: A #GrlMusic
  *
@@ -687,7 +687,7 @@ grl_music_get_volume (GrlMusic *self)
     return self->volume;
 }
 
-/**
+/*
  * grl_music_set_pitch:
  * @self: A #GrlMusic
  * @pitch: Pitch multiplier (1.0 = normal pitch)
@@ -713,7 +713,7 @@ grl_music_set_pitch (GrlMusic *self,
     }
 }
 
-/**
+/*
  * grl_music_get_pitch:
  * @self: A #GrlMusic
  *
@@ -729,7 +729,7 @@ grl_music_get_pitch (GrlMusic *self)
     return self->pitch;
 }
 
-/**
+/*
  * grl_music_set_pan:
  * @self: A #GrlMusic
  * @pan: Pan position (-1.0 = left, 0.0 = center, 1.0 = right)
@@ -755,7 +755,7 @@ grl_music_set_pan (GrlMusic *self,
     }
 }
 
-/**
+/*
  * grl_music_get_pan:
  * @self: A #GrlMusic
  *

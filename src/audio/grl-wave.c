@@ -70,7 +70,7 @@ wave_is_valid_internal (const Wave *wave)
     return raw != 0;
 }
 
-/**
+/*
  * grl_wave_new_from_file:
  * @filename: (type filename): Path to the audio file
  * @error: (nullable): Return location for error, or %NULL
@@ -120,7 +120,7 @@ grl_wave_new_from_file (const gchar  *filename,
     return self;
 }
 
-/**
+/*
  * grl_wave_new_from_memory:
  * @file_type: File type extension (e.g., ".wav", ".ogg")
  * @data: (array length=data_size): Audio file data in memory
@@ -166,7 +166,7 @@ grl_wave_new_from_memory (const gchar   *file_type,
     return self;
 }
 
-/**
+/*
  * grl_wave_new_from_samples:
  * @sample_rate: Sample rate in Hz (e.g., 44100)
  * @sample_size: Bits per sample (8, 16, or 32)
@@ -216,7 +216,7 @@ grl_wave_new_from_samples (guint         sample_rate,
     return self;
 }
 
-/**
+/*
  * grl_wave_copy:
  * @self: A #GrlWave
  *
@@ -240,7 +240,7 @@ grl_wave_copy (const GrlWave *self)
     return copy;
 }
 
-/**
+/*
  * grl_wave_free:
  * @self: (nullable): A #GrlWave to free
  *
@@ -256,7 +256,7 @@ grl_wave_free (GrlWave *self)
     g_free (self);
 }
 
-/**
+/*
  * grl_wave_get_frame_count:
  * @self: A #GrlWave
  *
@@ -275,7 +275,7 @@ grl_wave_get_frame_count (const GrlWave *self)
     return self->wave.frameCount;
 }
 
-/**
+/*
  * grl_wave_get_sample_rate:
  * @self: A #GrlWave
  *
@@ -291,7 +291,7 @@ grl_wave_get_sample_rate (const GrlWave *self)
     return self->wave.sampleRate;
 }
 
-/**
+/*
  * grl_wave_get_sample_size:
  * @self: A #GrlWave
  *
@@ -307,7 +307,7 @@ grl_wave_get_sample_size (const GrlWave *self)
     return self->wave.sampleSize;
 }
 
-/**
+/*
  * grl_wave_get_channels:
  * @self: A #GrlWave
  *
@@ -323,7 +323,7 @@ grl_wave_get_channels (const GrlWave *self)
     return self->wave.channels;
 }
 
-/**
+/*
  * grl_wave_get_duration:
  * @self: A #GrlWave
  *
@@ -342,7 +342,7 @@ grl_wave_get_duration (const GrlWave *self)
     return (gfloat)self->wave.frameCount / (gfloat)self->wave.sampleRate;
 }
 
-/**
+/*
  * grl_wave_is_valid:
  * @self: A #GrlWave
  *
@@ -358,7 +358,7 @@ grl_wave_is_valid (const GrlWave *self)
     return wave_is_valid_internal (&self->wave);
 }
 
-/**
+/*
  * grl_wave_crop:
  * @self: A #GrlWave
  * @init_frame: Starting frame (inclusive)
@@ -394,7 +394,7 @@ grl_wave_crop (const GrlWave *self,
     return result;
 }
 
-/**
+/*
  * grl_wave_format:
  * @self: A #GrlWave
  * @sample_rate: New sample rate in Hz
@@ -434,7 +434,7 @@ grl_wave_format (const GrlWave *self,
     return result;
 }
 
-/**
+/*
  * grl_wave_load_samples:
  * @self: A #GrlWave
  * @out_count: (out): Return location for the number of samples
@@ -478,7 +478,7 @@ grl_wave_load_samples (const GrlWave *self,
     return result;
 }
 
-/**
+/*
  * grl_wave_export:
  * @self: A #GrlWave
  * @filename: (type filename): Output file path
@@ -513,7 +513,7 @@ grl_wave_export (const GrlWave *self,
     return TRUE;
 }
 
-/**
+/*
  * grl_wave_export_as_code:
  * @self: A #GrlWave
  * @filename: (type filename): Output file path
