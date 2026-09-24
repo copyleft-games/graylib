@@ -114,16 +114,18 @@ gboolean            grl_audio_stream_is_valid           (GrlAudioStream     *sel
  */
 
 /**
- * grl_audio_stream_update:
+ * grl_audio_stream_update: (skip)
  * @self: A #GrlAudioStream
- * @data: (array length=frame_count): Audio sample data
+ * @data: Audio sample data, @frame_count frames in the stream's format
  * @frame_count: Number of frames to write
  *
  * Updates the audio stream buffers with new sample data.
  * Call this periodically when grl_audio_stream_is_processed()
  * returns %TRUE to keep the audio playing smoothly.
  *
- * The data format must match the stream's sample_size and channels.
+ * The data format must match the stream's sample_size and channels.  Not
+ * available to language bindings: the buffer's byte size depends on that
+ * format, which GObject Introspection cannot describe.
  */
 GRL_AVAILABLE_IN_ALL
 void                grl_audio_stream_update             (GrlAudioStream     *self,

@@ -983,8 +983,8 @@ grl_scene_find_entities_by_tag (GrlScene    *self,
 /**
  * grl_scene_foreach_entity:
  * @self: A #GrlScene
- * @func: (scope call): The callback function
- * @user_data: (closure func): User data for @func
+ * @func: (scope call) (closure user_data): The callback function
+ * @user_data: User data for @func
  *
  * Iterates over all entities in the scene, calling @func for each one.
  * Iteration stops if @func returns %FALSE.

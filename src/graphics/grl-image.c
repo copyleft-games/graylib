@@ -5444,6 +5444,15 @@ grl_layer_unref (GrlLayer *self)
     }
 }
 
+/**
+ * grl_layer_get_image:
+ * @self: A #GrlLayer
+ *
+ * Gets the pixels of the layer.  The image belongs to the layer and stays
+ * valid until the layer's last reference is dropped.
+ *
+ * Returns: (transfer none): the layer's image
+ */
 GrlImage *
 grl_layer_get_image (GrlLayer *self)
 {

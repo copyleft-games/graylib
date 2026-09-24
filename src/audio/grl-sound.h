@@ -201,16 +201,18 @@ GRL_AVAILABLE_IN_ALL
 gboolean            grl_sound_is_alias              (GrlSound           *self);
 
 /**
- * grl_sound_update:
+ * grl_sound_update: (skip)
  * @self: A #GrlSound
- * @data: (array length=sample_count): New sample data
+ * @data: New sample data, @sample_count samples in the sound's format
  * @sample_count: Number of samples to update
  *
  * Updates the sound buffer with new sample data. This can be used
  * for real-time audio generation or streaming.
  *
  * The sample data format must match the format the sound was
- * originally created with.
+ * originally created with.  Not available to language bindings: the
+ * buffer's byte size depends on that format, which GObject Introspection
+ * cannot describe.
  */
 GRL_AVAILABLE_IN_ALL
 void                grl_sound_update                (GrlSound           *self,
