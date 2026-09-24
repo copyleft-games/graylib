@@ -103,6 +103,17 @@ grl_model_finalize (GObject *object)
 
     if (priv->valid)
     {
+        /* raylib 6.0's UnloadModel() frees meshes, material maps and the
+         * skeleton but not the runtime animation state that LoadGLTF /
+         * LoadIQM / LoadM3D allocate for skinned models (currentPose and
+         * boneMatrices). Free them here and clear the pointers, so callers
+         * that already freed them through grl_model_get_handle() and set
+         * them to NULL stay safe. */
+        RL_FREE (priv->model.currentPose);
+        RL_FREE (priv->model.boneMatrices);
+        priv->model.currentPose = NULL;
+        priv->model.boneMatrices = NULL;
+
         UnloadModel (priv->model);
         priv->valid = FALSE;
     }

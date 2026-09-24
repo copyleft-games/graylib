@@ -237,8 +237,9 @@ grl_model_animation_load (const gchar  *filename,
 
     for (i = 0; i < *count; i++)
     {
-        /* First animation owns the data array, others just reference it */
-        result[i] = grl_model_animation_from_raylib (anims[i], (i == 0));
+        /* Every raylib 6.0 ModelAnimation owns its own keyframePoses (see
+         * UnloadModelAnimations()), so every wrapper owns its data. */
+        result[i] = grl_model_animation_from_raylib (anims[i], TRUE);
     }
 
     /* Free the raylib array structure (but not the animation data) */
