@@ -639,11 +639,7 @@ $(OBJDIR)/src/core/grl-input.o: src/core/grl-input.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
-# Graphics module
-$(OBJDIR)/src/graphics/grl-image.o: src/graphics/grl-image.c
-	@$(MKDIR_P) $(dir $@)
-	$(CC) $(LIB_CFLAGS) -c -o $@ $<
-
+# Graphics module (grl-image.o is built below with the rpng flags)
 $(OBJDIR)/src/graphics/grl-gif-writer.o: src/graphics/grl-gif-writer.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
