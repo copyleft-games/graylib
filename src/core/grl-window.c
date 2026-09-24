@@ -9,6 +9,7 @@
 
 #include "config.h"
 #include "grl-window.h"
+#include "grl-input-private.h"	/* grl_input_drain_injections (grl_window_poll_events) */
 #include <raylib.h>
 #include <rlgl.h>		/* rlDrawRenderBatchActive (grl_window_swap_buffers) */
 #include <math.h>

@@ -9,6 +9,7 @@
 
 #include "config.h"
 #include "grl-input.h"
+#include "grl-input-private.h"
 #include <raylib.h>
 
 /**
