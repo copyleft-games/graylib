@@ -34,6 +34,32 @@ else
 endif
 
 # =============================================================================
+# GLFW Wayland backend (see WAYLAND in config.mk)
+# =============================================================================
+
+GRAYLIB_WAYLAND_PKGS := wayland-client wayland-cursor wayland-egl xkbcommon
+GRAYLIB_WAYLAND := 0
+ifeq ($(TARGET_PLATFORM),linux)
+ifeq ($(RAYLIB_SHARED),0)
+    ifeq ($(WAYLAND),auto)
+        GRAYLIB_WAYLAND := $(shell $(PKG_CONFIG) --exists $(GRAYLIB_WAYLAND_PKGS) && \
+                                  command -v wayland-scanner >/dev/null 2>&1 && echo 1 || echo 0)
+    else ifeq ($(WAYLAND),1)
+        GRAYLIB_WAYLAND := 1
+    endif
+endif
+endif
+
+# raylib's own switch, and the tag that forces a rebuild when it changes
+ifeq ($(GRAYLIB_WAYLAND),1)
+    RAYLIB_GLFW_FLAGS := GLFW_LINUX_ENABLE_WAYLAND=TRUE
+    RAYLIB_PLATFORM_TAG := $(TARGET_PLATFORM)+wayland
+else
+    RAYLIB_GLFW_FLAGS :=
+    RAYLIB_PLATFORM_TAG := $(TARGET_PLATFORM)
+endif
+
+# =============================================================================
 # Platform-Specific System Libraries
 # =============================================================================
 # These are the system libraries required by raylib on each platform.
@@ -45,6 +71,9 @@ ifeq ($(TARGET_PLATFORM),windows)
 else ifeq ($(TARGET_PLATFORM),linux)
     # Linux libraries
     PLATFORM_LIBS := -lGL -lm -lpthread -ldl -lrt -lX11
+    ifeq ($(GRAYLIB_WAYLAND),1)
+        PLATFORM_LIBS += $(shell $(PKG_CONFIG) --libs $(GRAYLIB_WAYLAND_PKGS))
+    endif
 else ifeq ($(TARGET_PLATFORM),macos)
     # macOS libraries (untested)
     PLATFORM_LIBS := -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo

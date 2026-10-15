@@ -257,8 +257,8 @@ ifeq ($(RAYLIB_SHARED),0)
 	@if [ ! -f "$(RAYLIB_SRC)/libraylib.a" ]; then \
 		echo "Building raylib from deps/raylib..."; \
 		$(MAKE) WINDOWS=$(WINDOWS) CROSS=$(CROSS) raylib; \
-	elif [ ! -f "$(RAYLIB_PLATFORM_MARKER)" ] || [ "$$(cat $(RAYLIB_PLATFORM_MARKER))" != "$(TARGET_PLATFORM)" ]; then \
-		echo "Raylib platform mismatch (need $(TARGET_PLATFORM)), rebuilding..."; \
+	elif [ ! -f "$(RAYLIB_PLATFORM_MARKER)" ] || [ "$$(cat $(RAYLIB_PLATFORM_MARKER))" != "$(RAYLIB_PLATFORM_TAG)" ]; then \
+		echo "Raylib platform mismatch (need $(RAYLIB_PLATFORM_TAG)), rebuilding..."; \
 		$(MAKE) raylib-clean; \
 		$(MAKE) WINDOWS=$(WINDOWS) CROSS=$(CROSS) raylib; \
 	fi
@@ -272,10 +272,10 @@ ifeq ($(TARGET_PLATFORM),windows)
 	cd $(RAYLIB_SRC) && $(MAKE) CC=$(CC) AR=$(AR) \
 		PLATFORM=PLATFORM_DESKTOP PLATFORM_OS=WINDOWS RAYLIB_LIBTYPE=STATIC
 else
-	cd $(RAYLIB_SRC) && $(MAKE) PLATFORM=PLATFORM_DESKTOP RAYLIB_LIBTYPE=STATIC
+	cd $(RAYLIB_SRC) && $(MAKE) PLATFORM=PLATFORM_DESKTOP RAYLIB_LIBTYPE=STATIC $(RAYLIB_GLFW_FLAGS)
 endif
 	@$(MKDIR_P) $(BUILDDIR)
-	@echo "$(TARGET_PLATFORM)" > $(RAYLIB_PLATFORM_MARKER)
+	@echo "$(RAYLIB_PLATFORM_TAG)" > $(RAYLIB_PLATFORM_MARKER)
 else
 	$(call print_warning,"RAYLIB_SHARED=1 - using system raylib, skipping build")
 endif

@@ -110,6 +110,7 @@ Build options are configured in =config.mk=. You can override them on the comman
 | =BUILD_EXAMPLES= | 1       | Build example programs               |
 | =BUILD_DOCS=     | 0       | Generate API documentation           |
 | =RAYLIB_SHARED=  | 0       | Link against system raylib           |
+| =WAYLAND=        | auto    | GLFW Wayland backend (auto, 1, 0)    |
 | =DEBUG=          | 0       | Enable debug build                   |
 | =WINDOWS=        | 0       | Cross-compile for 64-bit Windows     |
 | =CROSS=          | (empty) | Cross-compilation toolchain prefix   |
@@ -258,6 +259,14 @@ sudo dnf install raylib-devel
 # Build with system raylib
 make RAYLIB_SHARED=1
 #+end_src
+
+** Wayland
+
+On Linux the embedded raylib is built with GLFW's X11 backend and, with =WAYLAND=auto= (the default) when =wayland-client=, =wayland-cursor=, =wayland-egl=, =xkbcommon= and =wayland-scanner= are installed, its Wayland backend as well (raylib's own =GLFW_LINUX_ENABLE_WAYLAND=TRUE=; raylib's sources are not changed, its generated protocol headers are gitignored).  GLFW then picks Wayland inside a Wayland session and X11 elsewhere.  =WAYLAND=1= requires the backend, =WAYLAND=0= builds X11 only.  Changing the setting rebuilds raylib (=build/.raylib-platform= records =linux= or =linux+wayland=).
+
+Why it matters: a disabled cursor (mouse look) on Wayland uses the pointer-constraints and relative-pointer protocols, a real lock.  The X11 path under XWayland only emulates the grab by warping the pointer and stutters at the window edge.
+
+Fedora packages: =wayland-devel libxkbcommon-devel=.  On Wayland GLFW reports (as warnings) that window positions cannot be read or set; compositors place windows themselves.
 
 When using system raylib:
 

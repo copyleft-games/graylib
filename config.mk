@@ -76,6 +76,16 @@ RAYLIB_SHARED ?= 0
 # Path to raylib source (used when RAYLIB_SHARED=0)
 RAYLIB_SRC ?= $(CURDIR)/deps/raylib/src
 
+# GLFW window-system backends of the embedded raylib on Linux:
+#   auto = X11, plus Wayland when its development files are installed
+#   1    = X11 and Wayland (fails without the Wayland packages)
+#   0    = X11 only
+# With both compiled in, GLFW picks Wayland inside a Wayland session.
+# That matters for mouse look: Wayland locks the pointer through
+# pointer-constraints/relative-pointer, while the X11 path under XWayland
+# only emulates the grab by warping and stutters at the window edge.
+WAYLAND ?= auto
+
 # =============================================================================
 # Debug Configuration
 # =============================================================================
