@@ -280,3 +280,39 @@ grl_rlgl_draw_vertex_array_elements_instanced (gint offset,
 {
     rlDrawVertexArrayElementsInstanced (offset, count, buffer, instances);
 }
+
+/**
+ * grl_rlgl_set_vertex_attribute:
+ * @index: the attribute location
+ * @comp_size: components per vertex
+ * @type: the GL component type
+ * @normalized: whether integers are normalized
+ * @stride: bytes between vertices
+ * @offset: byte offset inside the vertex buffer
+ *
+ * Describes an interleaved vertex attribute.
+ */
+void
+grl_rlgl_set_vertex_attribute (guint    index,
+                               gint     comp_size,
+                               gint     type,
+                               gboolean normalized,
+                               gint     stride,
+                               gint     offset)
+{
+    rlSetVertexAttribute (index, comp_size, type, normalized ? true : false, stride, offset);
+}
+
+/**
+ * grl_rlgl_set_vertex_attribute_divisor:
+ * @index: the attribute location
+ * @divisor: 0 per vertex, N per N instances
+ *
+ * Sets the instancing divisor of an attribute.
+ */
+void
+grl_rlgl_set_vertex_attribute_divisor (guint index,
+                                       gint  divisor)
+{
+    rlSetVertexAttributeDivisor (index, divisor);
+}

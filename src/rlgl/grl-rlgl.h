@@ -358,6 +358,56 @@ void                grl_rlgl_cubemap_parameters         (guint id,
                                                          gint param,
                                                          gint value);
 
+/**
+ * grl_rlgl_load_texture:
+ * @data: (nullable) (array) (element-type guint8): pixel data, every
+ *   mipmap level packed one after another, largest first (block
+ *   compressed formats included); %NULL allocates an empty texture
+ * @width: width of level 0
+ * @height: height of level 0
+ * @format: the pixel format of @data
+ * @mipmap_count: the number of levels in @data (at least 1)
+ *
+ * Uploads raw or block-compressed texture data straight to the GPU, for
+ * formats a #GrlImage does not carry (DXT data with its own mip chain).
+ *
+ * Returns: the GL texture id, or 0 on failure
+ */
+GRL_AVAILABLE_IN_ALL
+guint               grl_rlgl_load_texture               (gconstpointer  data,
+                                                         gint           width,
+                                                         gint           height,
+                                                         GrlPixelFormat format,
+                                                         gint           mipmap_count);
+
+/**
+ * grl_rlgl_update_texture:
+ * @id: a texture id
+ * @offset_x: left of the region
+ * @offset_y: top of the region
+ * @width: region width
+ * @height: region height
+ * @format: the pixel format of @data
+ * @data: (array) (element-type guint8): the region's pixels
+ *
+ * Replaces a region of level 0 (uncompressed formats).
+ */
+GRL_AVAILABLE_IN_ALL
+void                grl_rlgl_update_texture             (guint          id,
+                                                         gint           offset_x,
+                                                         gint           offset_y,
+                                                         gint           width,
+                                                         gint           height,
+                                                         GrlPixelFormat format,
+                                                         gconstpointer  data);
+
+/**
+ * grl_rlgl_unload_texture:
+ * @id: a texture id from grl_rlgl_load_texture()
+ */
+GRL_AVAILABLE_IN_ALL
+void                grl_rlgl_unload_texture             (guint id);
+
 /*
  * =============================================================================
  * VBO/VAO Operations
@@ -418,6 +468,38 @@ void                grl_rlgl_enable_vertex_attribute    (guint index);
 
 GRL_AVAILABLE_IN_ALL
 void                grl_rlgl_disable_vertex_attribute   (guint index);
+
+/**
+ * grl_rlgl_set_vertex_attribute:
+ * @index: the attribute location
+ * @comp_size: components per vertex (1-4)
+ * @type: the component type (a GL type such as 0x1406 GL_FLOAT,
+ *   0x1401 GL_UNSIGNED_BYTE)
+ * @normalized: whether integer components map to 0..1 / -1..1
+ * @stride: bytes between consecutive vertices
+ * @offset: byte offset of the attribute inside the bound vertex buffer
+ *
+ * Describes how the bound vertex buffer feeds attribute @index of the
+ * bound vertex array, for interleaved custom vertex formats.
+ */
+GRL_AVAILABLE_IN_ALL
+void                grl_rlgl_set_vertex_attribute       (guint    index,
+                                                         gint     comp_size,
+                                                         gint     type,
+                                                         gboolean normalized,
+                                                         gint     stride,
+                                                         gint     offset);
+
+/**
+ * grl_rlgl_set_vertex_attribute_divisor:
+ * @index: the attribute location
+ * @divisor: 0 per vertex, N per N instances
+ *
+ * Makes attribute @index advance per instance for instanced drawing.
+ */
+GRL_AVAILABLE_IN_ALL
+void                grl_rlgl_set_vertex_attribute_divisor (guint index,
+                                                           gint  divisor);
 
 GRL_AVAILABLE_IN_ALL
 void                grl_rlgl_draw_vertex_array          (gint offset,

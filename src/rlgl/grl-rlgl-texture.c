@@ -100,3 +100,66 @@ grl_rlgl_cubemap_parameters (guint id,
 {
     rlCubemapParameters (id, param, value);
 }
+
+/**
+ * grl_rlgl_load_texture:
+ * @data: (nullable): pixel data, every level packed largest first
+ * @width: width of level 0
+ * @height: height of level 0
+ * @format: the pixel format
+ * @mipmap_count: the number of levels
+ *
+ * Uploads raw or block-compressed texture data.
+ *
+ * Returns: the GL texture id, or 0 on failure
+ */
+guint
+grl_rlgl_load_texture (gconstpointer  data,
+                       gint           width,
+                       gint           height,
+                       GrlPixelFormat format,
+                       gint           mipmap_count)
+{
+    g_return_val_if_fail (width > 0 && height > 0, 0);
+    g_return_val_if_fail (mipmap_count >= 1, 0);
+
+    return rlLoadTexture (data, width, height, (int) format, mipmap_count);
+}
+
+/**
+ * grl_rlgl_update_texture:
+ * @id: a texture id
+ * @offset_x: left of the region
+ * @offset_y: top of the region
+ * @width: region width
+ * @height: region height
+ * @format: the pixel format
+ * @data: the region's pixels
+ *
+ * Replaces a region of level 0.
+ */
+void
+grl_rlgl_update_texture (guint          id,
+                         gint           offset_x,
+                         gint           offset_y,
+                         gint           width,
+                         gint           height,
+                         GrlPixelFormat format,
+                         gconstpointer  data)
+{
+    g_return_if_fail (data != NULL);
+
+    rlUpdateTexture (id, offset_x, offset_y, width, height, (int) format, data);
+}
+
+/**
+ * grl_rlgl_unload_texture:
+ * @id: a texture id
+ *
+ * Frees a texture made with grl_rlgl_load_texture().
+ */
+void
+grl_rlgl_unload_texture (guint id)
+{
+    rlUnloadTexture (id);
+}
