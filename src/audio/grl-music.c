@@ -9,6 +9,7 @@
 
 #include "config.h"
 #include "grl-music.h"
+#include "grl-audio-processor-private.h"
 #include <gio/gio.h>
 #include <raylib.h>
 
@@ -64,6 +65,9 @@ struct _GrlMusic
     /* For memory-loaded music: raylib streams from this buffer */
     guint8         *memory_data;
     gsize           memory_size;
+
+    /* per-voice processors, made on first use */
+    GrlAudioProcessorSet *processors;
 };
 
 G_DEFINE_FINAL_TYPE (GrlMusic, grl_music, G_TYPE_OBJECT)
@@ -83,6 +87,24 @@ enum
 };
 
 static GParamSpec *properties[N_PROPS];
+
+/*
+ * The processors leave raylib's stream before the voice can be unloaded
+ * (raylib does not free a stream's processors when it unloads it).
+ */
+static void
+grl_music_dispose (GObject *object)
+{
+    GrlMusic *self = (GrlMusic *)object;
+
+    if (self->processors != NULL)
+    {
+        grl_audio_processor_set_clear (self->processors, self->is_loaded ? &self->music.stream : NULL, TRUE);
+        g_clear_pointer (&self->processors, grl_audio_processor_set_free);
+    }
+
+    G_OBJECT_CLASS (grl_music_parent_class)->dispose (object);
+}
 
 static void
 grl_music_finalize (GObject *object)
@@ -185,6 +207,7 @@ grl_music_class_init (GrlMusicClass *klass)
 {
     GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
+    object_class->dispose = grl_music_dispose;
     object_class->finalize = grl_music_finalize;
     object_class->get_property = grl_music_get_property;
     object_class->set_property = grl_music_set_property;
@@ -769,4 +792,63 @@ grl_music_get_pan (GrlMusic *self)
     g_return_val_if_fail (GRL_IS_MUSIC (self), 0.0f);
 
     return self->pan;
+}
+
+/*
+ * Per-voice processors (see grl-audio-processor.c): the set is made on
+ * first use; an unloaded object keeps its processors without a raylib
+ * stream, where only grl_music_process() runs them.
+ */
+guint
+grl_music_add_processor (GrlMusic            *self,
+                         GrlAudioProcessFunc  func,
+                         gpointer             user_data,
+                         GDestroyNotify       destroy)
+{
+    g_return_val_if_fail (GRL_IS_MUSIC (self), 0);
+    g_return_val_if_fail (func != NULL, 0);
+
+    if (self->processors == NULL)
+        self->processors = grl_audio_processor_set_new ();
+    return grl_audio_processor_set_add (self->processors, self->is_loaded ? &self->music.stream : NULL,
+                                        func, user_data, destroy);
+}
+
+gboolean
+grl_music_remove_processor (GrlMusic *self,
+                            guint     id)
+{
+    g_return_val_if_fail (GRL_IS_MUSIC (self), FALSE);
+
+    if (self->processors == NULL || id == 0)
+        return FALSE;
+    return grl_audio_processor_set_remove (self->processors, self->is_loaded ? &self->music.stream : NULL, id);
+}
+
+void
+grl_music_clear_processors (GrlMusic *self)
+{
+    g_return_if_fail (GRL_IS_MUSIC (self));
+
+    if (self->processors != NULL)
+        grl_audio_processor_set_clear (self->processors, self->is_loaded ? &self->music.stream : NULL, FALSE);
+}
+
+guint
+grl_music_get_n_processors (GrlMusic *self)
+{
+    g_return_val_if_fail (GRL_IS_MUSIC (self), 0);
+
+    return grl_audio_processor_set_get_count (self->processors);
+}
+
+void
+grl_music_process (GrlMusic *self,
+                   gfloat   *frames,
+                   guint     n_frames)
+{
+    g_return_if_fail (GRL_IS_MUSIC (self));
+    g_return_if_fail (frames != NULL || n_frames == 0);
+
+    grl_audio_processor_set_run (self->processors, frames, n_frames);
 }

@@ -15,6 +15,7 @@
 
 #include <glib-object.h>
 #include "../grl-version.h"
+#include "grl-audio-processor.h"
 
 G_BEGIN_DECLS
 
@@ -265,5 +266,86 @@ gfloat              grl_audio_stream_get_pan            (GrlAudioStream     *sel
  */
 GRL_AVAILABLE_IN_ALL
 void                grl_audio_stream_set_default_buffer_size (gint          size);
+
+/*
+ * Per-voice processors
+ */
+
+/**
+ * grl_audio_stream_add_processor:
+ * @self: A #GrlAudioStream
+ * @func: (scope notified) (closure user_data) (destroy destroy): the processor
+ * @user_data: data for @func
+ * @destroy: (nullable): frees @user_data when the processor is removed
+ *
+ * Adds a processor of this voice's samples, run after the processors
+ * added before it each time raylib mixes the voice (see
+ * #GrlAudioProcessFunc for the thread and the format it runs in).  The
+ * processor stays until it is removed, the processors are cleared or the
+ * voice is disposed; @destroy then runs.
+ *
+ * On an object without loaded audio the processor is kept and runs only
+ * through grl_audio_stream_process().  While the audio device is closed it is not
+ * attached to raylib either.
+ *
+ * Returns: the processor's id (never 0), or 0 when all
+ *   %GRL_AUDIO_PROCESSOR_MAX_SLOTS slots are taken (@destroy has then
+ *   already been called)
+ */
+GRL_AVAILABLE_IN_ALL
+guint               grl_audio_stream_add_processor (GrlAudioStream     *self,
+                                         GrlAudioProcessFunc  func,
+                                         gpointer             user_data,
+                                         GDestroyNotify       destroy);
+
+/**
+ * grl_audio_stream_remove_processor:
+ * @self: A #GrlAudioStream
+ * @id: an id grl_audio_stream_add_processor() returned
+ *
+ * Removes one processor; once this returns it no longer runs.
+ *
+ * Returns: %TRUE when @id was one of this voice's processors
+ */
+GRL_AVAILABLE_IN_ALL
+gboolean            grl_audio_stream_remove_processor (GrlAudioStream     *self,
+                                         guint                id);
+
+/**
+ * grl_audio_stream_clear_processors:
+ * @self: A #GrlAudioStream
+ *
+ * Removes every processor of this voice.
+ */
+GRL_AVAILABLE_IN_ALL
+void                grl_audio_stream_clear_processors (GrlAudioStream     *self);
+
+/**
+ * grl_audio_stream_get_n_processors:
+ * @self: A #GrlAudioStream
+ *
+ * Gets how many processors this voice has.
+ *
+ * Returns: the number of processors
+ */
+GRL_AVAILABLE_IN_ALL
+guint               grl_audio_stream_get_n_processors (GrlAudioStream     *self);
+
+/**
+ * grl_audio_stream_process: (skip)
+ * @self: A #GrlAudioStream
+ * @frames: @n_frames x %GRL_AUDIO_PROCESSOR_CHANNELS interleaved floats
+ * @n_frames: frames in @frames
+ *
+ * Runs this voice's processors over @frames in place, in order, as the
+ * device does before mixing the voice.  For offline rendering and tests;
+ * never call it on a playing voice's processors from another thread.
+ * Not available to language bindings (the block's size is in frames,
+ * not floats).
+ */
+GRL_AVAILABLE_IN_ALL
+void                grl_audio_stream_process          (GrlAudioStream     *self,
+                                         gfloat              *frames,
+                                         guint                n_frames);
 
 G_END_DECLS

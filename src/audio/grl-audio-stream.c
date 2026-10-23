@@ -9,6 +9,7 @@
 
 #include "config.h"
 #include "grl-audio-stream.h"
+#include "grl-audio-processor-private.h"
 #include <raylib.h>
 
 /**
@@ -60,6 +61,9 @@ struct _GrlAudioStream
     guint           sample_rate;
     guint           sample_size;
     guint           channels;
+
+    /* per-voice processors, made on first use */
+    GrlAudioProcessorSet *processors;
 };
 
 G_DEFINE_FINAL_TYPE (GrlAudioStream, grl_audio_stream, G_TYPE_OBJECT)
@@ -78,6 +82,24 @@ enum
 };
 
 static GParamSpec *properties[N_PROPS];
+
+/*
+ * The processors leave raylib's stream before the voice can be unloaded
+ * (raylib does not free a stream's processors when it unloads it).
+ */
+static void
+grl_audio_stream_dispose (GObject *object)
+{
+    GrlAudioStream *self = (GrlAudioStream *)object;
+
+    if (self->processors != NULL)
+    {
+        grl_audio_processor_set_clear (self->processors, self->is_loaded ? &self->stream : NULL, TRUE);
+        g_clear_pointer (&self->processors, grl_audio_processor_set_free);
+    }
+
+    G_OBJECT_CLASS (grl_audio_stream_parent_class)->dispose (object);
+}
 
 static void
 grl_audio_stream_finalize (GObject *object)
@@ -169,6 +191,7 @@ grl_audio_stream_class_init (GrlAudioStreamClass *klass)
 {
     GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
+    object_class->dispose = grl_audio_stream_dispose;
     object_class->finalize = grl_audio_stream_finalize;
     object_class->get_property = grl_audio_stream_get_property;
     object_class->set_property = grl_audio_stream_set_property;
@@ -682,4 +705,63 @@ grl_audio_stream_set_default_buffer_size (gint size)
     g_return_if_fail (size > 0);
 
     SetAudioStreamBufferSizeDefault (size);
+}
+
+/*
+ * Per-voice processors (see grl-audio-processor.c): the set is made on
+ * first use; an unloaded object keeps its processors without a raylib
+ * stream, where only grl_audio_stream_process() runs them.
+ */
+guint
+grl_audio_stream_add_processor (GrlAudioStream            *self,
+                                GrlAudioProcessFunc  func,
+                                gpointer             user_data,
+                                GDestroyNotify       destroy)
+{
+    g_return_val_if_fail (GRL_IS_AUDIO_STREAM (self), 0);
+    g_return_val_if_fail (func != NULL, 0);
+
+    if (self->processors == NULL)
+        self->processors = grl_audio_processor_set_new ();
+    return grl_audio_processor_set_add (self->processors, self->is_loaded ? &self->stream : NULL,
+                                        func, user_data, destroy);
+}
+
+gboolean
+grl_audio_stream_remove_processor (GrlAudioStream *self,
+                                   guint     id)
+{
+    g_return_val_if_fail (GRL_IS_AUDIO_STREAM (self), FALSE);
+
+    if (self->processors == NULL || id == 0)
+        return FALSE;
+    return grl_audio_processor_set_remove (self->processors, self->is_loaded ? &self->stream : NULL, id);
+}
+
+void
+grl_audio_stream_clear_processors (GrlAudioStream *self)
+{
+    g_return_if_fail (GRL_IS_AUDIO_STREAM (self));
+
+    if (self->processors != NULL)
+        grl_audio_processor_set_clear (self->processors, self->is_loaded ? &self->stream : NULL, FALSE);
+}
+
+guint
+grl_audio_stream_get_n_processors (GrlAudioStream *self)
+{
+    g_return_val_if_fail (GRL_IS_AUDIO_STREAM (self), 0);
+
+    return grl_audio_processor_set_get_count (self->processors);
+}
+
+void
+grl_audio_stream_process (GrlAudioStream *self,
+                          gfloat   *frames,
+                          guint     n_frames)
+{
+    g_return_if_fail (GRL_IS_AUDIO_STREAM (self));
+    g_return_if_fail (frames != NULL || n_frames == 0);
+
+    grl_audio_processor_set_run (self->processors, frames, n_frames);
 }

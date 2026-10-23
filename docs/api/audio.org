@@ -564,6 +564,52 @@ void audio_callback (gpointer buffer, guint frames, gpointer user_data)
 grl_audio_stream_set_callback (stream, audio_callback, user_data);
 #+end_src
 
+** Per-Voice Processors
+:PROPERTIES:
+:CUSTOM_ID: per-voice-processors
+:END:
+A processor is a callback with user data that rewrites one voice's samples (a =GrlSound=, a sound alias, a =GrlMusic= or a =GrlAudioStream=) each time raylib mixes that voice into the device output: per-voice effects, sends into a submix bus, meters.  It wraps raylib's =AttachAudioStreamProcessor()= without modifying raylib.
+
+| Function | Purpose |
+|----------+---------|
+| =grl_sound_add_processor (sound, func, user_data, destroy)= | add a processor after the existing ones; returns its id, 0 when no slot is free |
+| =grl_sound_remove_processor (sound, id)= | remove one; once it returns the processor no longer runs and =destroy= ran |
+| =grl_sound_clear_processors (sound)= / =grl_sound_get_n_processors (sound)= | remove all / count |
+| =grl_sound_process (sound, frames, n_frames)= | run the processors over a block in place, as the device would (offline rendering, tests; not introspected) |
+| =grl_music_*= / =grl_audio_stream_*= | the same five for music and audio streams |
+| =grl_audio_processor_get_n_free_slots ()= | how many more processors can be attached |
+
+*** The callback
+=GrlAudioProcessFunc (gfloat *frames, guint n_frames, guint channels, gpointer user_data)= receives the voice's block in raylib's mixing format: interleaved 32-bit float, =GRL_AUDIO_PROCESSOR_CHANNELS= (2) channels at the device's rate, whatever the file's own format.  The samples are the voice's *before* raylib applies its volume and pan (raylib mixes them in after the processors), so a processor that needs the voice's level reads =grl_sound_get_volume()= / =grl_sound_get_pan()= itself; zeroing the block silences the voice in the mix.
+
+On a playing voice the callback runs on miniaudio's thread with raylib's audio lock held: it must not block, must not call graylib's or raylib's audio functions, and must not wait for a lock that another thread holds while calling them.
+
+*** How it is wired
+raylib's processor is a bare =void (*)(void *, unsigned int)= without user data, and the block it is handed is a scratch buffer shared by all voices.  graylib therefore keeps a table of =GRL_AUDIO_PROCESSOR_MAX_SLOTS= (256) trampolines, each a distinct static function that knows its slot: adding a processor takes a free slot, stores the callback and data there, then attaches that slot's trampoline to the voice's raylib stream; removing detaches it first and clears the slot afterwards.  raylib's attach and detach take its audio lock, which the device thread holds while it runs the trampolines, so a slot is never seen half written.
+
+- Processors run in the order they were added (raylib keeps a list per stream).
+- A voice drops its processors when it is disposed, before it is unloaded (raylib does not free a stream's processors when it unloads the stream).
+- An object without loaded audio keeps its processors; they run only through =*_process()=.  While the audio device is closed a processor is kept but not attached; a processor removed while the device is closed from a voice that stays loaded retires its slot for good (raylib still holds that trampoline on the buffer), so a voice surviving a device restart never calls another voice's processor.
+- When every slot is taken, =*_add_processor()= logs a warning, calls =destroy= on the data at once and returns 0.
+
+#+begin_src C
+/* halve one voice's level before it is mixed */
+static void
+halve (gfloat *frames, guint n_frames, guint channels, gpointer user_data)
+{
+    guint i;
+
+    for (i = 0; i < n_frames * channels; i++)
+        frames[i] *= 0.5f;
+}
+
+guint id = grl_sound_add_processor (alias, halve, NULL, NULL);
+/* ... */
+grl_sound_remove_processor (alias, id);
+#+end_src
+
+Tests: =tests/test-audio-processor.c= (headless, on unloaded objects): order and the stereo block, removal, destroy notifies on removal, clear and dispose, the slots given back, exhaustion.
+
 ** Additional Audio Device Features
 :PROPERTIES:
 :CUSTOM_ID: additional-audio-device-features

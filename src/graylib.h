@@ -99,6 +99,7 @@
 #include "audio/grl-sound.h"
 #include "audio/grl-music.h"
 #include "audio/grl-audio-stream.h"
+#include "audio/grl-audio-processor.h"
 
 /* Scene module */
 #include "scene/grl-drawable.h"

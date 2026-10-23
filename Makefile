@@ -66,6 +66,7 @@ PUBLIC_HEADERS := \
 	src/audio/grl-sound.h \
 	src/audio/grl-music.h \
 	src/audio/grl-audio-stream.h \
+	src/audio/grl-audio-processor.h \
 	src/scene/grl-drawable.h \
 	src/scene/grl-updatable.h \
 	src/scene/grl-collidable.h \
@@ -149,6 +150,7 @@ SOURCES := \
 	src/audio/grl-sound.c \
 	src/audio/grl-music.c \
 	src/audio/grl-audio-stream.c \
+	src/audio/grl-audio-processor.c \
 	src/scene/grl-drawable.c \
 	src/scene/grl-updatable.c \
 	src/scene/grl-collidable.c \
@@ -493,6 +495,7 @@ endif
 	$(INSTALL_DATA) src/audio/grl-sound.h $(DESTDIR)$(INCLUDEDIR)/graylib/audio/
 	$(INSTALL_DATA) src/audio/grl-music.h $(DESTDIR)$(INCLUDEDIR)/graylib/audio/
 	$(INSTALL_DATA) src/audio/grl-audio-stream.h $(DESTDIR)$(INCLUDEDIR)/graylib/audio/
+	$(INSTALL_DATA) src/audio/grl-audio-processor.h $(DESTDIR)$(INCLUDEDIR)/graylib/audio/
 	$(INSTALL_DATA) src/scene/grl-drawable.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
 	$(INSTALL_DATA) src/scene/grl-updatable.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
 	$(INSTALL_DATA) src/scene/grl-collidable.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
@@ -758,6 +761,10 @@ $(OBJDIR)/src/audio/grl-music.o: src/audio/grl-music.c
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
 $(OBJDIR)/src/audio/grl-audio-stream.o: src/audio/grl-audio-stream.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(LIB_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/audio/grl-audio-processor.o: src/audio/grl-audio-processor.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
