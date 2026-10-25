@@ -316,6 +316,46 @@ test_scene_foreach_entity_stop_early (void)
  * Test registration
  */
 
+/* Draw order follows z-index changes made after the entities were added,
+ * stays stable for equal z-indices, and adds/removes keep the count and
+ * duplicate check right. */
+static void
+test_scene_draw_order_follows_z_index (void)
+{
+    g_autoptr(GrlScene)  scene = grl_scene_new ();
+    g_autoptr(GrlEntity) a = grl_entity_new ();
+    g_autoptr(GrlEntity) b = grl_entity_new ();
+    g_autoptr(GrlEntity) c = grl_entity_new ();
+    GList               *l;
+
+    grl_scene_add_entity (scene, a);
+    grl_scene_add_entity (scene, b);
+    grl_scene_add_entity (scene, c);
+    grl_scene_add_entity (scene, b);   /* duplicate: ignored */
+    g_assert_cmpuint (grl_scene_get_entity_count (scene), ==, 3);
+
+    /* Equal z-indices: insertion order */
+    grl_scene_draw (scene);
+    l = grl_scene_get_entities (scene);
+    g_assert_true (l->data == a && l->next->data == b && l->next->next->data == c);
+
+    /* Raise a above the others after it was added */
+    grl_entity_set_z_index (a, 5);
+    grl_scene_draw (scene);
+    l = grl_scene_get_entities (scene);
+    g_assert_true (l->data == b && l->next->data == c && l->next->next->data == a);
+
+    /* Remove the tail, then append again: order and count stay right */
+    grl_scene_remove_entity (scene, a);
+    g_assert_cmpuint (grl_scene_get_entity_count (scene), ==, 2);
+    grl_entity_set_z_index (a, -1);
+    grl_scene_add_entity (scene, a);
+    grl_scene_draw (scene);
+    l = grl_scene_get_entities (scene);
+    g_assert_true (l->data == a && l->next->data == b && l->next->next->data == c);
+    g_assert_cmpuint (grl_scene_get_entity_count (scene), ==, 3);
+}
+
 int
 main (int   argc,
       char *argv[])
@@ -351,6 +391,7 @@ main (int   argc,
 
     /* Foreach */
     g_test_add_func ("/scene/foreach-entity", test_scene_foreach_entity);
+    g_test_add_func ("/scene/draw-order-follows-z-index", test_scene_draw_order_follows_z_index);
     g_test_add_func ("/scene/foreach-entity-stop-early", test_scene_foreach_entity_stop_early);
 
     return g_test_run ();
