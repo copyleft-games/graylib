@@ -41,6 +41,7 @@ typedef struct
     gint            width;
     gint            height;
     gboolean        valid;
+    GrlTexture     *color_texture;  /* cached wrapper for get_texture() */
 } GrlRenderTexturePrivate;
 
 G_DEFINE_TYPE_WITH_PRIVATE (GrlRenderTexture, grl_render_texture, G_TYPE_OBJECT)
@@ -72,6 +73,8 @@ grl_render_texture_finalize (GObject *object)
 {
     GrlRenderTexture *self = GRL_RENDER_TEXTURE (object);
     GrlRenderTexturePrivate *priv = grl_render_texture_get_instance_private (self);
+
+    g_clear_object (&priv->color_texture);
 
     if (priv->valid)
     {
@@ -372,10 +375,14 @@ grl_render_texture_get_texture (GrlRenderTexture *self)
         return NULL;
 
     /*
-     * Create a GrlTexture that wraps the render texture's color buffer.
-     * We use the internal constructor that takes a handle.
+     * Wrap the render texture's color buffer in a (non-owning) GrlTexture
+     * once and hand out references to it: games call this every frame to
+     * blit the target, and a new GObject per call is wasted work.
      */
-    texture = grl_texture_new_from_handle (&priv->render_texture.texture);
+    if (priv->color_texture == NULL)
+        priv->color_texture = grl_texture_new_from_handle (&priv->render_texture.texture);
+
+    texture = g_object_ref (priv->color_texture);
 
     return texture;
 }

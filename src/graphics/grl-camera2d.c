@@ -314,11 +314,16 @@ grl_camera2d_set_offset (GrlCamera2D *self,
     g_return_if_fail (offset != NULL);
 
     priv = grl_camera2d_get_instance_private (self);
-    priv->offset_x = offset->x;
-    priv->offset_y = offset->y;
-
-    g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_OFFSET_X]);
-    g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_OFFSET_Y]);
+    if (priv->offset_x != offset->x)
+    {
+        priv->offset_x = offset->x;
+        g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_OFFSET_X]);
+    }
+    if (priv->offset_y != offset->y)
+    {
+        priv->offset_y = offset->y;
+        g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_OFFSET_Y]);
+    }
 }
 
 /*
@@ -339,11 +344,16 @@ grl_camera2d_set_offset_xy (GrlCamera2D *self,
     g_return_if_fail (GRL_IS_CAMERA2D (self));
 
     priv = grl_camera2d_get_instance_private (self);
-    priv->offset_x = x;
-    priv->offset_y = y;
-
-    g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_OFFSET_X]);
-    g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_OFFSET_Y]);
+    if (priv->offset_x != x)
+    {
+        priv->offset_x = x;
+        g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_OFFSET_X]);
+    }
+    if (priv->offset_y != y)
+    {
+        priv->offset_y = y;
+        g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_OFFSET_Y]);
+    }
 }
 
 /*
@@ -382,11 +392,16 @@ grl_camera2d_set_target (GrlCamera2D *self,
     g_return_if_fail (target != NULL);
 
     priv = grl_camera2d_get_instance_private (self);
-    priv->target_x = target->x;
-    priv->target_y = target->y;
-
-    g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TARGET_X]);
-    g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TARGET_Y]);
+    if (priv->target_x != target->x)
+    {
+        priv->target_x = target->x;
+        g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TARGET_X]);
+    }
+    if (priv->target_y != target->y)
+    {
+        priv->target_y = target->y;
+        g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TARGET_Y]);
+    }
 }
 
 /*
@@ -407,11 +422,16 @@ grl_camera2d_set_target_xy (GrlCamera2D *self,
     g_return_if_fail (GRL_IS_CAMERA2D (self));
 
     priv = grl_camera2d_get_instance_private (self);
-    priv->target_x = x;
-    priv->target_y = y;
-
-    g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TARGET_X]);
-    g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TARGET_Y]);
+    if (priv->target_x != x)
+    {
+        priv->target_x = x;
+        g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TARGET_X]);
+    }
+    if (priv->target_y != y)
+    {
+        priv->target_y = y;
+        g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TARGET_Y]);
+    }
 }
 
 /*
@@ -449,9 +469,11 @@ grl_camera2d_set_rotation (GrlCamera2D *self,
     g_return_if_fail (GRL_IS_CAMERA2D (self));
 
     priv = grl_camera2d_get_instance_private (self);
-    priv->rotation = rotation;
-
-    g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_ROTATION]);
+    if (priv->rotation != rotation)
+    {
+        priv->rotation = rotation;
+        g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_ROTATION]);
+    }
 }
 
 /*
@@ -490,9 +512,11 @@ grl_camera2d_set_zoom (GrlCamera2D *self,
     g_return_if_fail (zoom > 0.0f);
 
     priv = grl_camera2d_get_instance_private (self);
-    priv->zoom = zoom;
-
-    g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_ZOOM]);
+    if (priv->zoom != zoom)
+    {
+        priv->zoom = zoom;
+        g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_ZOOM]);
+    }
 }
 
 /*

@@ -59,7 +59,9 @@
 typedef struct
 {
     gchar    *name;
-    GList    *entities;
+    GList      *entities;
+    GList      *entities_tail;  /* last link of @entities, O(1) append */
+    GHashTable *entity_set;     /* membership set over @entities */
     gboolean  active;
     gboolean  paused;
     gboolean  visible;
@@ -110,17 +112,39 @@ compare_entities_by_z (gconstpointer a,
     gint z_a;
     gint z_b;
 
-    if (GRL_IS_DRAWABLE (entity_a))
-        z_a = grl_drawable_get_z_index (GRL_DRAWABLE (entity_a));
-    else
-        z_a = 0;
+    z_a = grl_entity_get_z_index (entity_a);
+    z_b = grl_entity_get_z_index (entity_b);
 
-    if (GRL_IS_DRAWABLE (entity_b))
-        z_b = grl_drawable_get_z_index (GRL_DRAWABLE (entity_b));
-    else
-        z_b = 0;
+    return (z_a > z_b) - (z_a < z_b);
+}
 
-    return z_a - z_b;
+/*
+ * entities_out_of_order:
+ *
+ * Linear check whether @list is sorted by z-index. Entities can change
+ * their z-index at any time without telling the scene, so draw() checks
+ * this every frame (cheap) and only sorts when it fails.
+ */
+static gboolean
+entities_out_of_order (GList *list)
+{
+    GList *l;
+    gint   prev_z;
+
+    if (list == NULL)
+        return FALSE;
+
+    prev_z = grl_entity_get_z_index (GRL_ENTITY (list->data));
+    for (l = list->next; l != NULL; l = l->next)
+    {
+        gint z = grl_entity_get_z_index (GRL_ENTITY (l->data));
+
+        if (z < prev_z)
+            return TRUE;
+        prev_z = z;
+    }
+
+    return FALSE;
 }
 
 /*
@@ -178,15 +202,11 @@ grl_scene_real_update (GrlScene *self,
     if (priv->paused && !priv->update_when_paused)
         return;
 
-    /* Update all updatable entities */
+    /* Update all entities (GrlEntity implements GrlUpdatable, and only
+     * entities can be added, so no per-entity interface check) */
     for (l = priv->entities; l != NULL; l = l->next)
     {
-        GrlEntity *entity = GRL_ENTITY (l->data);
-
-        if (GRL_IS_UPDATABLE (entity))
-        {
-            grl_updatable_update (GRL_UPDATABLE (entity), delta);
-        }
+        grl_updatable_update (GRL_UPDATABLE (l->data), delta);
     }
 }
 
@@ -204,22 +224,19 @@ grl_scene_real_draw (GrlScene *self)
     if (priv->paused && !priv->draw_when_paused)
         return;
 
-    /* Sort entities by z-index if dirty */
-    if (priv->entities_dirty)
+    /* Sort entities by z-index (stable) when membership changed or any
+     * entity's z-index moved it out of order since the last frame */
+    if (priv->entities_dirty || entities_out_of_order (priv->entities))
     {
         priv->entities = g_list_sort (priv->entities, compare_entities_by_z);
+        priv->entities_tail = g_list_last (priv->entities);
         priv->entities_dirty = FALSE;
     }
 
-    /* Draw all drawable entities */
+    /* Draw all entities (every GrlEntity is a GrlDrawable) */
     for (l = priv->entities; l != NULL; l = l->next)
     {
-        GrlEntity *entity = GRL_ENTITY (l->data);
-
-        if (GRL_IS_DRAWABLE (entity))
-        {
-            grl_drawable_draw (GRL_DRAWABLE (entity));
-        }
+        grl_drawable_draw (GRL_DRAWABLE (l->data));
     }
 }
 
@@ -236,6 +253,8 @@ grl_scene_finalize (GObject *object)
     g_clear_pointer (&priv->name, g_free);
     g_list_free_full (priv->entities, g_object_unref);
     priv->entities = NULL;
+    priv->entities_tail = NULL;
+    g_clear_pointer (&priv->entity_set, g_hash_table_unref);
 
     G_OBJECT_CLASS (grl_scene_parent_class)->finalize (object);
 }
@@ -276,7 +295,7 @@ grl_scene_get_property (GObject    *object,
         break;
 
     case PROP_ENTITY_COUNT:
-        g_value_set_uint (value, g_list_length (priv->entities));
+        g_value_set_uint (value, g_hash_table_size (priv->entity_set));
         break;
 
     default:
@@ -531,6 +550,8 @@ grl_scene_init (GrlScene *self)
 
     priv->name = NULL;
     priv->entities = NULL;
+    priv->entities_tail = NULL;
+    priv->entity_set = g_hash_table_new (g_direct_hash, g_direct_equal);
     priv->active = FALSE;
     priv->paused = FALSE;
     priv->visible = TRUE;
@@ -809,10 +830,21 @@ grl_scene_add_entity (GrlScene  *self,
     priv = grl_scene_get_instance_private (self);
 
     /* Don't add duplicates */
-    if (g_list_find (priv->entities, entity) != NULL)
+    if (g_hash_table_contains (priv->entity_set, entity))
         return;
 
-    priv->entities = g_list_append (priv->entities, g_object_ref (entity));
+    /* Append in O(1) through the tail link */
+    if (priv->entities_tail == NULL)
+    {
+        priv->entities = g_list_append (NULL, g_object_ref (entity));
+        priv->entities_tail = priv->entities;
+    }
+    else
+    {
+        priv->entities_tail =
+            g_list_append (priv->entities_tail, g_object_ref (entity))->next;
+    }
+    g_hash_table_add (priv->entity_set, entity);
     priv->entities_dirty = TRUE;
 
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_ENTITY_COUNT]);
@@ -839,11 +871,17 @@ grl_scene_remove_entity (GrlScene  *self,
 
     priv = grl_scene_get_instance_private (self);
 
+    if (!g_hash_table_contains (priv->entity_set, entity))
+        return;
+
     link = g_list_find (priv->entities, entity);
     if (link == NULL)
         return;
 
+    if (link == priv->entities_tail)
+        priv->entities_tail = link->prev;
     priv->entities = g_list_delete_link (priv->entities, link);
+    g_hash_table_remove (priv->entity_set, entity);
 
     g_signal_emit (self, signals[SIGNAL_ENTITY_REMOVED], 0, entity);
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_ENTITY_COUNT]);
@@ -868,6 +906,8 @@ grl_scene_clear_entities (GrlScene *self)
 
     g_list_free_full (priv->entities, g_object_unref);
     priv->entities = NULL;
+    priv->entities_tail = NULL;
+    g_hash_table_remove_all (priv->entity_set);
     priv->entities_dirty = FALSE;
 
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_ENTITY_COUNT]);
@@ -910,7 +950,7 @@ grl_scene_get_entity_count (GrlScene *self)
 
     priv = grl_scene_get_instance_private (self);
 
-    return g_list_length (priv->entities);
+    return g_hash_table_size (priv->entity_set);
 }
 
 /**

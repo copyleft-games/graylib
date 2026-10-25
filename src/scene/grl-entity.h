@@ -275,6 +275,20 @@ GRL_AVAILABLE_IN_ALL
 GrlVector2 *    grl_entity_get_origin       (GrlEntity      *self);
 
 /**
+ * grl_entity_get_origin_xy:
+ * @self: A #GrlEntity
+ * @x: (out) (optional): return location for the origin's X
+ * @y: (out) (optional): return location for the origin's Y
+ *
+ * Gets the entity's origin (pivot point) without allocating, for code
+ * that reads it every frame.
+ */
+GRL_AVAILABLE_IN_ALL
+void            grl_entity_get_origin_xy    (GrlEntity      *self,
+                                             gfloat         *x,
+                                             gfloat         *y);
+
+/**
  * grl_entity_set_origin:
  * @self: A #GrlEntity
  * @origin: The origin point

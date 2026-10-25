@@ -10,6 +10,7 @@
 #include "config.h"
 #include "grl-font.h"
 #include "../resources/grl-resource-pack.h"
+#include "../text/grl-text-layout-private.h"
 #include <raylib.h>
 
 /**
@@ -482,9 +483,30 @@ grl_font_measure_text (GrlFont     *self,
     g_return_val_if_fail (GRL_IS_FONT (self), NULL);
     g_return_val_if_fail (text != NULL, NULL);
 
-    size = MeasureTextEx (self->handle, text, font_size, spacing);
+    size = grl_text_measure_ex (self->handle, text, font_size, spacing);
 
     return grl_vector2_new (size.x, size.y);
+}
+
+void
+grl_font_measure_text_xy (GrlFont     *self,
+                          const gchar *text,
+                          gfloat       font_size,
+                          gfloat       spacing,
+                          gfloat      *width,
+                          gfloat      *height)
+{
+    Vector2 size;
+
+    g_return_if_fail (GRL_IS_FONT (self));
+    g_return_if_fail (text != NULL);
+
+    size = grl_text_measure_ex (self->handle, text, font_size, spacing);
+
+    if (width != NULL)
+        *width = size.x;
+    if (height != NULL)
+        *height = size.y;
 }
 
 /*

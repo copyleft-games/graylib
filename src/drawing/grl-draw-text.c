@@ -9,6 +9,7 @@
 
 #include "config.h"
 #include "grl-draw.h"
+#include "../text/grl-text-layout-private.h"
 #include <raylib.h>
 
 /**
@@ -92,7 +93,7 @@ grl_draw_text (const gchar    *text,
     g_return_if_fail (text != NULL);
     g_return_if_fail (color != NULL);
 
-    DrawText (text, x, y, font_size, GRL_TO_RAYLIB_COLOR (color));
+    grl_text_draw_default (text, x, y, font_size, GRL_TO_RAYLIB_COLOR (color));
 }
 
 /*
@@ -122,12 +123,12 @@ grl_draw_text_ex (GrlFont          *font,
     g_return_if_fail (tint != NULL);
 
     fnt = (Font *)grl_font_get_handle (font);
-    DrawTextEx (*fnt,
-                text,
-                GRL_TO_RAYLIB_VECTOR2 (position),
-                font_size,
-                spacing,
-                GRL_TO_RAYLIB_COLOR (tint));
+    grl_text_draw_ex (*fnt,
+                      text,
+                      GRL_TO_RAYLIB_VECTOR2 (position),
+                      font_size,
+                      spacing,
+                      GRL_TO_RAYLIB_COLOR (tint));
 }
 
 /*
@@ -222,5 +223,5 @@ grl_measure_text (const gchar *text,
 {
     g_return_val_if_fail (text != NULL, 0);
 
-    return MeasureText (text, font_size);
+    return grl_text_measure_default (text, font_size);
 }

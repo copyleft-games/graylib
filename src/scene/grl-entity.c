@@ -792,6 +792,23 @@ grl_entity_get_origin (GrlEntity *self)
 }
 
 void
+grl_entity_get_origin_xy (GrlEntity *self,
+                          gfloat    *x,
+                          gfloat    *y)
+{
+    GrlEntityPrivate *priv;
+
+    g_return_if_fail (GRL_IS_ENTITY (self));
+
+    priv = grl_entity_get_instance_private (self);
+
+    if (x != NULL)
+        *x = priv->origin_x;
+    if (y != NULL)
+        *y = priv->origin_y;
+}
+
+void
 grl_entity_set_origin (GrlEntity  *self,
                        GrlVector2 *origin)
 {

@@ -245,7 +245,13 @@ grl_entity_set_origin (entity, origin);
 
 /* Center the origin automatically */
 grl_entity_center_origin (entity);  /* Sets origin to (width/2, height/2) */
+
+/* Read it without allocating (per-frame code) */
+gfloat ox, oy;
+grl_entity_get_origin_xy (entity, &ox, &oy);
 #+end_src
+
+=grl_entity_get_origin()= returns a new =GrlVector2= on every call; draw code that runs every frame should use =grl_entity_get_origin_xy()=.
 
 *** Movement
 :PROPERTIES:
@@ -464,6 +470,8 @@ gboolean flipped_h = grl_sprite_get_flip_h (sprite);
 grl_sprite_set_flip_v (sprite, TRUE);
 gboolean flipped_v = grl_sprite_get_flip_v (sprite);
 #+end_src
+
+Flipping mirrors the sampled region (the source rectangle's width or height is negated before drawing). Earlier versions negated the sign twice in =grl_sprite_draw()=, so =flip-h= and =flip-v= had no visible effect; they now flip as documented. =grl_sprite_draw()= builds its rectangles on the stack, so drawing a sprite allocates nothing.
 
 ** GrlAnimatedTexture
 :PROPERTIES:
@@ -779,6 +787,8 @@ main (int argc, char *argv[])
 :CUSTOM_ID: grlscene
 :END:
 A container for entities with lifecycle management. Scenes can be subclassed to create custom game states (menus, levels, etc.).
+
+Draw order is by z-index, stable (equal z-indices draw in insertion order). The scene checks the order every frame in one linear pass and re-sorts only when an entity was added or an entity's z-index moved it out of order, so changing =z-index= on an entity already in a scene takes effect on the next draw (it used to be ignored until the next add). Adding, removing and counting entities is constant time apart from removal's list unlink; =grl_scene_get_entities()= still returns the scene's own =GList=.
 
 *** Creating Scenes
 :PROPERTIES:

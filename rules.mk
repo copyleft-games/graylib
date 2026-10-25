@@ -59,6 +59,12 @@ else
     RAYLIB_PLATFORM_TAG := $(TARGET_PLATFORM)
 endif
 
+# raylib's own Makefile builds the desktop RELEASE configuration at -O1.
+# CUSTOM_CFLAGS is appended after its optimisation flag, so -O2 here wins
+# (raylib's sources are untouched). The tag change forces one rebuild.
+RAYLIB_OPT_FLAGS := CUSTOM_CFLAGS=-O2
+RAYLIB_PLATFORM_TAG := $(RAYLIB_PLATFORM_TAG)+O2
+
 # =============================================================================
 # Platform-Specific System Libraries
 # =============================================================================
@@ -117,6 +123,12 @@ ifeq ($(DEBUG),1)
     endif
 else
     OPT_CFLAGS := -O2 -DNDEBUG
+    # Calls between graylib's own functions may be inlined and bound
+    # locally even though the library is built -fPIC.
+    OPT_CFLAGS += -fno-semantic-interposition
+    # GObject cast macros (GRL_ENTITY (x) ...) compile to plain casts in
+    # release builds; g_return_if_fail() argument checks stay on.
+    OPT_CFLAGS += -DG_DISABLE_CAST_CHECKS
     # Link-time optimization (optional, can be slow)
     # OPT_CFLAGS += -flto
     # OPT_LDFLAGS += -flto

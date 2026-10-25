@@ -204,6 +204,26 @@ GrlVector2 *        grl_font_measure_text       (GrlFont            *self,
                                                  gfloat              font_size,
                                                  gfloat              spacing);
 
+/**
+ * grl_font_measure_text_xy:
+ * @self: A #GrlFont
+ * @text: Text to measure
+ * @font_size: Font size to use
+ * @spacing: Character spacing
+ * @width: (out) (optional): return location for the width
+ * @height: (out) (optional): return location for the height
+ *
+ * Measures the size that text would occupy when rendered, without
+ * allocating: for code that measures every frame (layout, alignment).
+ */
+GRL_AVAILABLE_IN_ALL
+void                grl_font_measure_text_xy    (GrlFont            *self,
+                                                 const gchar        *text,
+                                                 gfloat              font_size,
+                                                 gfloat              spacing,
+                                                 gfloat             *width,
+                                                 gfloat             *height);
+
 /*
  * Glyph information
  */

@@ -60,7 +60,8 @@ TEST_SOURCES := \
 	test-text.c \
 	test-software-renderer.c \
 	test-sound-pan.c \
-	test-model-skinning.c
+	test-model-skinning.c \
+	test-text-layout.c
 
 # Test executables (with output directory and platform-specific extension)
 TEST_PROGRAMS := $(addprefix $(TESTOUTDIR)/,$(patsubst %.c,%$(EXE_EXT),$(TEST_SOURCES)))
