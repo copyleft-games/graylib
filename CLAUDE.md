@@ -44,6 +44,45 @@ make help           # Show all targets
 - `ASAN=1` - Enable AddressSanitizer (requires DEBUG=1)
 - `UBSAN=1` - Enable UndefinedBehaviorSanitizer (requires DEBUG=1)
 
+## Versioning
+
+The version lives in `config.mk` (`VERSION_MAJOR`, `VERSION_MINOR`, `VERSION_MICRO`; it feeds
+`grl-version.h` (`GRL_VERSION`, `GRL_*_VERSION`), the `.pc` file and the library file name) and every
+release on master carries an annotated tag `v<MAJOR>.<MINOR>.<MICRO>` (e.g. `v0.2.0`) on the
+commit that sets it. `v0.1.0` marks the graylib that libregnum `v0.1.0` shipped with.
+
+**graylib moves in lockstep with libregnum on MAJOR.MINOR.** graylib `vX.Y.*` is the graylib of
+libregnum `vX.Y.*`; only the micro versions move independently.
+
+- When libregnum bumps its minor (or major), graylib bumps to the same MAJOR.MINOR (micro 0) in
+  the same landing, even if graylib itself changed little: a version-only commit is fine.
+  graylib's release is pushed first, then the libregnum commit that points `deps/graylib` at it.
+- When a graylib change is worth a minor (a major feature, or anything that breaks
+  compatibility: public C API or ABI, GIR API, boxed type layouts, signals, property names,
+  behaviour callers rely on), libregnum takes the same minor bump when it adopts it.
+- **Micro** (+1): every other change landing on master that changes what is built: fixes,
+  performance work, small additions (`fix`, `perf`, small `feat`, `refactor`, `build`). Changes
+  that touch only docs, tests or tooling (`docs`, `test`, `ci`, `chore`) do not bump.
+- **Major**: never bumped without asking the user first.
+- `API_VERSION` (GIR namespace `Graylib-1`, `graylib-1.pc`) and `SO_VERSION` are separate and
+  move only on an ABI break, and only when asked.
+
+One bump per landing, the highest kind it contains. Every landing that changes the build is
+released at once: bump, build, `make test` with zero warnings, tag, push.
+
+```bash
+git merge --no-ff --no-commit feat/x     # bump in the merge commit itself
+$EDITOR config.mk                        # VERSION_MINOR or VERSION_MICRO
+make clean && make && make test
+git commit                               # merge message names the new version
+git tag -a v0.2.1 -m 'v0.2.1'
+git push origin master v0.2.1
+```
+
+Tag only a commit whose `config.mk` matches the tag; never move or delete a pushed tag; a broken
+release is fixed by the next micro. Code that reports the version uses `GRL_VERSION` /
+`GRL_MAJOR_VERSION` and friends, never a literal.
+
 ## Naming Conventions
 
 | Element | Convention | Example |
