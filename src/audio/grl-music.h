@@ -114,10 +114,49 @@ void                grl_music_resume                (GrlMusic           *self);
  * @self: A #GrlMusic
  *
  * Updates the music stream buffers. This MUST be called in the main
- * loop while music is playing to ensure continuous playback.
+ * loop while music is playing to ensure continuous playback, unless the
+ * music streams in the background (grl_music_set_background_streaming()),
+ * where it does nothing.
  */
 GRL_AVAILABLE_IN_ALL
 void                grl_music_update                (GrlMusic           *self);
+
+/**
+ * grl_music_set_background_streaming:
+ * @self: A #GrlMusic
+ * @enabled: %TRUE to refill the buffers on graylib's streaming thread
+ *
+ * Moves the decoding off the caller's thread.  A background-streamed
+ * music is refilled by one process-wide streaming thread, started on
+ * first use, which calls raylib's UpdateMusicStream() for every such
+ * music between grl_music_play() and its end or grl_music_stop(), about
+ * 200 times a second; grl_music_update() then does nothing.  Stopped or
+ * finished music costs the thread nothing, and with none playing it
+ * sleeps.  The thread stops when the audio device is closed.
+ *
+ * The control calls (play, stop, pause, resume, seek, looping) take the
+ * thread's lock, so they never run while this music is being decoded
+ * (they may wait for one decode).  grl_music_is_playing() and
+ * grl_music_get_time_played() return what the thread last saw instead of
+ * asking raylib, so they never wait: the position is at most one refill
+ * period (about 5 ms) old, and a music that ended is reported stopped
+ * within that period.
+ *
+ * Off by default.  Can be switched at any time; switching it off while
+ * the music plays hands the refills back to grl_music_update().
+ */
+GRL_AVAILABLE_IN_ALL
+void                grl_music_set_background_streaming (GrlMusic    *self,
+                                                        gboolean     enabled);
+
+/**
+ * grl_music_get_background_streaming:
+ * @self: A #GrlMusic
+ *
+ * Returns: %TRUE when the music is refilled on graylib's streaming thread
+ */
+GRL_AVAILABLE_IN_ALL
+gboolean            grl_music_get_background_streaming (GrlMusic    *self);
 
 /**
  * grl_music_is_playing:
