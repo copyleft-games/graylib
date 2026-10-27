@@ -61,7 +61,7 @@ typedef struct
     gchar    *name;
     GList      *entities;
     GList      *entities_tail;  /* last link of @entities, O(1) append */
-    GHashTable *entity_set;     /* membership set over @entities */
+    GHashTable *entity_set;     /* entity -> its link in @entities */
     gboolean  active;
     gboolean  paused;
     gboolean  visible;
@@ -844,7 +844,9 @@ grl_scene_add_entity (GrlScene  *self,
         priv->entities_tail =
             g_list_append (priv->entities_tail, g_object_ref (entity))->next;
     }
-    g_hash_table_add (priv->entity_set, entity);
+    /* The link, not just membership: removal is then O(1) (sorting
+     * relinks the same nodes, so links stay valid) */
+    g_hash_table_insert (priv->entity_set, entity, priv->entities_tail);
     priv->entities_dirty = TRUE;
 
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_ENTITY_COUNT]);
@@ -871,10 +873,7 @@ grl_scene_remove_entity (GrlScene  *self,
 
     priv = grl_scene_get_instance_private (self);
 
-    if (!g_hash_table_contains (priv->entity_set, entity))
-        return;
-
-    link = g_list_find (priv->entities, entity);
+    link = g_hash_table_lookup (priv->entity_set, entity);
     if (link == NULL)
         return;
 
@@ -1172,5 +1171,6 @@ grl_scene_sort_entities_by_z (GrlScene *self)
     priv = grl_scene_get_instance_private (self);
 
     priv->entities = g_list_sort (priv->entities, compare_entities_by_z);
+    priv->entities_tail = g_list_last (priv->entities);
     priv->entities_dirty = FALSE;
 }
