@@ -356,6 +356,47 @@ test_scene_draw_order_follows_z_index (void)
     g_assert_cmpuint (grl_scene_get_entity_count (scene), ==, 3);
 }
 
+/* Removal finds an entity's link directly: after explicit and draw-time
+ * sorts, removing from the middle and appending again keep the list, its
+ * tail and the count consistent (grl_scene_sort_entities_by_z() used to
+ * leave the tail link stale, so a later append went to the wrong place). */
+static void
+test_scene_remove_after_sort (void)
+{
+    g_autoptr(GrlScene) scene = grl_scene_new ();
+    GrlEntity          *e[6];
+    GList              *l;
+    guint               i;
+
+    for (i = 0; i < 6; i++)
+    {
+        e[i] = grl_entity_new ();
+        grl_entity_set_z_index (e[i], (gint) (5 - i));
+        grl_scene_add_entity (scene, e[i]);
+    }
+
+    /* Sorted: e5 (z 0) ... e0 (z 5); then append after the sort */
+    grl_scene_sort_entities_by_z (scene);
+    grl_scene_remove_entity (scene, e[3]);
+    grl_scene_remove_entity (scene, e[0]);
+    grl_scene_add_entity (scene, e[3]);
+    g_assert_cmpuint (grl_scene_get_entity_count (scene), ==, 5);
+
+    l = grl_scene_get_entities (scene);
+    g_assert_true (l->data == e[5]);
+    g_assert_true (g_list_last (l)->data == e[3]);
+    g_assert_cmpuint (g_list_length (l), ==, 5);
+
+    /* Removing everything through the stored links empties the list */
+    for (i = 0; i < 6; i++)
+        grl_scene_remove_entity (scene, e[i]);
+    g_assert_null (grl_scene_get_entities (scene));
+    g_assert_cmpuint (grl_scene_get_entity_count (scene), ==, 0);
+
+    for (i = 0; i < 6; i++)
+        g_object_unref (e[i]);
+}
+
 int
 main (int   argc,
       char *argv[])
@@ -379,6 +420,7 @@ main (int   argc,
     g_test_add_func ("/scene/add-entity", test_scene_add_entity);
     g_test_add_func ("/scene/add-multiple-entities", test_scene_add_multiple_entities);
     g_test_add_func ("/scene/remove-entity", test_scene_remove_entity);
+    g_test_add_func ("/scene/remove-after-sort", test_scene_remove_after_sort);
     g_test_add_func ("/scene/clear-entities", test_scene_clear_entities);
     g_test_add_func ("/scene/get-entities", test_scene_get_entities);
     g_test_add_func ("/scene/empty-entity-count", test_scene_empty_entity_count);
