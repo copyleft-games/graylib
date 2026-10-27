@@ -21,6 +21,13 @@ G_BEGIN_DECLS
 
 #define GRL_TYPE_AUDIO_STREAM (grl_audio_stream_get_type ())
 
+/**
+ * GRL_AUDIO_STREAM_MAX_CALLBACKS:
+ *
+ * How many audio streams can have a callback at the same time.
+ */
+#define GRL_AUDIO_STREAM_MAX_CALLBACKS (64)
+
 GRL_AVAILABLE_IN_ALL
 G_DECLARE_FINAL_TYPE (GrlAudioStream, grl_audio_stream, GRL, AUDIO_STREAM, GObject)
 
@@ -127,6 +134,10 @@ gboolean            grl_audio_stream_is_valid           (GrlAudioStream     *sel
  * The data format must match the stream's sample_size and channels.  Not
  * available to language bindings: the buffer's byte size depends on that
  * format, which GObject Introspection cannot describe.
+ *
+ * Does nothing while the stream has a callback
+ * (grl_audio_stream_set_callback()): raylib then reads the callback
+ * instead of the buffers.
  */
 GRL_AVAILABLE_IN_ALL
 void                grl_audio_stream_update             (GrlAudioStream     *self,
@@ -139,12 +150,71 @@ void                grl_audio_stream_update             (GrlAudioStream     *sel
  *
  * Checks if the audio stream buffers require refill.
  * When this returns %TRUE, call grl_audio_stream_update()
- * to provide more audio data.
+ * to provide more audio data.  Always %FALSE while the stream has a
+ * callback, so a pump loop written for buffers does no work then.
  *
  * Returns: %TRUE if the buffer needs more data
  */
 GRL_AVAILABLE_IN_ALL
 gboolean            grl_audio_stream_is_processed       (GrlAudioStream     *self);
+
+/*
+ * Callback streaming
+ */
+
+/**
+ * GrlAudioStreamCallback:
+ * @buffer: (not nullable): the block to fill: @n_frames interleaved
+ *   frames in the stream's own format (sample size and channels)
+ * @n_frames: the frames to write
+ * @user_data: (closure): the data given to grl_audio_stream_set_callback()
+ *
+ * Fills one block of a playing stream on the audio device's thread
+ * (miniaudio's mixer thread), with raylib's audio lock held.  It must
+ * write all @n_frames frames, must not block, must not call graylib's or
+ * raylib's audio functions, and must not wait for a lock another thread
+ * holds while calling them.  Blocks are small (at most 4096 bytes, so
+ * 512 frames of 32-bit stereo) and come in bursts of one device period.
+ */
+typedef void (*GrlAudioStreamCallback) (gpointer buffer,
+                                        guint    n_frames,
+                                        gpointer user_data);
+
+/**
+ * grl_audio_stream_set_callback:
+ * @self: A #GrlAudioStream
+ * @callback: (nullable) (scope notified) (closure user_data) (destroy destroy):
+ *   the function that fills the stream, or %NULL to remove the current one
+ * @user_data: data for @callback
+ * @destroy: (nullable): frees @user_data once @callback can no longer run
+ *
+ * Lets the audio device pull the stream's samples from @callback on its
+ * own thread, instead of the game pushing them with
+ * grl_audio_stream_update() (which, like grl_audio_stream_is_processed(),
+ * then does nothing).  The callback runs only while the stream plays.
+ *
+ * Replacing or removing a callback detaches it first: when this returns,
+ * the old callback is not running and never runs again, and its @destroy
+ * has been called.  Disposing of the stream removes the callback the
+ * same way.  Wraps raylib's SetAudioStreamCallback(), whose callback has
+ * no user data, through a table of %GRL_AUDIO_STREAM_MAX_CALLBACKS
+ * trampolines; when every one is taken this logs a warning, calls
+ * @destroy at once and leaves the stream without a callback.
+ */
+GRL_AVAILABLE_IN_ALL
+void                grl_audio_stream_set_callback       (GrlAudioStream         *self,
+                                                         GrlAudioStreamCallback  callback,
+                                                         gpointer                user_data,
+                                                         GDestroyNotify          destroy);
+
+/**
+ * grl_audio_stream_has_callback:
+ * @self: A #GrlAudioStream
+ *
+ * Returns: %TRUE while the stream is filled by a callback
+ */
+GRL_AVAILABLE_IN_ALL
+gboolean            grl_audio_stream_has_callback       (GrlAudioStream     *self);
 
 /*
  * Properties

@@ -70,6 +70,7 @@ PUBLIC_HEADERS := \
 	src/scene/grl-drawable.h \
 	src/scene/grl-updatable.h \
 	src/scene/grl-collidable.h \
+	src/scene/grl-interpolation.h \
 	src/scene/grl-entity.h \
 	src/scene/grl-sprite.h \
 	src/scene/grl-animated-texture.h \
@@ -154,6 +155,7 @@ SOURCES := \
 	src/scene/grl-drawable.c \
 	src/scene/grl-updatable.c \
 	src/scene/grl-collidable.c \
+	src/scene/grl-interpolation.c \
 	src/scene/grl-entity.c \
 	src/scene/grl-sprite.c \
 	src/scene/grl-animated-texture.c \
@@ -499,6 +501,7 @@ endif
 	$(INSTALL_DATA) src/scene/grl-drawable.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
 	$(INSTALL_DATA) src/scene/grl-updatable.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
 	$(INSTALL_DATA) src/scene/grl-collidable.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
+	$(INSTALL_DATA) src/scene/grl-interpolation.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
 	$(INSTALL_DATA) src/scene/grl-entity.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
 	$(INSTALL_DATA) src/scene/grl-sprite.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
 	$(INSTALL_DATA) src/scene/grl-animated-texture.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
@@ -778,6 +781,10 @@ $(OBJDIR)/src/scene/grl-updatable.o: src/scene/grl-updatable.c
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
 $(OBJDIR)/src/scene/grl-collidable.o: src/scene/grl-collidable.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(LIB_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/scene/grl-interpolation.o: src/scene/grl-interpolation.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 

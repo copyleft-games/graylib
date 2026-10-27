@@ -212,7 +212,36 @@ while (!grl_window_should_close (window))
 }
 #+end_src
 
-Without calling =grl_music_update()=, music will stutter or stop.
+Without calling =grl_music_update()=, music will stutter or stop, unless the music streams in the background (next section).
+
+*** Background Streaming
+:PROPERTIES:
+:CUSTOM_ID: background-streaming
+:END:
+=grl_music_update()= decodes on the caller's thread: raylib's =UpdateMusicStream()= decodes a whole sub-buffer each time the device has consumed one, 1-3 ms of Vorbis or MP3 every few frames, all of it inside raylib's audio lock.  A background-streamed music is refilled by graylib's streaming thread instead:
+
+#+begin_src C
+grl_music_set_background_streaming (music, TRUE);   /* or the "background-streaming" property */
+grl_music_play (music);
+/* no grl_music_update () needed; calling it does nothing */
+#+end_src
+
+| Aspect | Behaviour |
+|--------+-----------|
+| The thread | one per process, started by the first background play, named =grl-music=; refills every active background music about every 5 ms (=PUMP_INTERVAL_US=) with =UpdateMusicStream()= |
+| Cost when idle | none: with no background music playing (stopped, ended, never played) the thread sleeps on a condition variable |
+| Control calls | =play=, =stop=, =pause=, =resume=, =seek= and =set_looping= take the thread's lock, so they never run while that music decodes; they may wait for one decode |
+| Getters | =grl_music_is_playing()= and =grl_music_get_time_played()= return what the thread last published (after every refill and every control call), so they never wait on a decode; the position is at most one period (~5 ms) old |
+| End of track | a non-looping music that ends is taken off the thread's list and reads as stopped within one period |
+| Volume, pitch, pan, processors | unchanged: raylib's own lock covers them |
+| Shutdown | =grl_audio_device_close()= (and the device's finalize) stops and joins the thread before closing raylib's device; a later background play starts it again |
+| Lifetime | the thread holds no reference: disposing of a music takes it off the list under the lock |
+
+The switch can change at any time; switching it off while the music plays hands the refills back to =grl_music_update()=.  Lock order: graylib's streaming lock, then raylib's audio lock (raylib takes it inside its functions); the device thread takes only raylib's, which is why processors and stream callbacks may not call graylib's audio functions.
+
+Note on =looping=: raylib loads music looping; graylib now makes the loaded music follow the =looping= property, which starts =FALSE=, so a music that is never set looping now ends instead of repeating.  Call =grl_music_set_looping (music, TRUE)= for background tracks that should loop.
+
+Tests: =tests/test-music.c= (the switch and inert calls headless; playback without =grl_music_update()=, pause, seek, end detection, stop and closing the device under a playing track with =GRL_TEST_AUDIO_DEVICE=1=).
 
 *** Looping
 :PROPERTIES:
@@ -553,16 +582,39 @@ guint channels = grl_audio_stream_get_channels (stream);
 :PROPERTIES:
 :CUSTOM_ID: callback-based-streaming
 :END:
+Instead of pushing buffers from the game loop, a stream can let the device pull its samples from a callback on the device's own thread.  This takes synthesis off the game thread entirely and lowers latency: the device asks for small blocks just before it plays them, where a pushed stream renders a whole sub-buffer ahead.
+
 #+begin_src C
-/* Set a callback for continuous audio generation */
-void audio_callback (gpointer buffer, guint frames, gpointer user_data)
+/* runs on miniaudio's mixer thread, raylib's audio lock held */
+static void
+fill (gpointer buffer, guint n_frames, gpointer user_data)
 {
-    gfloat *samples = (gfloat *)buffer;
-    /* Fill buffer with samples... */
+    MySynth *synth = user_data;
+    gfloat  *out = buffer;   /* the stream's format: here 32-bit float stereo */
+
+    my_synth_render (synth, out, n_frames);
 }
 
-grl_audio_stream_set_callback (stream, audio_callback, user_data);
+g_autoptr(GrlAudioStream) stream = grl_audio_stream_new (44100, 32, 2);
+grl_audio_stream_set_callback (stream, fill, synth, NULL);
+grl_audio_stream_play (stream);
+/* ... */
+grl_audio_stream_set_callback (stream, NULL, NULL, NULL);   /* detached: fill is not running and never runs again */
 #+end_src
+
+| Function | Purpose |
+|----------+---------|
+| =grl_audio_stream_set_callback (stream, func, user_data, destroy)= | set, replace or (with =NULL=) remove the callback; the old one is detached and its =destroy= has run when this returns |
+| =grl_audio_stream_has_callback (stream)= | whether a callback fills the stream |
+| =GRL_AUDIO_STREAM_MAX_CALLBACKS= (64) | streams that can have a callback at once |
+
+- =GrlAudioStreamCallback (gpointer buffer, guint n_frames, gpointer user_data)= gets the block in the stream's own format (sample size and channels as created), at most 4096 bytes (512 frames of 32-bit stereo), several blocks back to back per device period.  It must fill every frame.
+- It runs only while the stream plays (not paused or stopped).
+- With a callback, =grl_audio_stream_update()= does nothing and =grl_audio_stream_is_processed()= is always =FALSE=, so an old pump loop does no work.
+- The same rules as for processors: it runs with raylib's audio lock held, so it must not block, must not call graylib's or raylib's audio functions, and must not wait for a lock another thread holds while calling them.  Share state with the game through atomics or a queue (libregnum's synthesizers drain a command queue at the start of each block).
+- How it is wired: raylib's =SetAudioStreamCallback()= has no user data, so graylib keeps a table of trampolines as for processors.  Setting fills a free slot before handing raylib its trampoline; removing hands raylib =NULL= first (under raylib's lock, so the callback is not running afterwards) and frees the slot.  A callback that cannot be detached because the device was closed under a loaded stream retires its slot.  When every slot is taken, setting logs a warning, calls =destroy= at once and leaves the stream without a callback.
+
+Tests: =tests/test-audio-stream.c= (bookkeeping, slot reuse and exhaustion headless; the device pulling the callback and never calling it after removal with =GRL_TEST_AUDIO_DEVICE=1=).
 
 ** Per-Voice Processors
 :PROPERTIES:

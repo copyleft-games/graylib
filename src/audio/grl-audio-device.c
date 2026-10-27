@@ -9,6 +9,7 @@
 
 #include "config.h"
 #include "grl-audio-device.h"
+#include "grl-music-private.h"
 #include <raylib.h>
 
 /**
@@ -63,6 +64,8 @@ grl_audio_device_finalize (GObject *object)
 
     if (priv->is_initialized)
     {
+        /* the music streaming thread calls raylib: it stops first */
+        grl_music_streaming_shutdown ();
         CloseAudioDevice ();
         priv->is_initialized = FALSE;
     }
@@ -238,6 +241,8 @@ grl_audio_device_close (GrlAudioDevice *self)
 
     if (priv->is_initialized)
     {
+        /* the music streaming thread calls raylib: it stops first */
+        grl_music_streaming_shutdown ();
         CloseAudioDevice ();
         priv->is_initialized = FALSE;
         g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_IS_READY]);

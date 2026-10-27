@@ -32,12 +32,14 @@ TEST_SOURCES := \
 	test-enums.c \
 	test-font.c \
 	test-entity.c \
+	test-interpolation.c \
 	test-scene.c \
 	test-interfaces.c \
 	test-math-utils.c \
 	test-wave.c \
 	test-audio-stream.c \
 	test-audio-processor.c \
+	test-music.c \
 	test-ui-control.c \
 	test-ui-button.c \
 	test-png.c \
