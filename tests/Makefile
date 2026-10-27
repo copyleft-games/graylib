@@ -72,6 +72,7 @@ TEST_CFLAGS := \
 	$(GLIB_CFLAGS) \
 	-I$(PROJROOT) \
 	-I$(PROJROOT)/src \
+	-I$(RAYLIB_LIBDIR) \
 	-DGRAYLIB_COMPILATION
 
 # Linker flags for tests

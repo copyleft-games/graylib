@@ -6,8 +6,11 @@
  */
 
 #include "grl-model.h"
+#include "grl-graphics-private.h"
 #include <gio/gio.h>
+#include <string.h>
 #include <raylib.h>
+#include <rlgl.h>
 
 /**
  * SECTION:grl-model
@@ -44,6 +47,14 @@ typedef struct
     GrlMaterial **materials;
     gint         material_count;
     GrlMesh     *source_mesh;   /* Holds ref to mesh if created via new_from_mesh */
+
+    /* GPU skinning (grl_model_prepare_gpu_skinning): two buffers per mesh,
+     * bone indices then bone weights, 0 for meshes without bone data;
+     * NULL until prepared. */
+    guint       *skin_vbos;
+    /* TRUE when CPU skinning may have written a pose into the position
+     * and normal buffers, which the GPU path needs in bind pose. */
+    gboolean     cpu_posed;
 } GrlModelPrivate;
 
 G_DEFINE_TYPE_WITH_PRIVATE (GrlModel, grl_model, G_TYPE_OBJECT)
@@ -103,6 +114,18 @@ grl_model_finalize (GObject *object)
 
     if (priv->valid)
     {
+        /* The bone attribute buffers are ours, not raylib's: UnloadMesh()
+         * only frees the vboId slots it knows about. */
+        if (priv->skin_vbos != NULL)
+        {
+            gint i;
+
+            for (i = 0; i < 2 * priv->model.meshCount; i++)
+                if (priv->skin_vbos[i] != 0)
+                    rlUnloadVertexBuffer (priv->skin_vbos[i]);
+        }
+        g_clear_pointer (&priv->skin_vbos, g_free);
+
         /* raylib 6.0's UnloadModel() frees meshes, material maps and the
          * skeleton but not the runtime animation state that LoadGLTF /
          * LoadIQM / LoadM3D allocate for skinned models (currentPose and
@@ -809,6 +832,156 @@ grl_model_draw_wires_ex (GrlModel         *self,
     color.a = grl_color_get_a (tint);
 
     DrawModelWiresEx (priv->model, pos, axis, rotation_angle, scl, color);
+}
+
+/* mesh_has_skin:
+ * Whether raylib loaded bone indices and weights for @mesh. */
+static gboolean
+mesh_has_skin (const Mesh *mesh)
+{
+    return mesh->boneIndices != NULL && mesh->boneWeights != NULL && mesh->vertexCount > 0;
+}
+
+/* upload_bind_pose:
+ * Writes the bind-pose positions and normals of every skinned mesh back
+ * into its GPU buffers (CPU skinning overwrites them with a pose), and
+ * into the CPU animation buffers so both sides agree. */
+static void
+upload_bind_pose (GrlModelPrivate *priv)
+{
+    gint i;
+
+    for (i = 0; i < priv->model.meshCount; i++)
+    {
+        Mesh *mesh = &priv->model.meshes[i];
+        gint  bytes;
+
+        if (!mesh_has_skin (mesh) || mesh->vertices == NULL || mesh->vboId == NULL)
+            continue;
+        bytes = mesh->vertexCount * 3 * (gint)sizeof (gfloat);
+        if (mesh->animVertices != NULL)
+            memcpy (mesh->animVertices, mesh->vertices, (gsize)bytes);
+        if (mesh->vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION] != 0)
+            rlUpdateVertexBuffer (mesh->vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION],
+                                  mesh->vertices, bytes, 0);
+        if (mesh->normals == NULL)
+            continue;
+        if (mesh->animNormals != NULL)
+            memcpy (mesh->animNormals, mesh->normals, (gsize)bytes);
+        if (mesh->vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_NORMAL] != 0)
+            rlUpdateVertexBuffer (mesh->vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_NORMAL],
+                                  mesh->normals, bytes, 0);
+    }
+}
+
+/*
+ * grl_model_prepare_gpu_skinning:
+ * @self: A #GrlModel
+ *
+ * Gets @self ready to be skinned by a vertex shader. raylib's own GPU
+ * skinning is compiled out of the embedded build (SUPPORT_GPU_SKINNING
+ * 0), so its meshes carry no bone attributes on the GPU. The first call
+ * uploads each skinned mesh's bone indices and weights into its vertex
+ * array at raylib's bone attribute locations
+ * (RL_DEFAULT_SHADER_ATTRIB_LOCATION_BONEINDICES / _BONEWEIGHTS), where
+ * raylib binds a shader's "vertexBoneIndices" and "vertexBoneWeights"
+ * inputs. Every call restores the bind pose in the position and normal
+ * buffers if CPU skinning (grl_model_animation_update(),
+ * grl_model_animation_blend()) wrote a pose there since the last one, so
+ * the shader skins the rest geometry.
+ *
+ * Returns: %TRUE when @self has a skeleton and every skinned mesh can be
+ *          skinned on the GPU (OpenGL 3.3 or 4.3 with vertex arrays);
+ *          %FALSE otherwise, in which case nothing is changed
+ */
+gboolean
+grl_model_prepare_gpu_skinning (GrlModel *self)
+{
+    GrlModelPrivate *priv;
+    gint             version;
+    gint             i;
+
+    g_return_val_if_fail (GRL_IS_MODEL (self), FALSE);
+
+    priv = grl_model_get_instance_private (self);
+
+    if (!priv->valid || priv->model.boneMatrices == NULL ||
+        priv->model.skeleton.boneCount <= 0)
+        return FALSE;
+
+    if (priv->skin_vbos == NULL)
+    {
+        /* Bone matrix arrays (rlSetUniformMatrices) and vertex arrays are
+         * only there on desktop OpenGL 3.3+. */
+        version = rlGetVersion ();
+        if (version != RL_OPENGL_33 && version != RL_OPENGL_43)
+            return FALSE;
+        for (i = 0; i < priv->model.meshCount; i++)
+            if (mesh_has_skin (&priv->model.meshes[i]) && priv->model.meshes[i].vaoId == 0)
+                return FALSE;
+
+        priv->skin_vbos = g_new0 (guint, 2 * MAX (priv->model.meshCount, 1));
+        for (i = 0; i < priv->model.meshCount; i++)
+        {
+            Mesh *mesh = &priv->model.meshes[i];
+
+            if (!mesh_has_skin (mesh) || !rlEnableVertexArray (mesh->vaoId))
+                continue;
+            priv->skin_vbos[2 * i] =
+                rlLoadVertexBuffer (mesh->boneIndices, mesh->vertexCount * 4, false);
+            rlSetVertexAttribute (RL_DEFAULT_SHADER_ATTRIB_LOCATION_BONEINDICES, 4,
+                                  RL_UNSIGNED_BYTE, false, 0, 0);
+            rlEnableVertexAttribute (RL_DEFAULT_SHADER_ATTRIB_LOCATION_BONEINDICES);
+            priv->skin_vbos[2 * i + 1] =
+                rlLoadVertexBuffer (mesh->boneWeights,
+                                    mesh->vertexCount * 4 * (gint)sizeof (gfloat), false);
+            rlSetVertexAttribute (RL_DEFAULT_SHADER_ATTRIB_LOCATION_BONEWEIGHTS, 4,
+                                  RL_FLOAT, false, 0, 0);
+            rlEnableVertexAttribute (RL_DEFAULT_SHADER_ATTRIB_LOCATION_BONEWEIGHTS);
+            rlDisableVertexArray ();
+            rlDisableVertexBuffer ();
+        }
+        /* Whatever was posed before is still in the buffers. */
+        priv->cpu_posed = TRUE;
+    }
+
+    if (priv->cpu_posed)
+    {
+        upload_bind_pose (priv);
+        priv->cpu_posed = FALSE;
+    }
+    return TRUE;
+}
+
+/*
+ * grl_model_has_gpu_skinning:
+ * @self: A #GrlModel
+ *
+ * Whether grl_model_prepare_gpu_skinning() has succeeded on @self, so its
+ * skinned meshes carry bone indices and weights on the GPU.
+ *
+ * Returns: %TRUE when the bone attributes are uploaded
+ */
+gboolean
+grl_model_has_gpu_skinning (GrlModel *self)
+{
+    GrlModelPrivate *priv;
+
+    g_return_val_if_fail (GRL_IS_MODEL (self), FALSE);
+
+    priv = grl_model_get_instance_private (self);
+
+    return priv->skin_vbos != NULL;
+}
+
+/* grl_model_mark_cpu_posed:
+ * Internal: CPU skinning wrote a pose into @self's vertex buffers. */
+void
+grl_model_mark_cpu_posed (GrlModel *self)
+{
+    GrlModelPrivate *priv = grl_model_get_instance_private (self);
+
+    priv->cpu_posed = TRUE;
 }
 
 /*
