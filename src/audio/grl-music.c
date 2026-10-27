@@ -385,6 +385,8 @@ grl_music_new_from_file (const gchar  *filename,
 
     self = g_object_new (GRL_TYPE_MUSIC, NULL);
     self->music = music;
+    /* raylib loads music looping; the looping property starts FALSE */
+    self->music.looping = self->looping;
     self->is_loaded = TRUE;
     self->filename = g_strdup (filename);
 
@@ -453,6 +455,8 @@ grl_music_new_from_memory (const gchar  *file_type,
 
     self = g_object_new (GRL_TYPE_MUSIC, NULL);
     self->music = music;
+    /* raylib loads music looping; the looping property starts FALSE */
+    self->music.looping = self->looping;
     self->is_loaded = TRUE;
     self->filename = g_strdup_printf ("(memory:%s)", file_type);
     self->memory_data = data_copy;
