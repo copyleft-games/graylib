@@ -101,7 +101,7 @@ grl_rlgl_cubemap_parameters (guint id,
     rlCubemapParameters (id, param, value);
 }
 
-/**
+/*
  * grl_rlgl_load_texture:
  * @data: (nullable): pixel data, every level packed largest first
  * @width: width of level 0
@@ -126,7 +126,7 @@ grl_rlgl_load_texture (gconstpointer  data,
     return rlLoadTexture (data, width, height, (int) format, mipmap_count);
 }
 
-/**
+/*
  * grl_rlgl_update_texture:
  * @id: a texture id
  * @offset_x: left of the region
@@ -152,7 +152,7 @@ grl_rlgl_update_texture (guint          id,
     rlUpdateTexture (id, offset_x, offset_y, width, height, (int) format, data);
 }
 
-/**
+/*
  * grl_rlgl_unload_texture:
  * @id: a texture id
  *
