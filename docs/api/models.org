@@ -220,6 +220,10 @@ GrlBoneInfo *    grl_model_get_bone           (GrlModel *model,
 GrlTransform *   grl_model_get_bind_pose_transform (GrlModel *model,
                                                      gint      bone);
 
+/* GPU skinning (see GPU Skinning below) */
+gboolean         grl_model_prepare_gpu_skinning (GrlModel *model);
+gboolean         grl_model_has_gpu_skinning     (GrlModel *model);
+
 /* Bounding box */
 GrlBoundingBox * grl_model_get_bounding_box   (GrlModel *model);
 
@@ -349,6 +353,15 @@ void           grl_model_animation_blend           (GrlModel          *model,
                                                     GrlModelAnimation *anim_b,
                                                     gfloat             frame_b,
                                                     gfloat             blend);
+void           grl_model_animation_update_bones    (GrlModelAnimation *anim,
+                                                    GrlModel          *model,
+                                                    gfloat             frame);
+void           grl_model_animation_blend_bones     (GrlModel          *model,
+                                                    GrlModelAnimation *anim_a,
+                                                    gfloat             frame_a,
+                                                    GrlModelAnimation *anim_b,
+                                                    gfloat             frame_b,
+                                                    gfloat             blend);
 #+end_src
 
 | Method                                                  | Description                                                                  |
@@ -360,6 +373,10 @@ void           grl_model_animation_blend           (GrlModel          *model,
 | =is_valid(model)=                                       | Check if the animation is compatible with =model=                            |
 | =update(model, frame)=                                  | Apply animation frame to model (wraps if =frame= exceeds the keyframe count) |
 | =blend(model, anim_a, frame_a, anim_b, frame_b, blend)= | Blend =model='s pose between two animation frames (see below)                |
+| =update_bones(model, frame)=                            | Like =update()=, bones only: no CPU skinning, no buffer upload (GPU skinning) |
+| =blend_bones(model, anim_a, frame_a, anim_b, frame_b, blend)= | Like =blend()=, bones only (GPU skinning)                              |
+
+=update()= and =blend()= skin on the CPU: raylib poses the bones, then transforms every vertex and normal of every skinned mesh and re-uploads the position and normal buffers. For many animated models that is most of the frame. See [[#gpu-skinning][GPU Skinning]] for the alternative.
 
 *** Animation Blending
 :PROPERTIES:
@@ -425,6 +442,38 @@ g_free (animations);
 :CUSTOM_ID: skeletal-animation--gpu-skinning
 :END:
 raylib 6.0 adds GPU vertex skinning for skeletal animation. Two GBoxed value types describe the skeleton and its poses: =GrlBoneInfo= (the static bone hierarchy) and =GrlTransform= (a decomposed translation/rotation/scale pose).
+
+*** GPU Skinning
+:PROPERTIES:
+:CUSTOM_ID: gpu-skinning
+:END:
+The embedded raylib is built with =SUPPORT_GPU_SKINNING 0= (raylib's default, because some GPUs offer only 8 vertex buffers), so loaded meshes carry no bone attributes on the GPU and =UpdateModelAnimation()= always skins on the CPU. graylib adds the pieces to skin in a vertex shader without changing raylib:
+
+| Function                                 | What it does                                                                                                                         |
+|------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------|
+| =grl_model_prepare_gpu_skinning(model)=  | First call: uploads each skinned mesh's bone indices (=u8 x4=) and weights (=f32 x4=) into its vertex array at raylib's bone attribute locations (=RL_DEFAULT_SHADER_ATTRIB_LOCATION_BONEINDICES= 7 / =_BONEWEIGHTS= 8). Every call: restores the bind pose in the position/normal buffers if CPU skinning wrote a pose there since. Returns =FALSE= (and changes nothing) without a skeleton or outside OpenGL 3.3/4.3. Cheap once prepared. |
+| =grl_model_has_gpu_skinning(model)=      | Whether the bone attributes are uploaded                                                                                             |
+| =grl_model_animation_update_bones()=     | Poses the skeleton (current pose and =boneMatrices=) without touching any vertex                                                     |
+| =grl_model_animation_blend_bones()=      | Same for a two-clip blend                                                                                                            |
+
+The bones-only functions call raylib's =UpdateModelAnimation()= / =UpdateModelAnimationEx()= with a by-value copy of the model whose =meshCount= is 0: the skeleton lives behind pointers and is posed in place, and the vertex loop has nothing to do.
+
+A shader skins these meshes when it declares raylib's inputs: =in vec4 vertexBoneIndices;= and =in vec4 vertexBoneWeights;= (raylib binds them to locations 7 and 8 at link time) and =uniform mat4 boneMatrices[N];= with =N= at least the bone count. raylib's =DrawModel()= / =DrawModelEx()= already upload =boneMatrices= to such a shader; with =DrawMesh()= upload them yourself with =rlSetUniformMatrices()= before the draw. The skinned position is the weighted sum of =boneMatrices[i] * position= over the four influences, exactly what the CPU path computes.
+
+#+begin_src C
+/* once per model, then per pose */
+if (grl_model_prepare_gpu_skinning (character))
+    grl_model_animation_update_bones (walk, character, frame);
+else
+    grl_model_animation_update (walk, character, (gint)frame);
+grl_model_draw (character, pos, 1.0f, white);   /* material uses a skinning shader */
+#+end_src
+
+Notes:
+- CPU-side mesh data stays valid: =Mesh.vertices= / =normals= always hold the bind pose (raylib's collision and bounding box functions read those), and =animVertices= / =animNormals= hold the last CPU-skinned pose, or the bind pose after =grl_model_prepare_gpu_skinning()=.
+- Mixing paths on one model is safe: CPU skinning marks the buffers posed and the next =prepare= restores the bind pose.
+- A model drawn with a non-skinning shader after =prepare= shows its bind pose; keep such models on the CPU path.
+- The extra buffers are freed with the model.
 
 *** GrlBoneInfo
 :PROPERTIES:
