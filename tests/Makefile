@@ -32,6 +32,7 @@ TEST_SOURCES := \
 	test-enums.c \
 	test-font.c \
 	test-entity.c \
+	test-interpolation.c \
 	test-scene.c \
 	test-interfaces.c \
 	test-math-utils.c \

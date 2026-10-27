@@ -88,10 +88,9 @@ grl_sprite_draw (GrlEntity *entity)
     if (priv->texture == NULL)
         return;
 
-    /* Entity transform. Everything below lives on the stack: sprites are
-     * drawn every frame, often thousands of them. */
-    rotation = grl_entity_get_rotation (entity);
-    scale = grl_entity_get_scale (entity);
+    /* Entity transform, interpolated for drawing. Everything below lives
+     * on the stack: sprites are drawn every frame, often thousands. */
+    grl_entity_get_render_pose (entity, &dest.x, &dest.y, &rotation, &scale);
     grl_entity_get_origin_xy (entity, &origin.x, &origin.y);
 
     /* Determine source rectangle */
@@ -116,9 +115,7 @@ grl_sprite_draw (GrlEntity *entity)
     if (priv->flip_v)
         source.height = -source.height;
 
-    /* Apply scale to destination */
-    dest.x = grl_entity_get_x (entity);
-    dest.y = grl_entity_get_y (entity);
+    /* Apply scale to destination (position from the render pose) */
     dest.width = grl_entity_get_width (entity) * scale;
     dest.height = grl_entity_get_height (entity) * scale;
 

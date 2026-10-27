@@ -105,6 +105,7 @@
 #include "scene/grl-drawable.h"
 #include "scene/grl-updatable.h"
 #include "scene/grl-collidable.h"
+#include "scene/grl-interpolation.h"
 #include "scene/grl-entity.h"
 #include "scene/grl-sprite.h"
 #include "scene/grl-animated-texture.h"
