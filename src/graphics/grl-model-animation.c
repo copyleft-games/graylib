@@ -6,6 +6,7 @@
  */
 
 #include "grl-model-animation.h"
+#include "grl-graphics-private.h"
 #include <gio/gio.h>
 #include <raylib.h>
 
@@ -379,6 +380,7 @@ grl_model_animation_update (GrlModelAnimation *self,
 
     rl_model = (Model *)grl_model_get_handle (model);
     UpdateModelAnimation (*rl_model, priv->animation, frame);
+    grl_model_mark_cpu_posed (model);
 }
 
 /*
@@ -417,6 +419,85 @@ grl_model_animation_blend (GrlModel          *model,
 
     rl_model = (Model *)grl_model_get_handle (model);
     UpdateModelAnimationEx (*rl_model, priv_a->animation, frame_a,
+                            priv_b->animation, frame_b, blend);
+    grl_model_mark_cpu_posed (model);
+}
+
+/*
+ * grl_model_animation_update_bones:
+ * @self: A #GrlModelAnimation
+ * @model: The model to pose
+ * @frame: The animation frame; fractional frames interpolate between
+ *   keyframes and frames past the end wrap
+ *
+ * Poses @model's skeleton like grl_model_animation_update() (the current
+ * pose and the bone matrices) without skinning any vertex on the CPU or
+ * touching the vertex buffers: the GPU skinning half of it. Pair it with
+ * grl_model_prepare_gpu_skinning() and a skinning shader.
+ *
+ * raylib's UpdateModelAnimation() takes the model by value and skins the
+ * first meshCount meshes after posing the bones; the bones live behind
+ * pointers, so a copy with no meshes poses the shared skeleton and skips
+ * the vertex work.
+ */
+void
+grl_model_animation_update_bones (GrlModelAnimation *self,
+                                  GrlModel          *model,
+                                  gfloat             frame)
+{
+    GrlModelAnimationPrivate *priv;
+    Model                     bones_only;
+
+    g_return_if_fail (GRL_IS_MODEL_ANIMATION (self));
+    g_return_if_fail (GRL_IS_MODEL (model));
+
+    priv = grl_model_animation_get_instance_private (self);
+
+    if (!priv->valid)
+        return;
+
+    bones_only = *(Model *)grl_model_get_handle (model);
+    bones_only.meshCount = 0;
+    UpdateModelAnimation (bones_only, priv->animation, frame);
+}
+
+/*
+ * grl_model_animation_blend_bones:
+ * @model: The model to pose
+ * @anim_a: First animation
+ * @frame_a: Frame within @anim_a
+ * @anim_b: Second animation to blend toward
+ * @frame_b: Frame within @anim_b
+ * @blend: Blend factor in [0.0, 1.0] (0.0 = @anim_a, 1.0 = @anim_b)
+ *
+ * grl_model_animation_blend() without the CPU skinning: poses the current
+ * pose and bone matrices only (see grl_model_animation_update_bones()).
+ */
+void
+grl_model_animation_blend_bones (GrlModel          *model,
+                                 GrlModelAnimation *anim_a,
+                                 gfloat             frame_a,
+                                 GrlModelAnimation *anim_b,
+                                 gfloat             frame_b,
+                                 gfloat             blend)
+{
+    GrlModelAnimationPrivate *priv_a;
+    GrlModelAnimationPrivate *priv_b;
+    Model                     bones_only;
+
+    g_return_if_fail (GRL_IS_MODEL (model));
+    g_return_if_fail (GRL_IS_MODEL_ANIMATION (anim_a));
+    g_return_if_fail (GRL_IS_MODEL_ANIMATION (anim_b));
+
+    priv_a = grl_model_animation_get_instance_private (anim_a);
+    priv_b = grl_model_animation_get_instance_private (anim_b);
+
+    if (!priv_a->valid || !priv_b->valid)
+        return;
+
+    bones_only = *(Model *)grl_model_get_handle (model);
+    bones_only.meshCount = 0;
+    UpdateModelAnimationEx (bones_only, priv_a->animation, frame_a,
                             priv_b->animation, frame_b, blend);
 }
 

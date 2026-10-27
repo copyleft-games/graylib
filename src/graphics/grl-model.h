@@ -267,6 +267,39 @@ void                grl_model_draw_wires_ex         (GrlModel           *self,
                                                      GrlColor           *tint);
 
 /**
+ * grl_model_prepare_gpu_skinning:
+ * @self: A #GrlModel
+ *
+ * Gets @self ready to be skinned by a vertex shader: uploads each skinned
+ * mesh's bone indices and weights into its vertex array at raylib's bone
+ * attribute locations (where raylib binds a shader's "vertexBoneIndices"
+ * and "vertexBoneWeights" inputs) on the first call, and restores the
+ * bind pose in the position and normal buffers whenever CPU skinning
+ * (grl_model_animation_update(), grl_model_animation_blend()) wrote a
+ * pose there since the last call. Pose the bones with
+ * grl_model_animation_update_bones() or
+ * grl_model_animation_blend_bones() afterwards, and draw with a shader
+ * that reads the "boneMatrices" uniform. Cheap once prepared. Needs a
+ * graphics context.
+ *
+ * Returns: %TRUE when @self has a skeleton and its skinned meshes can be
+ *          skinned on the GPU (OpenGL 3.3 or 4.3); %FALSE otherwise
+ */
+GRL_AVAILABLE_IN_ALL
+gboolean            grl_model_prepare_gpu_skinning  (GrlModel           *self);
+
+/**
+ * grl_model_has_gpu_skinning:
+ * @self: A #GrlModel
+ *
+ * Whether grl_model_prepare_gpu_skinning() has succeeded on @self.
+ *
+ * Returns: %TRUE when the bone attributes are on the GPU
+ */
+GRL_AVAILABLE_IN_ALL
+gboolean            grl_model_has_gpu_skinning      (GrlModel           *self);
+
+/**
  * grl_model_get_handle:
  * @self: A #GrlModel
  *
