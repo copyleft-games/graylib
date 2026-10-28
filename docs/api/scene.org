@@ -16,6 +16,15 @@ The scene module provides three interfaces that can be implemented by any GObjec
 | =GrlUpdatable=  | Objects that update each frame with delta time        |
 | =GrlCollidable= | Objects that participate in collision detection       |
 
+*** Per-call cost
+:PROPERTIES:
+:CUSTOM_ID: per-call-cost
+:END:
+Engines call =grl_updatable_update()=, =grl_drawable_draw()= and the =GrlEntity= getters for every object every frame, so their argument checks are cheap:
+
+- GLib's instance check only has an inline fast path for an exact type match; a subclass instance (every game object is one) or an interface check calls into the type system. The entity accessors and the =GrlUpdatable= / =GrlDrawable= entry points remember the last instance type that passed their check (one atomic word per source file, =src/grl-type-check-private.h=). Conformance never stops being true, so this is exact: non-conforming arguments still fail with the same critical.
+- =grl_updatable_update()= and =grl_drawable_draw()= look the instance's vtable up once and use it for both the active/visible test and the call; a subclass that re-implements an interface is still dispatched (and asked whether it is active or visible) through its own vtable.
+
 ** GrlDrawable Interface
 :PROPERTIES:
 :CUSTOM_ID: grldrawable-interface

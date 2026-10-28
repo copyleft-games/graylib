@@ -9,6 +9,14 @@
 
 #include "config.h"
 #include "grl-updatable.h"
+#include "../grl-type-check-private.h"
+
+/* Interface checks always take the slow type system path; cache the last
+ * conforming instance type (see grl-type-check-private.h). */
+static gsize updatable_check_cache;
+#undef GRL_IS_UPDATABLE
+#define GRL_IS_UPDATABLE(obj) \
+    (grl_type_check_instance_cached ((obj), GRL_TYPE_UPDATABLE, &updatable_check_cache))
 
 /**
  * SECTION:grl-updatable
@@ -57,6 +65,33 @@ grl_updatable_default_init (GrlUpdatableInterface *iface)
 }
 
 /*
+ * updatable_get_active_iface:
+ * @self: A #GrlUpdatable
+ * @iface: @self's #GrlUpdatableInterface
+ *
+ * grl_updatable_get_active() for a caller that has already validated @self
+ * and looked up its vtable.
+ */
+static gboolean
+updatable_get_active_iface (GrlUpdatable          *self,
+                            GrlUpdatableInterface *iface)
+{
+    gpointer data;
+
+    if (iface->get_active != NULL)
+        return iface->get_active (self);
+
+    /* Default implementation using qdata */
+    data = g_object_get_qdata (G_OBJECT (self), active_quark);
+
+    /* Default to active if not set */
+    if (data == NULL)
+        return TRUE;
+
+    return GPOINTER_TO_INT (data) != 0;
+}
+
+/*
  * grl_updatable_update:
  * @self: A #GrlUpdatable
  * @delta: Time elapsed since the last frame in seconds
@@ -71,11 +106,10 @@ grl_updatable_update (GrlUpdatable *self,
 
     g_return_if_fail (GRL_IS_UPDATABLE (self));
 
-    /* Check if active first */
-    if (!grl_updatable_get_active (self))
-        return;
-
+    /* Check if active first; one vtable lookup serves both calls */
     iface = GRL_UPDATABLE_GET_IFACE (self);
+    if (!updatable_get_active_iface (self, iface))
+        return;
 
     if (iface->update != NULL)
         iface->update (self, delta);
@@ -93,23 +127,12 @@ gboolean
 grl_updatable_get_active (GrlUpdatable *self)
 {
     GrlUpdatableInterface *iface;
-    gpointer data;
 
     g_return_val_if_fail (GRL_IS_UPDATABLE (self), FALSE);
 
     iface = GRL_UPDATABLE_GET_IFACE (self);
 
-    if (iface->get_active != NULL)
-        return iface->get_active (self);
-
-    /* Default implementation using qdata */
-    data = g_object_get_qdata (G_OBJECT (self), active_quark);
-
-    /* Default to active if not set */
-    if (data == NULL)
-        return TRUE;
-
-    return GPOINTER_TO_INT (data) != 0;
+    return updatable_get_active_iface (self, iface);
 }
 
 /*
