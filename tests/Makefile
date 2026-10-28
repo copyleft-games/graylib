@@ -25,6 +25,7 @@ TEST_SOURCES := \
 	test-bounding-box.c \
 	test-color.c \
 	test-input-event-mods.c \
+	test-frame-sync.c \
 	test-rectangle.c \
 	test-collision.c \
 	test-camera2d.c \

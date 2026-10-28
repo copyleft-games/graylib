@@ -237,6 +237,39 @@ gfloat dt = grl_window_get_frame_time (window);
 gdouble time = grl_window_get_time (window);
 #+end_src
 
+*** Frames in Flight (Input Latency)
+:PROPERTIES:
+:CUSTOM_ID: frames-in-flight
+:END:
+A GL driver lets the CPU queue finished frames ahead of the GPU before it blocks (Mesa about one, other drivers up to three). Every queued frame is input latency: the input a frame was built from is that much older when it reaches the screen. *Frame sync* (=src/core/grl-frame-sync.h=) bounds the queue with GL sync objects: before each buffer swap it fences the frame (=glFenceSync()=) and waits (=glClientWaitSync()=) until at most N - 1 earlier frames are unfinished on the GPU, so with the frame the CPU builds next at most N are in flight.
+
+#+begin_src C
+/* on a window: grl_window_end_drawing() and grl_window_swap_buffers() honour it */
+grl_window_set_max_frames_in_flight (window, 2);
+g_object_set (window, "max-frames-in-flight", 1, NULL);
+
+/* raw raylib loops: grl_frame_sync_end_drawing() in place of EndDrawing() */
+grl_frame_sync_set_max_frames_in_flight (2);
+BeginDrawing ();
+/* ... */
+grl_frame_sync_end_drawing ();
+
+gdouble waited = grl_frame_sync_get_last_wait ();   /* seconds the last swap waited on the GPU */
+#+end_src
+
+| Bound | Behaviour                                                                                          |
+|-------+----------------------------------------------------------------------------------------------------|
+| 0     | Off (default): plain =EndDrawing()=, the driver's own limit                                        |
+| 1     | The GPU finishes each frame before its swap: the next input poll sees an idle GPU. Lowest latency; CPU and GPU work no longer overlap, so a GPU-bound program loses frame rate |
+| 2     | One frame of CPU/GPU overlap (other APIs' "max frame latency 1"). What Mesa does by itself; caps drivers that queue three |
+| 3-4   | Looser caps (=GRL_FRAME_SYNC_MAX_FRAMES= is 4)                                                     |
+
+Where the wait sits: =grl_frame_sync_end_drawing()= flushes raylib's render batch, fences and waits, then calls =EndDrawing()= (swap, frame limiter, input poll), so the input the next frame reads is always polled after the wait. raylib's own frame-time accounting (=GetFrameTime()=, =GetFPS()=) is untouched. A fence the GPU already passed is checked without a flush or a block, so on a GPU that keeps up the cost is one fence per frame (measured: no frame-rate change at ~1000 fps on an Iris Xe, a 2 µs median wait on llvmpipe). With the bound at 0 the present path is exactly =EndDrawing()=.
+
+Support: sync objects are core in OpenGL 3.2+ and ES 3.0, so raylib's desktop GL 3.3 build always has them; on GL 1.1/2.1/ES 2.0 or the software renderer =grl_frame_sync_is_supported()= is =FALSE= and every call is a no-op. A wait gives up after 100 ms (counted by =grl_frame_sync_get_timeouts()=) so a lost GPU cannot hang the frame; a =GL_WAIT_FAILED= turns frame sync off for that context with a warning. The bound is process-wide, like raylib's window and GL context; =GrlWindow= deletes the outstanding fences when it closes the window (=grl_frame_sync_reset()=; raw raylib code calls it before =CloseWindow()=).
+
+When to use it: measured on Mesa (Iris Xe, Wayland and XWayland), the driver already holds GPU-bound and vsynced frames to about one frame of queue, so 2 changes nothing there and is a cheap guard elsewhere; 1 cut input-to-GPU-done latency from 3.5 to 2.5 ms on an uncapped GPU-bound scene at a 19% frame-rate cost, and changed nothing with vsync on. libregnum's =docs/performance.org= ("Input latency") has the full tables.
+
 *** Running the Window Loop
 :PROPERTIES:
 :CUSTOM_ID: running-the-window-loop
@@ -286,6 +319,7 @@ g_autofree gchar *text = grl_window_get_clipboard_text (window);
 | =height=         | int     | Window height (construct-only)      |
 | =target-fps=     | int     | Target frames per second            |
 | =is-initialized= | boolean | Whether window is ready (read-only) |
+| =max-frames-in-flight= | uint | Frames in flight bounded with GL fences (0 = driver default); see [[#frames-in-flight][Frames in Flight]] |
 
 *** Subclassing
 :PROPERTIES:

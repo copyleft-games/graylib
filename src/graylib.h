@@ -66,6 +66,7 @@
 #include "core/grl-application.h"
 #include "core/grl-window.h"
 #include "core/grl-input.h"
+#include "core/grl-frame-sync.h"
 
 /* Graphics module */
 #include "graphics/grl-image.h"

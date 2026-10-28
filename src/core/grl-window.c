@@ -10,6 +10,7 @@
 #include "config.h"
 #include "grl-window.h"
 #include "grl-input-private.h"	/* grl_input_drain_injections (grl_window_poll_events) */
+#include "grl-frame-sync.h"	/* bounded frames in flight on the present path */
 #include <raylib.h>
 #include <rlgl.h>		/* rlDrawRenderBatchActive (grl_window_swap_buffers) */
 #include <math.h>
@@ -82,6 +83,7 @@ enum
     PROP_HEIGHT,
     PROP_TARGET_FPS,
     PROP_IS_INITIALIZED,
+    PROP_MAX_FRAMES_IN_FLIGHT,
     N_PROPS
 };
 
@@ -266,6 +268,10 @@ grl_window_get_property (GObject    *object,
         g_value_set_boolean (value, priv->is_initialized);
         break;
 
+    case PROP_MAX_FRAMES_IN_FLIGHT:
+        g_value_set_uint (value, grl_frame_sync_get_max_frames_in_flight ());
+        break;
+
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
         break;
@@ -306,6 +312,10 @@ grl_window_set_property (GObject      *object,
         {
             SetTargetFPS (priv->target_fps);
         }
+        break;
+
+    case PROP_MAX_FRAMES_IN_FLIGHT:
+        grl_window_set_max_frames_in_flight (self, g_value_get_uint (value));
         break;
 
     default:
@@ -369,6 +379,8 @@ grl_window_dispose (GObject *object)
     /* Close the raylib window if it was initialized */
     if (priv->is_initialized && IsWindowReady ())
     {
+        /* fences belong to the GL context about to be destroyed */
+        grl_frame_sync_reset ();
         CloseWindow ();
         priv->is_initialized = FALSE;
     }
@@ -466,6 +478,25 @@ grl_window_class_init (GrlWindowClass *klass)
                           0, G_MAXINT,
                           60,
                           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+
+    /**
+     * GrlWindow:max-frames-in-flight:
+     *
+     * How many frames may be in flight (the one being built plus those
+     * the GPU has not finished), bounded with GL fences at each swap: 1
+     * is the lowest input latency, 2 keeps one frame of CPU/GPU overlap.
+     * 0 (the default) leaves it to the driver, which allows one to three
+     * queued frames.  Process-wide, like the GL context: see
+     * grl_frame_sync_set_max_frames_in_flight().
+     */
+    properties[PROP_MAX_FRAMES_IN_FLIGHT] =
+        g_param_spec_uint ("max-frames-in-flight",
+                           "Max frames in flight",
+                           "Frames in flight, bounded with GL fences (0 = driver default)",
+                           0, GRL_FRAME_SYNC_MAX_FRAMES,
+                           0,
+                           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS |
+                           G_PARAM_EXPLICIT_NOTIFY);
 
     /**
      * GrlWindow:is-initialized:
@@ -1657,7 +1688,9 @@ grl_window_end_drawing (GrlWindow *self)
 {
     g_return_if_fail (GRL_IS_WINDOW (self));
 
-    EndDrawing ();
+    /* EndDrawing(), with the frame-sync wait before its swap when
+       #GrlWindow:max-frames-in-flight is set */
+    grl_frame_sync_end_drawing ();
 }
 
 /**
@@ -1677,6 +1710,7 @@ grl_window_swap_buffers (GrlWindow *self)
     g_return_if_fail (GRL_IS_WINDOW (self));
 
     rlDrawRenderBatchActive ();   /* flush queued draws to the back buffer */
+    grl_frame_sync_before_present ();   /* bound frames in flight (no-op when off) */
     SwapScreenBuffer ();          /* present (no PollInputEvents, no WaitTime) */
 }
 
@@ -1701,6 +1735,45 @@ grl_window_poll_events (GrlWindow *self)
        press/release edges survive the current->previous copy that
        PollInputEvents performs at its start (see grl-input.c).  */
     grl_input_drain_injections ();
+}
+
+/**
+ * grl_window_set_max_frames_in_flight:
+ * @self: A #GrlWindow.
+ * @frames: frames the CPU may queue ahead of the GPU, 0 to
+ *   %GRL_FRAME_SYNC_MAX_FRAMES; 0 turns the bound off
+ *
+ * Bounds the frames in flight on grl_window_end_drawing() and
+ * grl_window_swap_buffers() with GL fences, for lower input-to-photon
+ * latency (see grl_frame_sync_set_max_frames_in_flight()).  Does nothing
+ * on a context without sync objects.
+ */
+void
+grl_window_set_max_frames_in_flight (GrlWindow *self,
+                                     guint      frames)
+{
+    g_return_if_fail (GRL_IS_WINDOW (self));
+
+    frames = MIN (frames, (guint) GRL_FRAME_SYNC_MAX_FRAMES);
+    if (grl_frame_sync_get_max_frames_in_flight () == frames)
+        return;
+
+    grl_frame_sync_set_max_frames_in_flight (frames);
+    g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_MAX_FRAMES_IN_FLIGHT]);
+}
+
+/**
+ * grl_window_get_max_frames_in_flight:
+ * @self: A #GrlWindow.
+ *
+ * Returns: the frames-in-flight bound (0: off)
+ */
+guint
+grl_window_get_max_frames_in_flight (GrlWindow *self)
+{
+    g_return_val_if_fail (GRL_IS_WINDOW (self), 0);
+
+    return grl_frame_sync_get_max_frames_in_flight ();
 }
 
 /**
@@ -2048,7 +2121,7 @@ grl_window_run (GrlWindow *self)
         /* Draw phase */
         BeginDrawing ();
         g_signal_emit (self, signals[SIGNAL_DRAW], 0);
-        EndDrawing ();
+        grl_frame_sync_end_drawing ();
     }
 
     /* Emit close-request signal */
