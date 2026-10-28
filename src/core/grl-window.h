@@ -330,6 +330,13 @@ GRL_AVAILABLE_IN_ALL
 void                grl_window_poll_events      (GrlWindow          *self);
 
 GRL_AVAILABLE_IN_ALL
+void                grl_window_set_max_frames_in_flight (GrlWindow  *self,
+                                                         guint       frames);
+
+GRL_AVAILABLE_IN_ALL
+guint               grl_window_get_max_frames_in_flight (GrlWindow  *self);
+
+GRL_AVAILABLE_IN_ALL
 void                grl_window_clear_background (GrlWindow          *self,
                                                  const GrlColor     *color);
 
