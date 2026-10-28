@@ -201,18 +201,20 @@ GRL_AVAILABLE_IN_ALL
 gboolean            grl_sound_is_alias              (GrlSound           *self);
 
 /**
- * grl_sound_update: (skip)
+ * grl_sound_update:
  * @self: A #GrlSound
- * @data: New sample data, @sample_count samples in the sound's format
- * @sample_count: Number of samples to update
+ * @data: (array zero-terminated=0) (element-type guint8): Packed playback bytes
+ * @sample_count: Number of playback frames to update (the C parameter name
+ *   is retained for compatibility); must not exceed the sound's frame count
  *
  * Updates the sound buffer with new sample data. This can be used
  * for real-time audio generation or streaming.
  *
- * The sample data format must match the format the sound was
- * originally created with.  Not available to language bindings: the
- * buffer's byte size depends on that format, which GObject Introspection
- * cannot describe.
+ * The caller retains @data, which is read only during this call. Its format
+ * must match the converted playback buffer, not necessarily the source wave
+ * (raylib's default is 32-bit float stereo). Provide @sample_count complete
+ * frames in that format. Bindings must validate the computed byte count:
+ * @sample_count is not a byte-array length, and no terminator is used.
  */
 GRL_AVAILABLE_IN_ALL
 void                grl_sound_update                (GrlSound           *self,

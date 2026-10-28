@@ -31,6 +31,7 @@ See the [[file:getting-started.org][Getting Started Guide]] for installation and
 :CUSTOM_ID: building
 :END:
 See the [[file:guides/building.org][Building Guide]] for build instructions.
+See also the [[file:gir-contract.org][full introspection and ownership contract]] and its metadata regression tests.
 
 ** Best Practices
 :PROPERTIES:

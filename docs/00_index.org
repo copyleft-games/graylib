@@ -1,0 +1,4 @@
+#+title: Graylib documentation index
+
+- [[file:index.org][Library documentation and API guides]]
+- [[file:gir-contract.org][Full introspection and ownership contract]]

@@ -1,0 +1,27 @@
+#+title: Full introspection and ownership contract
+
+* Boundary and ownership
+Graylib owns the gtk-doc contracts of its public C API. The full scanner input remains all 79 public headers and 87 implementation files in the root Makefile. There is no reduced renderer-only namespace, generated-GIR patching, or public-API removal to obtain a clean scan. Five rlgl definitions formerly duplicated their header documentation; their public contracts now have one authoritative header block, with ordinary implementation comments retained where useful. This change does not alter C signatures, object layouts, or executable statements.
+
+The worktree is based exactly on =3857bbadd15bfc1b6982ab17f314124596cd6ca7=, branch =fix/visual-gir=, origin =git@gitlab.com:copyleft-games/graylib.git=. Its five third-party dependencies were cloned into independent directories at the recorded gitlinks: raylib =dbc56a87=, raudio =811c150=, raygui =0b94b80=, rpng =164f8ea= and rres =29883c1=. Their raysan5 GitHub remotes were verified recursively; no vendor source or gitlink is changed. The borrowed libregnum-playable Graylib was only read.
+
+* Public metadata rules
+- Raw texture upload/update buffers are borrowed nonterminated byte arrays, consumed synchronously. Byte sizes follow the declared pixel format, dimensions and mip count. A new texture handle is a scalar GPU ID released explicitly with =grl_rlgl_unload_texture()= in the originating graphics context.
+- The existing public sound/stream update methods are visible as borrowed nonterminated byte arrays rather than skipped methods. Frame counts are not byte lengths: callers/bindings must validate the complete format-dependent buffer. Sound updates use raylib's converted playback format (normally float32 stereo), rather than assuming the original wave format. These are metadata-only repairs; tests never open an audio device.
+- The deliberately internal =grl_input_drain_injections()= stays skipped. Public methods are not skipped to conceal annotation warnings.
+- =grl_resource_pack_load_raw()= returns caller-owned bytes with a =gsize= output length, nullable failure and a real GError throw. =grl_image_get_pixels()= returns a borrowed nullable byte view. Material texture maps are borrowed; model transform getters return independently owned boxed values.
+- PNG chunk-array failures are nullable, with an output length and full array/element ownership. Texture constructors return wrapper objects even if the underlying texture is invalid; their documentation directs callers to =grl_texture_is_valid()=. Font loading may substitute raylib's default font; its wrapper is caller-owned and checked with =grl_font_is_valid()=.
+
+* Acceptance and verification
+Normal full scans now use =--warn-all --warn-error=, followed by =g-ir-compiler=. Both =build/gir/Graylib-1.gir= and =build/gir/Graylib-1.typelib= pass without scanner/compiler warnings. =--strict= additionally diagnoses existing ABI names shared by properties/methods/signals and intentional nullable boxed copy/free instance parameters; these advisory strict diagnostics are not repaired by breaking the ABI or falsifying nullability. No warning filter or scanner-output rewriting is used.
+
+The GTest metadata suite loads the actual compiled typelib through GLib's integrated =girepository-2.0=, verifying public rlgl entry points, byte-array semantics, nullable allocation, borrowed pixels/maps, owned transforms, sized resource returns/GError, PNG arrays and the two public raw audio-update methods. It performs no GPU/audio operations. The selected twelve pre-existing CPU suites pass 283 checks; the metadata suite passes five, for 288 checks total without skips. The broader legacy audio/display suite is not claimed as run.
+
+Fedora packages for the wrapper/metadata build are =gcc make pkgconf-pkg-config glib2-devel gobject-introspection-devel mesa-libGL-devel libX11-devel wayland-devel libxkbcommon-devel=; =girepository-2.0= comes from =glib2-devel=. No package installation is performed.
+
+#+begin_src bash
+make -j8 CC=gcc all
+make -C tests CC=gcc test-introspection
+#+end_src
+
+The first independent third-party raylib bootstrap emitted an existing GCC =external/m3d.h= maybe-uninitialized warning. That third-party source is unchanged; subsequent complete Graylib wrapper/GIR builds are warning-free using the already-built independent raylib archive. This is not a claim of warning-free rebuilding of all third-party sources. Full wrapper build and metadata logs are retained locally in the sibling engine's ignored =build/aux-uv-verification/= directory.

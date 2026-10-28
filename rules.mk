@@ -163,7 +163,7 @@ ALL_LIBS := $(GLIB_LIBS) $(RAYLIB_LIBS) $(MATH_LIBS)
 # =============================================================================
 
 ifeq ($(BUILD_GIR),1)
-    GIR_SCANNER_FLAGS := --warn-all
+    GIR_SCANNER_FLAGS := --warn-all --warn-error
     GIR_SCANNER_FLAGS += --namespace=Graylib
     GIR_SCANNER_FLAGS += --nsversion=$(API_VERSION)
     GIR_SCANNER_FLAGS += --identifier-prefix=Grl

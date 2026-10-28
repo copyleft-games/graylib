@@ -36,7 +36,8 @@ G_DECLARE_FINAL_TYPE (GrlTexture, grl_texture, GRL, TEXTURE, GObject)
  * Creates a new texture by loading an image file directly to GPU memory.
  * Supports most common image formats (PNG, JPG, BMP, TGA, etc.).
  *
- * Returns: (transfer full): A new #GrlTexture, or %NULL on error
+ * Returns: (transfer full): A new #GrlTexture; check grl_texture_is_valid()
+ *   to detect a failed upload
  */
 GRL_AVAILABLE_IN_ALL
 GrlTexture *        grl_texture_new_from_file   (const gchar        *filename);
@@ -62,12 +63,38 @@ GrlTexture *        grl_texture_new_from_image  (GrlImage           *image);
  *
  * Creates a new texture from raw image file data in memory.
  *
- * Returns: (transfer full): A new #GrlTexture, or %NULL on error
+ * Returns: (transfer full): A new #GrlTexture; check grl_texture_is_valid()
+ *   to detect a failed decode or upload
  */
 GRL_AVAILABLE_IN_ALL
 GrlTexture *        grl_texture_new_from_memory (const gchar        *file_type,
                                                  const guint8       *data,
                                                  gsize               data_size);
+
+/**
+ * grl_texture_new_from_rgba_mipmaps:
+ * @width: base width, 1..16384
+ * @height: base height, 1..16384
+ * @mipmaps: number of supplied levels, including the base
+ * @pixels: (transfer none): packed RGBA8 levels, largest first
+ * @error: (nullable): return location for a validation or upload error
+ *
+ * Uploads an already decoded mip chain without an intermediate file decoder.
+ * Each successive dimension is halved and clamped to one; no levels may follow
+ * the first 1x1 level. The byte count must match exactly and total data is
+ * limited to 256 MiB. Rectangular and partial chains are supported. Validation
+ * precedes graphics access; a successful upload requires a current window.
+ * The caller retains @pixels and may release it after this call. The returned
+ * texture owns its GPU allocation and must be released before window teardown.
+ *
+ * Returns: (transfer full) (nullable): the uploaded texture, or %NULL on error
+ */
+GRL_AVAILABLE_IN_ALL
+GrlTexture *grl_texture_new_from_rgba_mipmaps (gint width,
+                                             gint height,
+                                             gint mipmaps,
+                                             GBytes *pixels,
+                                             GError **error);
 
 /*
  * Properties

@@ -60,6 +60,7 @@ TEST_SOURCES := \
 	test-software-renderer.c \
 	test-sound-pan.c \
 	test-model-skinning.c
+TEST_SOURCES += test-texture-mipmaps.c
 
 # Test executables (with output directory and platform-specific extension)
 TEST_PROGRAMS := $(addprefix $(TESTOUTDIR)/,$(patsubst %.c,%$(EXE_EXT),$(TEST_SOURCES)))
@@ -82,6 +83,16 @@ TEST_LDFLAGS := \
 
 # Default target
 all: $(TESTOUTDIR) $(TEST_PROGRAMS)
+
+# Metadata tests load only the owned build's full typelib and open no devices.
+# Keep this separate from the legacy display/audio suite.
+$(TESTOUTDIR)/test-introspection: test-introspection.c | $(TESTOUTDIR)
+	$(CC) $(EXE_CFLAGS) $(TEST_CFLAGS) $(shell $(PKG_CONFIG) --cflags girepository-2.0) -Werror \
+		-o $@ $< $(shell $(PKG_CONFIG) --libs girepository-2.0)
+
+test-introspection: $(TESTOUTDIR)/test-introspection
+	$(MAKE) -C .. gir
+	GRL_TEST_TYPELIB_DIR=$(PROJROOT)/build/gir $(TESTOUTDIR)/test-introspection --no-sound
 
 # Create output directory
 $(TESTOUTDIR):
@@ -114,4 +125,4 @@ $(TESTOUTDIR)/test-%$(EXE_EXT): test-%.c | $(LIBOUTDIR)/$(LIB_SHARED) $(TESTOUTD
 clean:
 	$(RM) -r $(TESTOUTDIR)
 
-.PHONY: all run clean
+.PHONY: all run clean test-introspection

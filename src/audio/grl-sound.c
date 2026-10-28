@@ -640,14 +640,13 @@ grl_sound_is_alias (GrlSound *self)
 /*
  * grl_sound_update:
  * @self: A #GrlSound
- * @data: (array length=sample_count): New sample data
- * @sample_count: Number of samples to update
+ * @data: Packed playback bytes, borrowed for this call
+ * @sample_count: Number of complete playback frames to update
  *
  * Updates the sound buffer with new sample data. This can be used
  * for real-time audio generation or streaming.
  *
- * The sample data format must match the format the sound was
- * originally created with.
+ * The format must match the converted playback buffer; see grl-sound.h.
  */
 void
 grl_sound_update (GrlSound      *self,
