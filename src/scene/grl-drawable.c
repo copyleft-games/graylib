@@ -9,6 +9,14 @@
 
 #include "config.h"
 #include "grl-drawable.h"
+#include "../grl-type-check-private.h"
+
+/* Interface checks always take the slow type system path; cache the last
+ * conforming instance type (see grl-type-check-private.h). */
+static gsize drawable_check_cache;
+#undef GRL_IS_DRAWABLE
+#define GRL_IS_DRAWABLE(obj) \
+    (grl_type_check_instance_cached ((obj), GRL_TYPE_DRAWABLE, &drawable_check_cache))
 
 /**
  * SECTION:grl-drawable
@@ -60,6 +68,33 @@ grl_drawable_default_init (GrlDrawableInterface *iface)
 }
 
 /*
+ * drawable_get_visible_iface:
+ * @self: A #GrlDrawable
+ * @iface: @self's #GrlDrawableInterface
+ *
+ * grl_drawable_get_visible() for a caller that has already validated @self
+ * and looked up its vtable.
+ */
+static gboolean
+drawable_get_visible_iface (GrlDrawable          *self,
+                            GrlDrawableInterface *iface)
+{
+    gpointer data;
+
+    if (iface->get_visible != NULL)
+        return iface->get_visible (self);
+
+    /* Default implementation using qdata */
+    data = g_object_get_qdata (G_OBJECT (self), visible_quark);
+
+    /* Default to visible if not set */
+    if (data == NULL)
+        return TRUE;
+
+    return GPOINTER_TO_INT (data) != 0;
+}
+
+/*
  * grl_drawable_draw:
  * @self: A #GrlDrawable
  *
@@ -75,8 +110,8 @@ grl_drawable_draw (GrlDrawable *self)
 
     iface = GRL_DRAWABLE_GET_IFACE (self);
 
-    /* Check visibility first */
-    if (!grl_drawable_get_visible (self))
+    /* Check visibility first (same vtable, no second lookup) */
+    if (!drawable_get_visible_iface (self, iface))
         return;
 
     if (iface->draw != NULL)
@@ -95,23 +130,12 @@ gboolean
 grl_drawable_get_visible (GrlDrawable *self)
 {
     GrlDrawableInterface *iface;
-    gpointer data;
 
     g_return_val_if_fail (GRL_IS_DRAWABLE (self), FALSE);
 
     iface = GRL_DRAWABLE_GET_IFACE (self);
 
-    if (iface->get_visible != NULL)
-        return iface->get_visible (self);
-
-    /* Default implementation using qdata */
-    data = g_object_get_qdata (G_OBJECT (self), visible_quark);
-
-    /* Default to visible if not set */
-    if (data == NULL)
-        return TRUE;
-
-    return GPOINTER_TO_INT (data) != 0;
+    return drawable_get_visible_iface (self, iface);
 }
 
 /*

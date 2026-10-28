@@ -13,6 +13,16 @@
 #include "grl-updatable.h"
 #include "grl-collidable.h"
 #include "grl-interpolation-private.h"
+#include "../grl-type-check-private.h"
+
+/* Every accessor validates its instance, and game objects are subclasses,
+ * which miss G_TYPE_CHECK_INSTANCE_TYPE's exact-type fast path. Same check,
+ * cached per instance type (see grl-type-check-private.h); the stringified
+ * g_return_*_if_fail() expressions are unchanged. */
+static gsize entity_check_cache;
+#undef GRL_IS_ENTITY
+#define GRL_IS_ENTITY(obj) \
+    (grl_type_check_instance_cached ((obj), GRL_TYPE_ENTITY, &entity_check_cache))
 
 /**
  * SECTION:grl-entity
