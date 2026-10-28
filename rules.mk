@@ -62,8 +62,21 @@ endif
 # raylib's own Makefile builds the desktop RELEASE configuration at -O1.
 # CUSTOM_CFLAGS is appended after its optimisation flag, so -O2 here wins
 # (raylib's sources are untouched). The tag change forces one rebuild.
+#
+# -fPIC: the static raylib is linked into libgraylib.so, so it must be
+# position-independent. raylib's Makefile adds -fPIC only for shared
+# builds; this worked where gcc defaults to PIE (Fedora) and failed where it
+# does not (FreeBSD's gcc: "relocation R_X86_64_32 ... recompile with
+# -fPIC"). It lives here, not as a second CUSTOM_CFLAGS= on raylib's command
+# line, because the last CUSTOM_CFLAGS= given wins. Windows (MinGW) builds
+# a static archive only and has no use for it.
+ifeq ($(TARGET_PLATFORM),windows)
 RAYLIB_OPT_FLAGS := CUSTOM_CFLAGS=-O2
 RAYLIB_PLATFORM_TAG := $(RAYLIB_PLATFORM_TAG)+O2
+else
+RAYLIB_OPT_FLAGS := CUSTOM_CFLAGS="-O2 -fPIC"
+RAYLIB_PLATFORM_TAG := $(RAYLIB_PLATFORM_TAG)+O2+pic
+endif
 
 # =============================================================================
 # Platform-Specific System Libraries

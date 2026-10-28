@@ -270,12 +270,7 @@ ifeq ($(RAYLIB_SHARED),0)
 	fi
 endif
 
-# Build raylib from source.
-#
-# CUSTOM_CFLAGS=-fPIC: the static raylib is linked into libgraylib.so, so it
-# must be position-independent. raylib's Makefile adds -fPIC only for shared
-# builds; this worked where gcc defaults to PIE (Fedora) and failed where it
-# does not (FreeBSD's gcc: "relocation R_X86_64_32 ... recompile with -fPIC").
+# Build raylib from source (flags, -fPIC included: RAYLIB_OPT_FLAGS in rules.mk).
 raylib:
 ifeq ($(RAYLIB_SHARED),0)
 	$(call print_status,"Building raylib...")
@@ -283,7 +278,7 @@ ifeq ($(TARGET_PLATFORM),windows)
 	cd $(RAYLIB_SRC) && $(MAKE) CC=$(CC) AR=$(AR) \
 		PLATFORM=PLATFORM_DESKTOP PLATFORM_OS=WINDOWS RAYLIB_LIBTYPE=STATIC $(RAYLIB_OPT_FLAGS)
 else
-	cd $(RAYLIB_SRC) && $(MAKE) PLATFORM=PLATFORM_DESKTOP RAYLIB_LIBTYPE=STATIC $(RAYLIB_GLFW_FLAGS) CUSTOM_CFLAGS=-fPIC $(RAYLIB_OPT_FLAGS)
+	cd $(RAYLIB_SRC) && $(MAKE) PLATFORM=PLATFORM_DESKTOP RAYLIB_LIBTYPE=STATIC $(RAYLIB_GLFW_FLAGS) $(RAYLIB_OPT_FLAGS)
 endif
 	@$(MKDIR_P) $(BUILDDIR)
 	@echo "$(RAYLIB_PLATFORM_TAG)" > $(RAYLIB_PLATFORM_MARKER)
