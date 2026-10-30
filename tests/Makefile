@@ -40,6 +40,7 @@ TEST_SOURCES := \
 	test-wave.c \
 	test-audio-stream.c \
 	test-audio-processor.c \
+	test-audio-backend.c \
 	test-music.c \
 	test-ui-control.c \
 	test-ui-button.c \

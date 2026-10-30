@@ -10,7 +10,9 @@
 #include "config.h"
 #include "grl-audio-device.h"
 #include "grl-music-private.h"
+#include "../grl-enums.h"
 #include <raylib.h>
+#include <string.h>
 
 /**
  * SECTION:grl-audio-device
@@ -33,6 +35,16 @@
  *     grl_audio_device_set_master_volume (audio, 0.8f);
  * }
  * ]|
+ *
+ * # Backends
+ *
+ * On Linux and the BSDs the device opens through ALSA first (PipeWire is
+ * reached through pipewire-alsa) and through PulseAudio only if that
+ * fails; see #GrlAudioBackend, grl_audio_device_set_preferred_backend()
+ * and the `GRL_AUDIO_BACKEND` environment variable.  If no backend opens
+ * a device, grl_audio_device_init_audio() returns %FALSE, a message says
+ * so, and every sound, music and stream call is silently inert: the game
+ * keeps running without sound.
  */
 
 typedef struct
@@ -167,6 +179,163 @@ grl_audio_device_init (GrlAudioDevice *self)
     priv->master_volume = 1.0f;
 }
 
+/* ==========================================================================
+ * Backend order
+ *
+ * raylib's InitAudioDevice() lets miniaudio try its backends in its fixed
+ * order, PulseAudio before ALSA on Linux.  miniaudio 0.11.24's PulseAudio
+ * backend dereferences a NULL sink info when libpulse reports an error
+ * for the default-sink lookup in ma_device_init() (its callback ignores
+ * end-of-list < 0, where libpulse passes no info), which PipeWire's pulse
+ * server does now and then when many clients open streams: an
+ * intermittent SIGSEGV inside InitAudioDevice().  raylib takes no backend
+ * list and its sources are not changed here, so graylib steers miniaudio
+ * instead: for ALSA first it points PULSE_SERVER at a socket that does
+ * not exist for the duration of the call (libpulse then fails to connect
+ * at once and miniaudio moves on to ALSA), and restores the variable
+ * right after.  PulseAudio is tried, in miniaudio's own order, only when
+ * ALSA did not open a device.
+ * ========================================================================== */
+
+#if defined(G_OS_UNIX) && !defined(__APPLE__) && !defined(__ANDROID__) && !defined(__EMSCRIPTEN__)
+#define GRL_AUDIO_HAS_PULSE_CHOICE (1)
+#endif
+
+#define NO_PULSE_SERVER "unix:/nonexistent/graylib-no-pulseaudio"
+
+static GrlAudioBackend preferred_backend = GRL_AUDIO_BACKEND_AUTO;
+
+/*
+ * grl_audio_backend_parse:
+ * @name: (nullable): a backend name
+ * @backend: (out): where to store it
+ *
+ * Reads a backend name as `GRL_AUDIO_BACKEND` takes it: `auto`, `alsa`,
+ * `pipewire` (ALSA, through pipewire-alsa), `pulse` or `pulseaudio`,
+ * `none` (also `off`, `null`, `0`), ignoring case.
+ *
+ * Returns: %TRUE if @name names a backend
+ */
+gboolean
+grl_audio_backend_parse (const gchar     *name,
+                         GrlAudioBackend *backend)
+{
+    g_return_val_if_fail (backend != NULL, FALSE);
+
+    if (name == NULL || *name == '\0')
+        return FALSE;
+    if (g_ascii_strcasecmp (name, "auto") == 0 || g_ascii_strcasecmp (name, "default") == 0)
+        *backend = GRL_AUDIO_BACKEND_AUTO;
+    else if (g_ascii_strcasecmp (name, "alsa") == 0 || g_ascii_strcasecmp (name, "pipewire") == 0)
+        *backend = GRL_AUDIO_BACKEND_ALSA;
+    else if (g_ascii_strcasecmp (name, "pulse") == 0 || g_ascii_strcasecmp (name, "pulseaudio") == 0)
+        *backend = GRL_AUDIO_BACKEND_PULSEAUDIO;
+    else if (g_ascii_strcasecmp (name, "none") == 0 || g_ascii_strcasecmp (name, "off") == 0 ||
+             g_ascii_strcasecmp (name, "null") == 0 || strcmp (name, "0") == 0)
+        *backend = GRL_AUDIO_BACKEND_NONE;
+    else
+        return FALSE;
+    return TRUE;
+}
+
+/*
+ * grl_audio_device_set_preferred_backend:
+ * @backend: the backend to open the device through
+ *
+ * Sets the backend the next grl_audio_device_init_audio() (or the first
+ * grl_audio_device_get_default()) opens the device through; an open
+ * device is not reopened.  `GRL_AUDIO_BACKEND` in the environment wins
+ * over this.
+ */
+void
+grl_audio_device_set_preferred_backend (GrlAudioBackend backend)
+{
+    g_return_if_fail (backend >= GRL_AUDIO_BACKEND_AUTO && backend <= GRL_AUDIO_BACKEND_NONE);
+
+    preferred_backend = backend;
+}
+
+/*
+ * grl_audio_device_get_preferred_backend:
+ *
+ * Gets the backend the device will open through: `GRL_AUDIO_BACKEND`
+ * when it names one, else what grl_audio_device_set_preferred_backend()
+ * set (%GRL_AUDIO_BACKEND_AUTO by default).
+ *
+ * Returns: the effective preference
+ */
+GrlAudioBackend
+grl_audio_device_get_preferred_backend (void)
+{
+    GrlAudioBackend from_env;
+    const gchar    *value;
+
+    value = g_getenv ("GRL_AUDIO_BACKEND");
+    if (value != NULL && *value != '\0')
+    {
+        if (grl_audio_backend_parse (value, &from_env))
+            return from_env;
+        g_message ("graylib: unknown GRL_AUDIO_BACKEND=%s (auto, alsa, pipewire, pulseaudio, none); using auto",
+                   value);
+        return GRL_AUDIO_BACKEND_AUTO;
+    }
+    return preferred_backend;
+}
+
+/* raylib's bool read through a byte (graylib's bool/gboolean rule) */
+static gboolean
+device_ready (void)
+{
+    unsigned char raw;
+
+    raw = IsAudioDeviceReady ();
+    return raw != 0;
+}
+
+#ifdef GRL_AUDIO_HAS_PULSE_CHOICE
+/* InitAudioDevice() with miniaudio's PulseAudio backend failing at once */
+static gboolean
+device_open_without_pulse (void)
+{
+    g_autofree gchar *saved = NULL;
+    gboolean          ready;
+
+    saved = g_strdup (g_getenv ("PULSE_SERVER"));
+    g_setenv ("PULSE_SERVER", NO_PULSE_SERVER, TRUE);
+    InitAudioDevice ();
+    if (saved != NULL)
+        g_setenv ("PULSE_SERVER", saved, TRUE);
+    else
+        g_unsetenv ("PULSE_SERVER");
+
+    ready = device_ready ();
+    return ready;
+}
+#endif
+
+/* opens raylib's device through @backend; whether it is ready */
+static gboolean
+device_open (GrlAudioBackend backend)
+{
+    if (backend == GRL_AUDIO_BACKEND_NONE)
+        return FALSE;
+
+#ifdef GRL_AUDIO_HAS_PULSE_CHOICE
+    if (backend == GRL_AUDIO_BACKEND_AUTO || backend == GRL_AUDIO_BACKEND_ALSA)
+    {
+        if (device_open_without_pulse ())
+            return TRUE;
+        if (backend == GRL_AUDIO_BACKEND_ALSA)
+            return FALSE;
+        g_message ("graylib: ALSA opened no audio device; trying PulseAudio");
+    }
+#endif
+
+    /* miniaudio's own order (PulseAudio first where it exists) */
+    InitAudioDevice ();
+    return device_ready ();
+}
+
 /*
  * grl_audio_device_get_default:
  *
@@ -201,6 +370,7 @@ gboolean
 grl_audio_device_init_audio (GrlAudioDevice *self)
 {
     GrlAudioDevicePrivate *priv;
+    GrlAudioBackend        backend;
 
     g_return_val_if_fail (GRL_IS_AUDIO_DEVICE (self), FALSE);
 
@@ -209,9 +379,14 @@ grl_audio_device_init_audio (GrlAudioDevice *self)
     if (priv->is_initialized)
         return TRUE;
 
-    InitAudioDevice ();
+    backend = grl_audio_device_get_preferred_backend ();
+    if (backend == GRL_AUDIO_BACKEND_NONE)
+    {
+        g_message ("graylib: audio is off (backend 'none'); running without sound");
+        return FALSE;
+    }
 
-    if (IsAudioDeviceReady ())
+    if (device_open (backend))
     {
         priv->is_initialized = TRUE;
         SetMasterVolume (priv->master_volume);
@@ -219,6 +394,11 @@ grl_audio_device_init_audio (GrlAudioDevice *self)
         return TRUE;
     }
 
+    /* not fatal: every audio call is inert without a device */
+    g_message ("graylib: could not open an audio device (backend '%s'); running without sound. "
+               "Set GRL_AUDIO_BACKEND (auto, alsa, pulseaudio) to try another backend.",
+               backend == GRL_AUDIO_BACKEND_ALSA ? "alsa" :
+               backend == GRL_AUDIO_BACKEND_PULSEAUDIO ? "pulseaudio" : "auto");
     return FALSE;
 }
 

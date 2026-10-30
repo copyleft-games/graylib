@@ -900,3 +900,27 @@ grl_fill_rule_get_type (void)
 
     return g_define_type_id__volatile;
 }
+
+/*
+ * GrlAudioBackend
+ */
+GType
+grl_audio_backend_get_type (void)
+{
+    static volatile gsize g_define_type_id__volatile = 0;
+
+    if (g_once_init_enter (&g_define_type_id__volatile))
+    {
+        static const GEnumValue values[] = {
+            { GRL_AUDIO_BACKEND_AUTO, "GRL_AUDIO_BACKEND_AUTO", "auto" },
+            { GRL_AUDIO_BACKEND_ALSA, "GRL_AUDIO_BACKEND_ALSA", "alsa" },
+            { GRL_AUDIO_BACKEND_PULSEAUDIO, "GRL_AUDIO_BACKEND_PULSEAUDIO", "pulseaudio" },
+            { GRL_AUDIO_BACKEND_NONE, "GRL_AUDIO_BACKEND_NONE", "none" },
+            { 0, NULL, NULL }
+        };
+        GType g_define_type_id = g_enum_register_static ("GrlAudioBackend", values);
+        g_once_init_leave (&g_define_type_id__volatile, g_define_type_id);
+    }
+
+    return g_define_type_id__volatile;
+}

@@ -56,6 +56,39 @@ gfloat vol = grl_audio_device_get_master_volume (audio);
 grl_audio_device_close (audio);
 #+end_src
 
+*** Backends
+:PROPERTIES:
+:CUSTOM_ID: backends
+:END:
+raylib opens its device through miniaudio, which tries its backends in a fixed order: PulseAudio before ALSA on Linux.  miniaudio 0.11.24 (the one raylib 6.0 bundles) crashes in its PulseAudio backend now and then: in =ma_device_init()= it asks libpulse for the default sink's info, and when libpulse answers that lookup with an error (=eol= < 0, no info), miniaudio's callback ignores the error and dereferences the =NULL= info.  PipeWire's pulse server does that under load, when many clients open streams at once (reproduced: 16 processes opening and closing the device in a loop all crashed within 60 opens, =SIGSEGV= in =ma_context_get_device_info_sink_callback__pulse=).  This miniaudio has no native PipeWire backend.
+
+graylib therefore chooses the order itself.  raylib's =InitAudioDevice()= takes no backend list and raylib's sources are not changed, so graylib makes miniaudio's PulseAudio backend fail at once by pointing =PULSE_SERVER= at a socket that does not exist for the duration of the call (restored right after); miniaudio then moves on to ALSA, which reaches PipeWire through pipewire-alsa (or PulseAudio through its ALSA plugin).  PulseAudio, in miniaudio's own order, is only tried when ALSA opened nothing.
+
+| =GrlAudioBackend= | =GRL_AUDIO_BACKEND= | Order |
+|---------------------------------+---------------------------------+------------------------------------------------------------|
+| =GRL_AUDIO_BACKEND_AUTO= (default) | =auto= | ALSA, then PulseAudio (miniaudio's order) if ALSA fails |
+| =GRL_AUDIO_BACKEND_ALSA= | =alsa=, =pipewire= | ALSA only |
+| =GRL_AUDIO_BACKEND_PULSEAUDIO= | =pulse=, =pulseaudio= | miniaudio's order: PulseAudio first (the old behaviour) |
+| =GRL_AUDIO_BACKEND_NONE= | =none=, =off=, =null=, =0= | no device: the game runs silently |
+
+#+begin_src C
+/* before the device opens (the first grl_audio_device_get_default ()) */
+grl_audio_device_set_preferred_backend (GRL_AUDIO_BACKEND_ALSA);
+
+GrlAudioBackend backend;
+if (grl_audio_backend_parse (user_setting, &backend))
+    grl_audio_device_set_preferred_backend (backend);
+#+end_src
+
+- The environment variable =GRL_AUDIO_BACKEND= wins over the preference set in code (=grl_audio_device_get_preferred_backend()= returns the effective one); an unknown value logs a message and means =auto=.
+- The choice applies the next time the device opens; an open device is not reopened.
+- On macOS, Windows, Android and the web there is no choice to make: =auto=, =alsa= and =pulseaudio= all open the platform's own backend; =none= still turns audio off.
+- *Failure is not fatal.*  When no backend opens a device, =grl_audio_device_init_audio()= returns =FALSE= and logs a message naming the backend and =GRL_AUDIO_BACKEND=; sounds and music fail to load or stay inert and every call on them is a no-op, so a game keeps running without sound.
+- Cost: opening through ALSA took ~0.2 s here against ~0.08 s through PulseAudio (once per run).  Under a private =XDG_RUNTIME_DIR= without the PipeWire socket, ALSA's PipeWire plugin waits a long time for it; set =PIPEWIRE_RUNTIME_DIR= (see libregnum's =docs/performance.org=).
+- Caveat: =setenv()= is not thread-safe against a concurrent =getenv()= on every libc; graylib changes the variable only while the device opens, which games do at start-up.
+
+Tests: =tests/test-audio-backend.c= (=/audio-backend/parse=, =preference=, =none= headless; =/audio-backend/init-stress= opens and closes the device 12 times through the default order when an audio server is reachable).
+
 ** GrlSound
 :PROPERTIES:
 :CUSTOM_ID: grlsound
