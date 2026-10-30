@@ -41,6 +41,7 @@ TEST_SOURCES := \
 	test-audio-stream.c \
 	test-audio-processor.c \
 	test-audio-backend.c \
+	test-audio-queue.c \
 	test-music.c \
 	test-ui-control.c \
 	test-ui-button.c \
@@ -117,8 +118,46 @@ endif
 $(TESTOUTDIR)/test-%$(EXE_EXT): test-%.c | $(LIBOUTDIR)/$(LIB_SHARED) $(TESTOUTDIR)
 	$(CC) $(TEST_CFLAGS) -o $@ $< $(TEST_LDFLAGS)
 
+# ThreadSanitizer run of the audio thread (make -C tests tsan): graylib's
+# audio sources and test-audio-queue built with -fsanitize=thread into
+# their own binary (the rest of graylib from the shared library, raylib
+# uninstrumented: its pthread locks are seen through TSan's interceptors).
+# Needs an audio server for the device tests (GRL_TEST_AUDIO_DEVICE=1).
+# TSAN_CC picks the compiler: gcc needs libtsan (Fedora package libtsan);
+# clang (e.g. TSAN_CC=clang) brings its own runtime.
+TSAN_CC ?= $(CC)
+TSAN_OUTDIR := $(PROJROOT)/build/tsan
+TSAN_SOURCES := \
+	$(PROJROOT)/src/audio/grl-audio-queue.c \
+	$(PROJROOT)/src/audio/grl-audio-device.c \
+	$(PROJROOT)/src/audio/grl-sound.c \
+	$(PROJROOT)/src/audio/grl-music.c \
+	$(PROJROOT)/src/audio/grl-audio-stream.c \
+	$(PROJROOT)/src/audio/grl-audio-processor.c \
+	$(PROJROOT)/src/audio/grl-wave.c \
+	test-audio-queue.c \
+	test-audio-backend.c \
+	test-music.c \
+	test-audio-stream.c
+TSAN_CFLAGS := $(TEST_CFLAGS) -g -O1 -fsanitize=thread -fno-omit-frame-pointer
+
+tsan: $(TSAN_OUTDIR)/test-audio-queue $(TSAN_OUTDIR)/test-audio-backend $(TSAN_OUTDIR)/test-music $(TSAN_OUTDIR)/test-audio-stream
+	TSAN_OPTIONS="halt_on_error=1 second_deadlock_stack=1 suppressions=$(CURDIR)/tsan.supp $$TSAN_OPTIONS" \
+		LD_LIBRARY_PATH=$(LIBOUTDIR):$$LD_LIBRARY_PATH $(TSAN_OUTDIR)/test-audio-queue
+	TSAN_OPTIONS="halt_on_error=1 second_deadlock_stack=1 suppressions=$(CURDIR)/tsan.supp $$TSAN_OPTIONS" \
+		LD_LIBRARY_PATH=$(LIBOUTDIR):$$LD_LIBRARY_PATH $(TSAN_OUTDIR)/test-audio-backend
+	TSAN_OPTIONS="halt_on_error=1 second_deadlock_stack=1 suppressions=$(CURDIR)/tsan.supp $$TSAN_OPTIONS" \
+		LD_LIBRARY_PATH=$(LIBOUTDIR):$$LD_LIBRARY_PATH $(TSAN_OUTDIR)/test-music
+	TSAN_OPTIONS="halt_on_error=1 second_deadlock_stack=1 suppressions=$(CURDIR)/tsan.supp $$TSAN_OPTIONS" \
+		LD_LIBRARY_PATH=$(LIBOUTDIR):$$LD_LIBRARY_PATH $(TSAN_OUTDIR)/test-audio-stream
+
+$(TSAN_OUTDIR)/test-%: test-%.c $(filter-out test-%.c,$(TSAN_SOURCES)) | $(LIBOUTDIR)/$(LIB_SHARED)
+	@$(MKDIR_P) $(TSAN_OUTDIR)
+	$(TSAN_CC) $(TSAN_CFLAGS) -I$(PROJROOT)/src/audio -o $@ $< \
+		$(filter $(PROJROOT)/src/%,$(TSAN_SOURCES)) $(TEST_LDFLAGS) -fsanitize=thread
+
 # Clean
 clean:
 	$(RM) -r $(TESTOUTDIR)
 
-.PHONY: all run clean
+.PHONY: all run clean tsan

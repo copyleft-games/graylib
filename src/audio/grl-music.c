@@ -10,7 +10,7 @@
 #include "config.h"
 #include "grl-music.h"
 #include "grl-audio-processor-private.h"
-#include "grl-music-private.h"
+#include "grl-audio-queue-private.h"
 #include <gio/gio.h>
 #include <raylib.h>
 
@@ -53,11 +53,27 @@
  * ]|
  */
 
+/*
+ * The part the audio thread owns (grl-audio-queue-private.h).  The raylib
+ * Music lives here for every music: a music that streams in the
+ * background belongs to the audio thread, which takes every call that
+ * touches it as a command; any other music is the caller's, called
+ * directly.  memory_data is what raylib streams a memory-loaded music
+ * from, freed only after the unload.
+ */
+typedef struct
+{
+    GrlAudioVoice   parent;
+    Music           music;
+    guint8         *memory_data;
+    gint            time_bits;      /* atomic: the gfloat's bits, published */
+} MusicVoice;
+
 struct _GrlMusic
 {
     GObject         parent_instance;
 
-    Music           music;
+    MusicVoice     *voice;
     gboolean        is_loaded;
     gfloat          volume;
     gfloat          pitch;
@@ -65,27 +81,20 @@ struct _GrlMusic
     gboolean        looping;
     gchar          *filename;
 
-    /* For memory-loaded music: raylib streams from this buffer */
-    guint8         *memory_data;
+    /* For memory-loaded music: its size (the data is the voice's) */
     gsize           memory_size;
 
     /* per-voice processors, made on first use */
     GrlAudioProcessorSet *processors;
 
     /*
-     * Background streaming (see below).  background is the caller's
-     * switch; active (played, not stopped or ended), paused and
-     * registered are written under pump_lock while background is on (the
-     * streaming thread reads them), else by the caller alone.  The
-     * cached_* values are what the streaming thread last saw, read
-     * without the lock.
+     * Background streaming (see below): the caller's switch, and the
+     * position a queued seek or stop will leave, reported by
+     * get_time_played() until the audio thread has applied it.
      */
     gboolean        background;
-    gboolean        active;
-    gboolean        paused;
-    gboolean        registered;
-    gint            cached_playing;      /* atomic, boolean */
-    gint            cached_time_played;  /* atomic, the gfloat's bits */
+    gboolean        time_pending;
+    gfloat          pending_time;
 };
 
 G_DEFINE_FINAL_TYPE (GrlMusic, grl_music, G_TYPE_OBJECT)
@@ -93,29 +102,20 @@ G_DEFINE_FINAL_TYPE (GrlMusic, grl_music, G_TYPE_OBJECT)
 /* ==========================================================================
  * Background streaming
  *
- * One process-wide thread refills every background-streamed music that
- * is active, PUMP_INTERVAL_US apart, by calling raylib's
+ * A background music is refilled by graylib's audio thread
+ * (grl-audio-queue.c): its voice's refresh calls raylib's
  * UpdateMusicStream(), which decodes a sub-buffer for each one the device
- * has consumed.  pump_lock guards the list and is held around every
- * raylib call that touches such a music's decoder or Music struct, on
- * the thread and in the control calls, so two threads never decode or
- * seek one music at once (raylib's own lock does not cover the decoder,
- * and its decode scratch buffer is shared by every music).  Lock order:
- * pump_lock, then raylib's audio lock (inside raylib's functions); the
- * device thread takes only raylib's, and processors may not call back
- * into graylib.  The thread holds no reference: dispose unregisters
- * under the lock, so it never sees a freed music.  A generation counter
- * lets grl_music_streaming_shutdown() join a thread while a new one may
- * already have been started for later playback.
+ * has consumed, about every 5 ms while it plays, and publishes the playing
+ * state and position.  Every call that touches such a music's Music struct
+ * or decoder (play, stop, pause, resume, seek, looping, volume, pitch,
+ * pan, unload) is a command on the same thread, so two threads never
+ * decode or seek one music at once (raylib's own lock does not cover the
+ * decoder, and its decode scratch buffer is shared by every music) and
+ * the caller never waits on a decode or on raylib's audio lock.
+ * is_playing() and get_time_played() read what the thread last
+ * published, or what the caller's last call will leave while it is still
+ * queued.
  * ========================================================================== */
-
-#define PUMP_INTERVAL_US (5000)
-
-static GMutex     pump_lock;
-static GCond      pump_cond;
-static GThread   *pump_thread;      /* NULL until the first background play */
-static GPtrArray *pump_tracks;      /* GrlMusic *, borrowed, registered */
-static guint      pump_generation;  /* the running thread quits when it moves on */
 
 typedef union
 {
@@ -123,137 +123,154 @@ typedef union
     gint   i;
 } FloatBits;
 
-/* raylib's bool read through a byte (graylib's bool/gboolean rule) */
-static gboolean
-pump_device_ready (void)
-{
-    unsigned char raw;
+#define MUSIC_OF(voice) (((MusicVoice *)(voice))->music)
 
-    raw = IsAudioDeviceReady ();
+/* the audio thread: refill, then publish the state and position */
+static gboolean
+music_voice_refresh (GrlAudioVoice *voice)
+{
+    MusicVoice    *mv = (MusicVoice *)voice;
+    unsigned char  raw;
+    FloatBits      bits;
+
+    UpdateMusicStream (mv->music);
+    raw = IsMusicStreamPlaying (mv->music);
+    bits.f = GetMusicTimePlayed (mv->music);
+    g_atomic_int_set (&mv->time_bits, bits.i);
+    grl_audio_voice_publish_playing (voice, raw != 0);
     return raw != 0;
 }
 
-/* publishes the music's playing state and position (pump_lock held) */
 static void
-pump_refresh (GrlMusic *self)
+music_voice_release (GrlAudioVoice *voice)
+{
+    MusicVoice *mv = (MusicVoice *)voice;
+
+    StopMusicStream (mv->music);
+    UnloadMusicStream (mv->music);
+}
+
+static void
+music_voice_finalize (GrlAudioVoice *voice)
+{
+    MusicVoice *mv = (MusicVoice *)voice;
+
+    g_free (mv->memory_data);
+    g_free (mv);
+}
+
+static const GrlAudioVoiceClass music_voice_class = {
+    music_voice_refresh,
+    music_voice_release,
+    music_voice_finalize
+};
+
+static void
+music_voice_play (GrlAudioVoice *voice,
+                  gfloat         value,
+                  gpointer       data)
+{
+    PlayMusicStream (MUSIC_OF (voice));
+}
+
+static void
+music_voice_stop (GrlAudioVoice *voice,
+                  gfloat         value,
+                  gpointer       data)
+{
+    StopMusicStream (MUSIC_OF (voice));
+}
+
+static void
+music_voice_pause (GrlAudioVoice *voice,
+                   gfloat         value,
+                   gpointer       data)
+{
+    PauseMusicStream (MUSIC_OF (voice));
+}
+
+static void
+music_voice_resume (GrlAudioVoice *voice,
+                    gfloat         value,
+                    gpointer       data)
+{
+    ResumeMusicStream (MUSIC_OF (voice));
+}
+
+static void
+music_voice_seek (GrlAudioVoice *voice,
+                  gfloat         value,
+                  gpointer       data)
+{
+    SeekMusicStream (MUSIC_OF (voice), value);
+}
+
+/* @value: non-zero to loop (UpdateMusicStream reads the struct's flag) */
+static void
+music_voice_set_looping (GrlAudioVoice *voice,
+                         gfloat         value,
+                         gpointer       data)
+{
+    MUSIC_OF (voice).looping = value != 0.0f;
+}
+
+static void
+music_voice_set_volume (GrlAudioVoice *voice,
+                        gfloat         value,
+                        gpointer       data)
+{
+    SetMusicVolume (MUSIC_OF (voice), value);
+}
+
+static void
+music_voice_set_pitch (GrlAudioVoice *voice,
+                       gfloat         value,
+                       gpointer       data)
+{
+    SetMusicPitch (MUSIC_OF (voice), value);
+}
+
+static void
+music_voice_set_pan (GrlAudioVoice *voice,
+                     gfloat         value,
+                     gpointer       data)
+{
+    SetMusicPan (MUSIC_OF (voice), value); /* raylib 6.0: pan is -1.0..1.0 */
+}
+
+/* raylib's playing state, asked directly (bool read through a byte) */
+static gboolean
+music_playing_direct (GrlMusic *self)
 {
     unsigned char raw;
-    FloatBits     bits;
 
-    if (!self->is_loaded)
-        return;
-    raw = IsMusicStreamPlaying (self->music);
-    bits.f = GetMusicTimePlayed (self->music);
-    g_atomic_int_set (&self->cached_playing, raw != 0);
-    g_atomic_int_set (&self->cached_time_played, bits.i);
+    raw = IsMusicStreamPlaying (self->voice->music);
+    return raw != 0;
 }
 
-/* the streaming thread: refill, publish, drop what ended, sleep */
-static gpointer
-pump_main (gpointer data)
-{
-    guint generation;
-
-    generation = GPOINTER_TO_UINT (data);
-    g_mutex_lock (&pump_lock);
-    while (generation == pump_generation)
-    {
-        guint  i;
-        gint64 deadline;
-
-        /* nothing to stream: sleep until a play (or shutdown) signals */
-        if (pump_tracks == NULL || pump_tracks->len == 0)
-        {
-            g_cond_wait (&pump_cond, &pump_lock);
-            continue;
-        }
-
-        if (pump_device_ready ())
-        {
-            i = 0;
-            while (i < pump_tracks->len)
-            {
-                GrlMusic *music = g_ptr_array_index (pump_tracks, i);
-
-                UpdateMusicStream (music->music);
-                pump_refresh (music);
-
-                /* ended (raylib stopped it at the end of a non-looping track) */
-                if (!g_atomic_int_get (&music->cached_playing) && !music->paused)
-                {
-                    music->active = FALSE;
-                    music->registered = FALSE;
-                    g_ptr_array_remove_index_fast (pump_tracks, i);
-                    continue;
-                }
-                i++;
-            }
-        }
-
-        /* a play or shutdown wakes it early; a spurious wake costs a pass */
-        deadline = g_get_monotonic_time () + PUMP_INTERVAL_US;
-        (void)g_cond_wait_until (&pump_cond, &pump_lock, deadline);
-    }
-    g_mutex_unlock (&pump_lock);
-    return NULL;
-}
-
-/* adds an active music to the thread's list, starting it (pump_lock held) */
+/* a plain call: queued in the background, else made at once */
 static void
-pump_register (GrlMusic *self)
+music_call (GrlMusic          *self,
+            GrlAudioVoiceFunc  func,
+            gfloat             value)
 {
-    if (self->registered || !self->is_loaded)
-        return;
-    if (pump_tracks == NULL)
-        pump_tracks = g_ptr_array_new ();
-    g_ptr_array_add (pump_tracks, self);
-    self->registered = TRUE;
-    if (pump_thread == NULL)
-        pump_thread = g_thread_new ("grl-music", pump_main, GUINT_TO_POINTER (pump_generation));
-    g_cond_broadcast (&pump_cond);
+    if (self->background)
+        grl_audio_voice_push (&self->voice->parent, func, value, NULL, NULL);
+    else
+        func (&self->voice->parent, value, NULL);
 }
 
-/* takes a music off the list (pump_lock held) */
+/* a call that changes whether it plays; @predicted as for push_state */
 static void
-pump_unregister (GrlMusic *self)
+music_call_state (GrlMusic          *self,
+                  GrlAudioVoiceFunc  func,
+                  gfloat             value,
+                  gboolean           predicted)
 {
-    if (!self->registered)
-        return;
-    g_ptr_array_remove_fast (pump_tracks, self);
-    self->registered = FALSE;
-}
-
-/* pump_lock when the music streams in the background; returns whether taken */
-static gboolean
-music_lock (GrlMusic *self)
-{
-    if (!self->background)
-        return FALSE;
-    g_mutex_lock (&pump_lock);
-    return TRUE;
-}
-
-void
-grl_music_streaming_shutdown (void)
-{
-    GThread *thread;
-    guint    i;
-
-    g_mutex_lock (&pump_lock);
-    thread = pump_thread;
-    pump_thread = NULL;
-    pump_generation++;
-    if (pump_tracks != NULL)
-    {
-        for (i = 0; i < pump_tracks->len; i++)
-            ((GrlMusic *)g_ptr_array_index (pump_tracks, i))->registered = FALSE;
-        g_ptr_array_set_size (pump_tracks, 0);
-    }
-    g_cond_broadcast (&pump_cond);
-    g_mutex_unlock (&pump_lock);
-
-    if (thread != NULL)
-        g_thread_join (thread);
+    if (self->background)
+        grl_audio_voice_push_state (&self->voice->parent, func, value, NULL, NULL, predicted);
+    else
+        func (&self->voice->parent, value, NULL);
 }
 
 enum
@@ -282,17 +299,9 @@ grl_music_dispose (GObject *object)
 {
     GrlMusic *self = (GrlMusic *)object;
 
-    /* off the streaming thread's list before anything goes away */
-    if (self->background)
-    {
-        g_mutex_lock (&pump_lock);
-        pump_unregister (self);
-        g_mutex_unlock (&pump_lock);
-    }
-
     if (self->processors != NULL)
     {
-        grl_audio_processor_set_clear (self->processors, self->is_loaded ? &self->music.stream : NULL, TRUE);
+        grl_audio_processor_set_clear (self->processors, self->is_loaded ? &self->voice->music.stream : NULL, TRUE);
         g_clear_pointer (&self->processors, grl_audio_processor_set_free);
     }
 
@@ -304,15 +313,15 @@ grl_music_finalize (GObject *object)
 {
     GrlMusic *self = GRL_MUSIC (object);
 
+    /* stopped and unloaded after every call queued before it (the voice
+     * frees the memory data after that); an unloaded voice just goes */
     if (self->is_loaded)
-    {
-        StopMusicStream (self->music);
-        UnloadMusicStream (self->music);
-        self->is_loaded = FALSE;
-    }
+        grl_audio_voice_release (&g_steal_pointer (&self->voice)->parent);
+    else if (self->voice != NULL)
+        grl_audio_voice_unref (&g_steal_pointer (&self->voice)->parent);
+    self->is_loaded = FALSE;
 
     g_clear_pointer (&self->filename, g_free);
-    g_clear_pointer (&self->memory_data, g_free);
 
     G_OBJECT_CLASS (grl_music_parent_class)->finalize (object);
 }
@@ -548,8 +557,9 @@ grl_music_init (GrlMusic *self)
     self->pan = 0.0f;
     self->looping = FALSE;
     self->filename = NULL;
-    self->memory_data = NULL;
     self->memory_size = 0;
+    self->voice = g_new0 (MusicVoice, 1);
+    grl_audio_voice_init (&self->voice->parent, &music_voice_class);
 }
 
 /*
@@ -600,9 +610,9 @@ grl_music_new_from_file (const gchar  *filename,
     }
 
     self = g_object_new (GRL_TYPE_MUSIC, NULL);
-    self->music = music;
+    self->voice->music = music;
     /* raylib loads music looping; the looping property starts FALSE */
-    self->music.looping = self->looping;
+    self->voice->music.looping = self->looping;
     self->is_loaded = TRUE;
     self->filename = g_strdup (filename);
 
@@ -670,12 +680,12 @@ grl_music_new_from_memory (const gchar  *file_type,
     }
 
     self = g_object_new (GRL_TYPE_MUSIC, NULL);
-    self->music = music;
+    self->voice->music = music;
     /* raylib loads music looping; the looping property starts FALSE */
-    self->music.looping = self->looping;
+    self->voice->music.looping = self->looping;
     self->is_loaded = TRUE;
     self->filename = g_strdup_printf ("(memory:%s)", file_type);
-    self->memory_data = data_copy;
+    self->voice->memory_data = data_copy;
     self->memory_size = data_size;
 
     return self;
@@ -691,24 +701,13 @@ grl_music_new_from_memory (const gchar  *file_type,
 void
 grl_music_play (GrlMusic *self)
 {
-    gboolean locked;
-
     g_return_if_fail (GRL_IS_MUSIC (self));
 
     if (!self->is_loaded)
         return;
 
-    locked = music_lock (self);
-    PlayMusicStream (self->music);
-    self->active = TRUE;
-    self->paused = FALSE;
-    if (locked)
-    {
-        /* the thread's first refill follows at once (it is woken) */
-        pump_refresh (self);
-        pump_register (self);
-        g_mutex_unlock (&pump_lock);
-    }
+    /* in the background the thread's first refill follows at once */
+    music_call_state (self, music_voice_play, 0.0f, TRUE);
 }
 
 /*
@@ -720,22 +719,17 @@ grl_music_play (GrlMusic *self)
 void
 grl_music_stop (GrlMusic *self)
 {
-    gboolean locked;
-
     g_return_if_fail (GRL_IS_MUSIC (self));
 
     if (!self->is_loaded)
         return;
 
-    locked = music_lock (self);
-    StopMusicStream (self->music);
-    self->active = FALSE;
-    self->paused = FALSE;
-    if (locked)
+    music_call_state (self, music_voice_stop, 0.0f, FALSE);
+    if (self->background)
     {
-        pump_unregister (self);
-        pump_refresh (self);
-        g_mutex_unlock (&pump_lock);
+        /* raylib's stop rewinds */
+        self->time_pending = TRUE;
+        self->pending_time = 0.0f;
     }
 }
 
@@ -748,21 +742,14 @@ grl_music_stop (GrlMusic *self)
 void
 grl_music_pause (GrlMusic *self)
 {
-    gboolean locked;
-
     g_return_if_fail (GRL_IS_MUSIC (self));
 
     if (!self->is_loaded)
         return;
 
-    locked = music_lock (self);
-    PauseMusicStream (self->music);
-    self->paused = TRUE;
-    if (locked)
-    {
-        pump_refresh (self);
-        g_mutex_unlock (&pump_lock);
-    }
+    /* resume() predicts playing only if it played when paused */
+    self->voice->parent.resumable = grl_music_is_playing (self);
+    music_call_state (self, music_voice_pause, 0.0f, FALSE);
 }
 
 /*
@@ -774,21 +761,12 @@ grl_music_pause (GrlMusic *self)
 void
 grl_music_resume (GrlMusic *self)
 {
-    gboolean locked;
-
     g_return_if_fail (GRL_IS_MUSIC (self));
 
     if (!self->is_loaded)
         return;
 
-    locked = music_lock (self);
-    ResumeMusicStream (self->music);
-    self->paused = FALSE;
-    if (locked)
-    {
-        pump_refresh (self);
-        g_mutex_unlock (&pump_lock);
-    }
+    music_call_state (self, music_voice_resume, 0.0f, self->voice->parent.resumable);
 }
 
 /*
@@ -807,7 +785,7 @@ grl_music_update (GrlMusic *self)
     if (!self->is_loaded || self->background)
         return;
 
-    UpdateMusicStream (self->music);
+    UpdateMusicStream (self->voice->music);
 }
 
 /*
@@ -821,20 +799,18 @@ grl_music_update (GrlMusic *self)
 gboolean
 grl_music_is_playing (GrlMusic *self)
 {
-    unsigned char raw;
+    gboolean playing;
 
     g_return_val_if_fail (GRL_IS_MUSIC (self), FALSE);
 
     if (!self->is_loaded)
         return FALSE;
 
-    /* what the streaming thread last saw: no wait on a decode */
-    if (self->background)
-        return g_atomic_int_get (&self->cached_playing) != 0;
+    /* the audio thread's mirror: no wait on a decode or raylib's lock */
+    if (self->background && grl_audio_voice_peek_playing (&self->voice->parent, &playing))
+        return playing;
 
-    /* Fix bool/gboolean ABI mismatch - use unsigned char intermediate */
-    raw = IsMusicStreamPlaying (self->music);
-    return raw != 0;
+    return music_playing_direct (self);
 }
 
 /*
@@ -854,16 +830,9 @@ grl_music_set_looping (GrlMusic *self,
     {
         self->looping = looping;
 
+        /* in the background the thread owns the Music struct */
         if (self->is_loaded)
-        {
-            gboolean locked;
-
-            /* the streaming thread reads the Music struct */
-            locked = music_lock (self);
-            self->music.looping = looping;
-            if (locked)
-                g_mutex_unlock (&pump_lock);
-        }
+            music_call (self, music_voice_set_looping, looping ? 1.0f : 0.0f);
 
         g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_LOOPING]);
     }
@@ -896,19 +865,22 @@ void
 grl_music_seek (GrlMusic *self,
                 gfloat    position)
 {
-    gboolean locked;
-
     g_return_if_fail (GRL_IS_MUSIC (self));
 
     if (!self->is_loaded)
         return;
 
-    locked = music_lock (self);
-    SeekMusicStream (self->music, position);
-    if (locked)
+    if (self->background)
     {
-        pump_refresh (self);
-        g_mutex_unlock (&pump_lock);
+        /* a seek does not change whether it plays; the refresh after it
+         * publishes the new position, reported at once meanwhile */
+        music_call_state (self, music_voice_seek, position, grl_music_is_playing (self));
+        self->time_pending = TRUE;
+        self->pending_time = position;
+    }
+    else
+    {
+        SeekMusicStream (self->voice->music, position);
     }
 }
 
@@ -928,7 +900,7 @@ grl_music_get_time_length (GrlMusic *self)
     if (!self->is_loaded)
         return 0.0f;
 
-    return GetMusicTimeLength (self->music);
+    return GetMusicTimeLength (self->voice->music);
 }
 
 /*
@@ -943,20 +915,25 @@ gfloat
 grl_music_get_time_played (GrlMusic *self)
 {
     FloatBits bits;
+    gboolean  playing;
 
     g_return_val_if_fail (GRL_IS_MUSIC (self), 0.0f);
 
     if (!self->is_loaded)
         return 0.0f;
 
-    /* what the streaming thread last saw: no wait on a decode */
-    if (self->background)
+    /* what the audio thread last published: no wait on a decode */
+    if (self->background && grl_audio_voice_peek_playing (&self->voice->parent, &playing))
     {
-        bits.i = g_atomic_int_get (&self->cached_time_played);
+        /* a seek or stop still queued: the position it will leave */
+        if (self->time_pending && !grl_audio_voice_is_settled (&self->voice->parent))
+            return self->pending_time;
+        self->time_pending = FALSE;
+        bits.i = g_atomic_int_get (&self->voice->time_bits);
         return bits.f;
     }
 
-    return GetMusicTimePlayed (self->music);
+    return GetMusicTimePlayed (self->voice->music);
 }
 
 /*
@@ -975,19 +952,27 @@ grl_music_set_background_streaming (GrlMusic *self,
     if (self->background == enabled)
         return;
 
-    g_mutex_lock (&pump_lock);
-    self->background = enabled;
     if (enabled)
     {
-        pump_refresh (self);
-        if (self->active)
-            pump_register (self);
+        /* the thread takes over: a refresh seeds the mirror and, if it
+         * plays, puts it on the refill list (one direct read here) */
+        self->background = TRUE;
+        if (self->is_loaded)
+            grl_audio_voice_push_state (&self->voice->parent, NULL, 0.0f, NULL, NULL,
+                                        music_playing_direct (self));
     }
     else
     {
-        pump_unregister (self);
+        /* handed back once the thread let go of it (the one blocking
+         * call here: it waits for what is queued) */
+        if (self->is_loaded)
+        {
+            grl_audio_voice_unwatch (&self->voice->parent);
+            grl_audio_queue_flush ();
+        }
+        self->background = FALSE;
+        self->time_pending = FALSE;
     }
-    g_mutex_unlock (&pump_lock);
 
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_BACKGROUND_STREAMING]);
 }
@@ -1020,7 +1005,7 @@ grl_music_set_volume (GrlMusic *self,
         self->volume = volume;
 
         if (self->is_loaded)
-            SetMusicVolume (self->music, volume);
+            music_call (self, music_voice_set_volume, volume);
 
         g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_VOLUME]);
     }
@@ -1062,7 +1047,7 @@ grl_music_set_pitch (GrlMusic *self,
         self->pitch = pitch;
 
         if (self->is_loaded)
-            SetMusicPitch (self->music, pitch);
+            music_call (self, music_voice_set_pitch, pitch);
 
         g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_PITCH]);
     }
@@ -1104,7 +1089,7 @@ grl_music_set_pan (GrlMusic *self,
         self->pan = pan;
 
         if (self->is_loaded)
-            SetMusicPan (self->music, pan); /* raylib 6.0: pan is -1.0..1.0 */
+            music_call (self, music_voice_set_pan, pan);
 
         g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_PAN]);
     }
@@ -1142,7 +1127,7 @@ grl_music_add_processor (GrlMusic            *self,
 
     if (self->processors == NULL)
         self->processors = grl_audio_processor_set_new ();
-    return grl_audio_processor_set_add (self->processors, self->is_loaded ? &self->music.stream : NULL,
+    return grl_audio_processor_set_add (self->processors, self->is_loaded ? &self->voice->music.stream : NULL,
                                         func, user_data, destroy);
 }
 
@@ -1154,7 +1139,7 @@ grl_music_remove_processor (GrlMusic *self,
 
     if (self->processors == NULL || id == 0)
         return FALSE;
-    return grl_audio_processor_set_remove (self->processors, self->is_loaded ? &self->music.stream : NULL, id);
+    return grl_audio_processor_set_remove (self->processors, self->is_loaded ? &self->voice->music.stream : NULL, id);
 }
 
 void
@@ -1163,7 +1148,7 @@ grl_music_clear_processors (GrlMusic *self)
     g_return_if_fail (GRL_IS_MUSIC (self));
 
     if (self->processors != NULL)
-        grl_audio_processor_set_clear (self->processors, self->is_loaded ? &self->music.stream : NULL, FALSE);
+        grl_audio_processor_set_clear (self->processors, self->is_loaded ? &self->voice->music.stream : NULL, FALSE);
 }
 
 guint

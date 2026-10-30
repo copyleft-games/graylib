@@ -10,6 +10,7 @@
 #include "config.h"
 #include "grl-audio-stream.h"
 #include "grl-audio-processor-private.h"
+#include "grl-audio-queue-private.h"
 #include <raylib.h>
 
 /**
@@ -71,6 +72,9 @@ struct _GrlAudioStream
     gboolean        callback_attached;
     guint           callback_slot;
     GDestroyNotify  callback_destroy;
+
+    /* what the audio thread controls (NULL until loaded), see below */
+    GrlAudioVoice  *voice;
 };
 
 G_DEFINE_FINAL_TYPE (GrlAudioStream, grl_audio_stream, G_TYPE_OBJECT)
@@ -220,6 +224,147 @@ callback_drop (GrlAudioStream *self)
         destroy (user_data);
 }
 
+/* ==========================================================================
+ * The audio thread's side (grl-audio-queue-private.h)
+ *
+ * A stream with a callback is filled on the device thread, so nothing the
+ * game thread does with it needs raylib at once: play, stop, pause,
+ * resume, volume, pitch and pan become commands for graylib's audio
+ * thread and is_playing() reads its mirror.  A pushed stream (no
+ * callback) is called directly: its data path, update() and
+ * is_processed(), takes raylib's lock on the caller's thread anyway, and
+ * its calls must stay in order with them.  Switching from callback to
+ * pushed waits for what is queued (grl_audio_queue_flush()).
+ * ========================================================================== */
+
+typedef struct
+{
+    GrlAudioVoice parent;
+    AudioStream   stream;
+} StreamVoice;
+
+#define STREAM_OF(voice) (((StreamVoice *)(voice))->stream)
+
+/* a callback stream plays until stopped: it never needs watching */
+static gboolean
+stream_voice_refresh (GrlAudioVoice *voice)
+{
+    unsigned char raw;
+
+    raw = IsAudioStreamPlaying (STREAM_OF (voice));
+    grl_audio_voice_publish_playing (voice, raw != 0);
+    return FALSE;
+}
+
+static void
+stream_voice_release (GrlAudioVoice *voice)
+{
+    StopAudioStream (STREAM_OF (voice));
+    UnloadAudioStream (STREAM_OF (voice));
+}
+
+static void
+stream_voice_finalize (GrlAudioVoice *voice)
+{
+    g_free (voice);
+}
+
+static const GrlAudioVoiceClass stream_voice_class = {
+    stream_voice_refresh,
+    stream_voice_release,
+    stream_voice_finalize
+};
+
+static void
+stream_voice_play (GrlAudioVoice *voice,
+                   gfloat         value,
+                   gpointer       data)
+{
+    PlayAudioStream (STREAM_OF (voice));
+}
+
+static void
+stream_voice_stop (GrlAudioVoice *voice,
+                   gfloat         value,
+                   gpointer       data)
+{
+    StopAudioStream (STREAM_OF (voice));
+}
+
+static void
+stream_voice_pause (GrlAudioVoice *voice,
+                    gfloat         value,
+                    gpointer       data)
+{
+    PauseAudioStream (STREAM_OF (voice));
+}
+
+static void
+stream_voice_resume (GrlAudioVoice *voice,
+                     gfloat         value,
+                     gpointer       data)
+{
+    ResumeAudioStream (STREAM_OF (voice));
+}
+
+static void
+stream_voice_set_volume (GrlAudioVoice *voice,
+                         gfloat         value,
+                         gpointer       data)
+{
+    SetAudioStreamVolume (STREAM_OF (voice), value);
+}
+
+static void
+stream_voice_set_pitch (GrlAudioVoice *voice,
+                        gfloat         value,
+                        gpointer       data)
+{
+    SetAudioStreamPitch (STREAM_OF (voice), value);
+}
+
+static void
+stream_voice_set_pan (GrlAudioVoice *voice,
+                      gfloat         value,
+                      gpointer       data)
+{
+    SetAudioStreamPan (STREAM_OF (voice), value); /* raylib 6.0: pan is -1.0..1.0 */
+}
+
+/* raylib's playing state, asked directly (bool read through a byte) */
+static gboolean
+stream_playing_direct (GrlAudioStream *self)
+{
+    unsigned char raw;
+
+    raw = IsAudioStreamPlaying (self->stream);
+    return raw != 0;
+}
+
+/* a plain call: queued for a callback stream, else made at once */
+static void
+stream_call (GrlAudioStream    *self,
+             GrlAudioVoiceFunc  func,
+             gfloat             value)
+{
+    if (self->has_callback)
+        grl_audio_voice_push (self->voice, func, value, NULL, NULL);
+    else
+        func (self->voice, value, NULL);
+}
+
+/* a call that changes whether it plays; @predicted as for push_state */
+static void
+stream_call_state (GrlAudioStream    *self,
+                   GrlAudioVoiceFunc  func,
+                   gboolean           predicted)
+{
+    if (self->has_callback)
+        grl_audio_voice_push_state (self->voice, func, 0.0f, NULL, NULL, predicted);
+    else
+        func (self->voice, 0.0f, NULL);
+}
+
 enum
 {
     PROP_0,
@@ -261,10 +406,10 @@ grl_audio_stream_finalize (GObject *object)
 {
     GrlAudioStream *self = GRL_AUDIO_STREAM (object);
 
+    /* stopped and unloaded after every call queued before it */
     if (self->is_loaded)
     {
-        StopAudioStream (self->stream);
-        UnloadAudioStream (self->stream);
+        grl_audio_voice_release (g_steal_pointer (&self->voice));
         self->is_loaded = FALSE;
     }
 
@@ -500,6 +645,9 @@ grl_audio_stream_new (guint sample_rate,
     self = g_object_new (GRL_TYPE_AUDIO_STREAM, NULL);
     self->stream = stream;
     self->is_loaded = TRUE;
+    self->voice = g_malloc0 (sizeof (StreamVoice));
+    grl_audio_voice_init (self->voice, &stream_voice_class);
+    STREAM_OF (self->voice) = stream;
     self->sample_rate = sample_rate;
     self->sample_size = sample_size;
     self->channels = channels;
@@ -521,7 +669,7 @@ grl_audio_stream_play (GrlAudioStream *self)
     if (!self->is_loaded)
         return;
 
-    PlayAudioStream (self->stream);
+    stream_call_state (self, stream_voice_play, TRUE);
 }
 
 /*
@@ -538,7 +686,7 @@ grl_audio_stream_stop (GrlAudioStream *self)
     if (!self->is_loaded)
         return;
 
-    StopAudioStream (self->stream);
+    stream_call_state (self, stream_voice_stop, FALSE);
 }
 
 /*
@@ -555,7 +703,9 @@ grl_audio_stream_pause (GrlAudioStream *self)
     if (!self->is_loaded)
         return;
 
-    PauseAudioStream (self->stream);
+    /* resume() predicts playing only if it played when paused */
+    self->voice->resumable = grl_audio_stream_is_playing (self);
+    stream_call_state (self, stream_voice_pause, FALSE);
 }
 
 /*
@@ -572,7 +722,7 @@ grl_audio_stream_resume (GrlAudioStream *self)
     if (!self->is_loaded)
         return;
 
-    ResumeAudioStream (self->stream);
+    stream_call_state (self, stream_voice_resume, self->voice->resumable);
 }
 
 /*
@@ -586,16 +736,18 @@ grl_audio_stream_resume (GrlAudioStream *self)
 gboolean
 grl_audio_stream_is_playing (GrlAudioStream *self)
 {
-    unsigned char raw;
+    gboolean playing;
 
     g_return_val_if_fail (GRL_IS_AUDIO_STREAM (self), FALSE);
 
     if (!self->is_loaded)
         return FALSE;
 
-    /* Fix bool/gboolean ABI mismatch - use unsigned char intermediate */
-    raw = IsAudioStreamPlaying (self->stream);
-    return raw != 0;
+    /* a callback stream: the audio thread's mirror, no wait on raylib */
+    if (self->has_callback && grl_audio_voice_peek_playing (self->voice, &playing))
+        return playing;
+
+    return stream_playing_direct (self);
 }
 
 /*
@@ -742,7 +894,7 @@ grl_audio_stream_set_volume (GrlAudioStream *self,
         self->volume = volume;
 
         if (self->is_loaded)
-            SetAudioStreamVolume (self->stream, volume);
+            stream_call (self, stream_voice_set_volume, volume);
 
         g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_VOLUME]);
     }
@@ -784,7 +936,7 @@ grl_audio_stream_set_pitch (GrlAudioStream *self,
         self->pitch = pitch;
 
         if (self->is_loaded)
-            SetAudioStreamPitch (self->stream, pitch);
+            stream_call (self, stream_voice_set_pitch, pitch);
 
         g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_PITCH]);
     }
@@ -826,7 +978,7 @@ grl_audio_stream_set_pan (GrlAudioStream *self,
         self->pan = pan;
 
         if (self->is_loaded)
-            SetAudioStreamPan (self->stream, pan); /* raylib 6.0: pan is -1.0..1.0 */
+            stream_call (self, stream_voice_set_pan, pan);
 
         g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_PAN]);
     }
@@ -879,7 +1031,9 @@ grl_audio_stream_set_callback (GrlAudioStream         *self,
 
     g_return_if_fail (GRL_IS_AUDIO_STREAM (self));
 
-    /* 1. */
+    /* 1. (calls queued for the old callback stream land first) */
+    if (self->has_callback && self->is_loaded)
+        grl_audio_queue_flush ();
     callback_drop (self);
     if (callback == NULL)
     {
@@ -907,6 +1061,10 @@ grl_audio_stream_set_callback (GrlAudioStream         *self,
         SetAudioStreamCallback (self->stream, callback_trampolines[slot]);
         self->callback_attached = TRUE;
     }
+
+    /* from here its calls are queued: seed the mirror (one direct read) */
+    if (self->is_loaded)
+        grl_audio_voice_push_state (self->voice, NULL, 0.0f, NULL, NULL, stream_playing_direct (self));
 }
 
 gboolean

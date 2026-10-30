@@ -89,6 +89,36 @@ if (grl_audio_backend_parse (user_setting, &backend))
 
 Tests: =tests/test-audio-backend.c= (=/audio-backend/parse=, =preference=, =none= headless; =/audio-backend/init-stress= opens and closes the device 12 times through the default order when an audio server is reachable).
 
+*** The audio thread
+:PROPERTIES:
+:CUSTOM_ID: audio-thread
+:END:
+raylib has one audio lock (=AUDIO.System.lock=).  Its mixer holds it for every device period, with graylib's stream callbacks and processors running inside it, and =UpdateMusicStream()= holds it for a whole sub-buffer decode (up to ~2 ms of Vorbis or MP3).  Every raylib call that changes a voice (=PlaySound()=, =SetSoundVolume()=, =IsSoundPlaying()=, ...) takes the same lock, so a game-thread call that landed in such a window used to wait for it: up to 5.5 ms per call in libregnum's =sfx-calls= benchmark, 12 ms under a slow stream callback.
+
+While the device is open graylib runs one thread, =grl-audio= (=src/audio/grl-audio-queue.c=), and the game thread's audio calls become commands for it:
+
+| What | Where it runs |
+|------+---------------|
+| =GrlSound=: =play=, =stop=, =pause=, =resume=, =play_multi=, =stop_multi=, =set_volume=, =set_pitch=, =set_pan=, =update=, unload | queued |
+| =GrlMusic= with background streaming: the same, plus =seek=, =set_looping=, refills | queued |
+| =GrlAudioStream= with a callback: =play=, =stop=, =pause=, =resume=, =set_volume=, =set_pitch=, =set_pan=, unload | queued |
+| =GrlMusic= without background streaming, =GrlAudioStream= without a callback | direct, as before (their data path, =grl_music_update()= / =grl_audio_stream_update()=, takes the lock on the caller's thread anyway, and the calls must stay in order with it) |
+| Loading, aliases, processors, setting a stream callback, the master volume | direct (setup-time calls; the master volume is an atomic in miniaudio, no lock) |
+
+- *Queue.*  A lock-free list (a Treiber stack: a compare-and-swap push, the thread takes the whole list with another and reverses it), so each producer's commands run in the order it pushed them, and calls on several objects stay in order with each other.  A push never waits on a lock: commands are recycled (the thread hands applied ones back on a second lock-free list, a producer takes that list into a thread-local cache in one exchange), so the steady state neither mallocs nor frees, and nothing is freed across threads.  The thread sleeps on a condition variable; a producer wakes it only when it announced it is about to sleep (Dekker-style atomics), signalling under a =trylock= when it gets the lock and without it otherwise, and the thread never sleeps longer than 20 ms, which bounds the one rare lost wake-up (a signal in the few instructions between the thread's last check and its wait).
+- *Getters stay coherent.*  =grl_sound_is_playing()=, =grl_music_is_playing()=, =grl_music_get_time_played()= (background) and =grl_audio_stream_is_playing()= (callback) read a mirror and never take raylib's lock.  A call that changes whether a voice plays carries a serial and the state it will leave (=play= -> playing, =stop= / =pause= -> not, =resume= -> what it was when paused); until the thread has applied it and read raylib's state back, the getter reports that prediction, then raylib's state.  A queued =seek= or =stop= reports its position at once.  The thread re-reads every playing voice about every 5 ms, which is how a sound's natural end shows up (within ~5 ms of it).
+- *Refills.*  Background music refills are this thread now (the old =grl-music= thread is gone): =UpdateMusicStream()= for every playing background music about every 5 ms.
+- *Lifetimes.*  Commands hold a reference to a small refcounted voice the object embeds, not to the GObject, so the thread never runs a finalize: dropping a sound queues its unload after its other calls (an alias before its source when they are dropped in that order) and returns.
+- *Latency.*  A queued call reaches raylib as soon as the thread runs (microseconds when the lock is free, else when the mixer or a decode releases it), which is no later than the next device period would have heard it anyway.
+- *Blocking calls left.*  Switching background streaming off, and removing or replacing a stream's callback, wait for what is queued (=grl_audio_queue_flush()=, internal) so the direct calls after them stay in order.  =grl_audio_device_close()= applies every queued command, then joins the thread, then closes raylib's device.
+- *Inline without a device.*  Before the device opens (or after it closes) commands run at once on the caller's thread and getters ask raylib, as before.
+
+Measured (libregnum =lrg-bench -s sfx-calls=, 8 sounds' volume / pitch / pan / is-playing / retrigger calls every 3 ms frame while a Vorbis track decodes and a MIDI synth renders; Xvfb, 1000 frames): per-call max 5.5 ms -> tens of µs; see libregnum's =docs/performance.org=.
+
+Thread safety: =make -C tests tsan TSAN_CC=clang= (or gcc with libtsan installed) builds the audio sources and =test-audio-queue=, =test-audio-backend=, =test-music= and =test-audio-stream= with ThreadSanitizer (raylib uninstrumented, its pthread locks seen through TSan's interceptors); =tests/tsan.supp= suppresses only the system audio stack (ALSA, PipeWire, PulseAudio) and raylib's =CloseAudioDevice()=, which destroys its mixing mutex before it stops the device thread.
+
+Tests: =tests/test-audio-queue.c= (=/audio-queue/lock-hammer=: a stream callback holds raylib's lock 6 ms of every period while ~62000 sound calls are timed; a direct raylib call is checked to wait for it (6-12 ms), graylib's must not: no call may give up the CPU voluntarily (=getrusage(RUSAGE_THREAD)= voluntary context switches, i.e. no futex wait on any lock), the calls the scheduler did not preempt stay under 1 ms (measured: median 0.1 µs, p99 3 µs, max 20-70 µs) and p99 under 0.2 ms; and =is_playing()= must follow play / stop / pause / resume at once and see a 50 ms sound end; =/audio-queue/release-order=: objects dropped with calls queued, then the device closed).
+
 ** GrlSound
 :PROPERTIES:
 :CUSTOM_ID: grlsound
@@ -261,16 +291,16 @@ grl_music_play (music);
 
 | Aspect | Behaviour |
 |--------+-----------|
-| The thread | one per process, started by the first background play, named =grl-music=; refills every active background music about every 5 ms (=PUMP_INTERVAL_US=) with =UpdateMusicStream()= |
-| Cost when idle | none: with no background music playing (stopped, ended, never played) the thread sleeps on a condition variable |
-| Control calls | =play=, =stop=, =pause=, =resume=, =seek= and =set_looping= take the thread's lock, so they never run while that music decodes; they may wait for one decode |
-| Getters | =grl_music_is_playing()= and =grl_music_get_time_played()= return what the thread last published (after every refill and every control call), so they never wait on a decode; the position is at most one period (~5 ms) old |
+| The thread | graylib's audio thread ([[#audio-thread][the audio thread]]), started when the device opens; refills every playing background music about every 5 ms with =UpdateMusicStream()= |
+| Cost when idle | none: with no voice playing and nothing queued the thread sleeps on a condition variable |
+| Control calls | =play=, =stop=, =pause=, =resume=, =seek=, =set_looping=, =set_volume=, =set_pitch= and =set_pan= are queued for the thread, so they never wait on a decode or on raylib's lock |
+| Getters | =grl_music_is_playing()= and =grl_music_get_time_played()= return what the thread last published, or what the last queued call will leave (a seek's target, a stop's 0) until it ran; the position is at most one period (~5 ms) old |
 | End of track | a non-looping music that ends is taken off the thread's list and reads as stopped within one period |
-| Volume, pitch, pan, processors | unchanged: raylib's own lock covers them |
-| Shutdown | =grl_audio_device_close()= (and the device's finalize) stops and joins the thread before closing raylib's device; a later background play starts it again |
-| Lifetime | the thread holds no reference: disposing of a music takes it off the list under the lock |
+| Processors | unchanged: added and removed on the caller's thread |
+| Shutdown | =grl_audio_device_close()= (and the device's finalize) applies what is queued and joins the thread before closing raylib's device |
+| Lifetime | the thread holds a reference to the music's voice, not the =GrlMusic=; disposing of a music queues its unload |
 
-The switch can change at any time; switching it off while the music plays hands the refills back to =grl_music_update()=.  Lock order: graylib's streaming lock, then raylib's audio lock (raylib takes it inside its functions); the device thread takes only raylib's, which is why processors and stream callbacks may not call graylib's audio functions.
+The switch can change at any time; switching it on seeds the mirror with one direct read; switching it off waits for what is queued, then hands the refills back to =grl_music_update()=.  The device thread takes only raylib's lock, which is why processors and stream callbacks may not call graylib's audio functions.
 
 Note on =looping=: raylib loads music looping; graylib now makes the loaded music follow the =looping= property, which starts =FALSE=, so a music that is never set looping now ends instead of repeating.  Call =grl_music_set_looping (music, TRUE)= for background tracks that should loop.
 
@@ -644,6 +674,7 @@ grl_audio_stream_set_callback (stream, NULL, NULL, NULL);   /* detached: fill is
 - =GrlAudioStreamCallback (gpointer buffer, guint n_frames, gpointer user_data)= gets the block in the stream's own format (sample size and channels as created), at most 4096 bytes (512 frames of 32-bit stereo), several blocks back to back per device period.  It must fill every frame.
 - It runs only while the stream plays (not paused or stopped).
 - With a callback, =grl_audio_stream_update()= does nothing and =grl_audio_stream_is_processed()= is always =FALSE=, so an old pump loop does no work.
+- With a callback, =play=, =stop=, =pause=, =resume=, =set_volume=, =set_pitch= and =set_pan= are queued for graylib's audio thread and =grl_audio_stream_is_playing()= reads its mirror ([[#audio-thread][the audio thread]]); setting, replacing or removing the callback still takes raylib's lock on the caller's thread, and removing or replacing one first waits for what is queued.
 - The same rules as for processors: it runs with raylib's audio lock held, so it must not block, must not call graylib's or raylib's audio functions, and must not wait for a lock another thread holds while calling them.  Share state with the game through atomics or a queue (libregnum's synthesizers drain a command queue at the start of each block).
 - How it is wired: raylib's =SetAudioStreamCallback()= has no user data, so graylib keeps a table of trampolines as for processors.  Setting fills a free slot before handing raylib its trampoline; removing hands raylib =NULL= first (under raylib's lock, so the callback is not running afterwards) and frees the slot.  A callback that cannot be detached because the device was closed under a loaded stream retires its slot.  When every slot is taken, setting logs a warning, calls =destroy= at once and leaves the stream without a callback.
 

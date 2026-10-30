@@ -9,7 +9,7 @@
 
 #include "config.h"
 #include "grl-audio-device.h"
-#include "grl-music-private.h"
+#include "grl-audio-queue-private.h"
 #include "../grl-enums.h"
 #include <raylib.h>
 #include <string.h>
@@ -35,6 +35,14 @@
  *     grl_audio_device_set_master_volume (audio, 0.8f);
  * }
  * ]|
+ *
+ * # Threads
+ *
+ * While the device is open, graylib runs one audio thread (`grl-audio`)
+ * that applies the calls made on sounds, background music and callback
+ * streams, so the game thread never waits on raylib's audio lock (see
+ * #GrlSound).  It starts when the device opens and is joined, after
+ * applying everything queued, before the device closes.
  *
  * # Backends
  *
@@ -76,8 +84,8 @@ grl_audio_device_finalize (GObject *object)
 
     if (priv->is_initialized)
     {
-        /* the music streaming thread calls raylib: it stops first */
-        grl_music_streaming_shutdown ();
+        /* the audio thread calls raylib: it finishes and stops first */
+        grl_audio_queue_stop ();
         CloseAudioDevice ();
         priv->is_initialized = FALSE;
     }
@@ -390,6 +398,7 @@ grl_audio_device_init_audio (GrlAudioDevice *self)
     {
         priv->is_initialized = TRUE;
         SetMasterVolume (priv->master_volume);
+        grl_audio_queue_start ();
         g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_IS_READY]);
         return TRUE;
     }
@@ -421,8 +430,8 @@ grl_audio_device_close (GrlAudioDevice *self)
 
     if (priv->is_initialized)
     {
-        /* the music streaming thread calls raylib: it stops first */
-        grl_music_streaming_shutdown ();
+        /* the audio thread calls raylib: it finishes and stops first */
+        grl_audio_queue_stop ();
         CloseAudioDevice ();
         priv->is_initialized = FALSE;
         g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_IS_READY]);

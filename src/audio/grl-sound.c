@@ -10,6 +10,7 @@
 #include "config.h"
 #include "grl-sound.h"
 #include "grl-audio-processor-private.h"
+#include "grl-audio-queue-private.h"
 #include "grl-wave.h"
 #include "grl-wave-private.h"
 #include "../resources/grl-resource-pack.h"
@@ -28,6 +29,11 @@
  *
  * For longer audio like background music, use #GrlMusic instead, which
  * streams the audio from disk.
+ *
+ * Playback calls (play, stop, pause, resume, volume, pitch, pan, update)
+ * return at once: graylib's audio thread applies them, so they never wait
+ * on raylib's audio lock while the mixer or a music decode holds it, and
+ * grl_sound_is_playing() reports the state the last call leaves at once.
  *
  * # Example
  *
@@ -60,9 +66,159 @@ struct _GrlSound
 
     /* per-voice processors, made on first use */
     GrlAudioProcessorSet *processors;
+
+    /* what the audio thread plays (NULL until loaded), see below */
+    GrlAudioVoice  *voice;
 };
 
 G_DEFINE_FINAL_TYPE (GrlSound, grl_sound, G_TYPE_OBJECT)
+
+/* ==========================================================================
+ * The audio thread's side (grl-audio-queue-private.h)
+ *
+ * Every raylib call that takes raylib's audio lock (play, stop, pause,
+ * resume, volume, pitch, pan, update, unload) is a command for graylib's
+ * audio thread, so the caller never waits on the mixer or a music decode.
+ * The voice keeps its own copy of the raylib Sound (its fields never
+ * change after loading).  is_playing() reads the thread's mirror: the
+ * state the last call will leave until the thread has applied it, then
+ * raylib's state as the thread last read it (within ~5 ms of a sound's
+ * natural end).
+ * ========================================================================== */
+
+typedef struct
+{
+    GrlAudioVoice parent;
+    Sound         sound;
+    gboolean      is_alias;
+} SoundVoice;
+
+/* raylib's bool read through a byte (graylib's bool/gboolean rule) */
+static gboolean
+sound_voice_refresh (GrlAudioVoice *voice)
+{
+    SoundVoice    *sv = (SoundVoice *)voice;
+    unsigned char  raw;
+
+    raw = IsSoundPlaying (sv->sound);
+    grl_audio_voice_publish_playing (voice, raw != 0);
+    return raw != 0;
+}
+
+static void
+sound_voice_release (GrlAudioVoice *voice)
+{
+    SoundVoice *sv = (SoundVoice *)voice;
+
+    if (sv->is_alias)
+        UnloadSoundAlias (sv->sound);
+    else
+        UnloadSound (sv->sound);
+}
+
+static void
+sound_voice_finalize (GrlAudioVoice *voice)
+{
+    g_free (voice);
+}
+
+static const GrlAudioVoiceClass sound_voice_class = {
+    sound_voice_refresh,
+    sound_voice_release,
+    sound_voice_finalize
+};
+
+static void
+sound_voice_play (GrlAudioVoice *voice,
+                  gfloat         value,
+                  gpointer       data)
+{
+    PlaySound (((SoundVoice *)voice)->sound);
+}
+
+static void
+sound_voice_stop (GrlAudioVoice *voice,
+                  gfloat         value,
+                  gpointer       data)
+{
+    StopSound (((SoundVoice *)voice)->sound);
+}
+
+static void
+sound_voice_pause (GrlAudioVoice *voice,
+                   gfloat         value,
+                   gpointer       data)
+{
+    PauseSound (((SoundVoice *)voice)->sound);
+}
+
+static void
+sound_voice_resume (GrlAudioVoice *voice,
+                    gfloat         value,
+                    gpointer       data)
+{
+    ResumeSound (((SoundVoice *)voice)->sound);
+}
+
+static void
+sound_voice_set_volume (GrlAudioVoice *voice,
+                        gfloat         value,
+                        gpointer       data)
+{
+    SetSoundVolume (((SoundVoice *)voice)->sound, value);
+}
+
+static void
+sound_voice_set_pitch (GrlAudioVoice *voice,
+                       gfloat         value,
+                       gpointer       data)
+{
+    SetSoundPitch (((SoundVoice *)voice)->sound, value);
+}
+
+static void
+sound_voice_set_pan (GrlAudioVoice *voice,
+                     gfloat         value,
+                     gpointer       data)
+{
+    SetSoundPan (((SoundVoice *)voice)->sound, value); /* raylib 6.0: pan is -1.0..1.0 */
+}
+
+/* new samples for UpdateSound(), copied when queued */
+typedef struct
+{
+    gint   frames;
+    guint8 samples[1];   /* frames x channels x sample size bytes */
+} SoundUpdate;
+
+static void
+sound_voice_update (GrlAudioVoice *voice,
+                    gfloat         value,
+                    gpointer       data)
+{
+    SoundUpdate *update = data;
+
+    UpdateSound (((SoundVoice *)voice)->sound, update->samples, update->frames);
+}
+
+/* a loaded raylib Sound becomes the object's, with its voice */
+static void
+sound_adopt (GrlSound *self,
+             Sound     sound,
+             gboolean  is_alias)
+{
+    SoundVoice *sv;
+
+    self->is_loaded = TRUE;
+    self->sound = sound;
+    self->is_alias = is_alias;
+
+    sv = g_new0 (SoundVoice, 1);
+    grl_audio_voice_init (&sv->parent, &sound_voice_class);
+    sv->sound = sound;
+    sv->is_alias = is_alias;
+    self->voice = &sv->parent;
+}
 
 enum
 {
@@ -102,11 +258,8 @@ grl_sound_finalize (GObject *object)
 
     if (self->is_loaded)
     {
-        /* Use appropriate unload function based on whether this is an alias */
-        if (self->is_alias)
-            UnloadSoundAlias (self->sound);
-        else
-            UnloadSound (self->sound);
+        /* unloaded (alias or not) after every call queued before it */
+        grl_audio_voice_release (g_steal_pointer (&self->voice));
         self->is_loaded = FALSE;
     }
 
@@ -317,8 +470,7 @@ grl_sound_new_from_file (const gchar  *filename,
     }
 
     self = g_object_new (GRL_TYPE_SOUND, NULL);
-    self->sound = sound;
-    self->is_loaded = TRUE;
+    sound_adopt (self, sound, FALSE);
     self->filename = g_strdup (filename);
 
     return self;
@@ -367,8 +519,7 @@ grl_sound_new_from_wave (const guint8 *data,
         return NULL;
 
     self = g_object_new (GRL_TYPE_SOUND, NULL);
-    self->sound = sound;
-    self->is_loaded = TRUE;
+    sound_adopt (self, sound, FALSE);
 
     return self;
 }
@@ -511,8 +662,7 @@ grl_sound_new_from_grl_wave (GrlWave *wave)
         return NULL;
 
     self = g_object_new (GRL_TYPE_SOUND, NULL);
-    self->sound = sound;
-    self->is_loaded = TRUE;
+    sound_adopt (self, sound, FALSE);
 
     return self;
 }
@@ -545,9 +695,7 @@ grl_sound_new_alias (GrlSound *source)
         return NULL;
 
     self = g_object_new (GRL_TYPE_SOUND, NULL);
-    self->sound = alias;
-    self->is_loaded = TRUE;
-    self->is_alias = TRUE;
+    sound_adopt (self, alias, TRUE);
 
     return self;
 }
@@ -567,7 +715,7 @@ grl_sound_play (GrlSound *self)
     if (!self->is_loaded)
         return;
 
-    PlaySound (self->sound);
+    grl_audio_voice_push_state (self->voice, sound_voice_play, 0.0f, NULL, NULL, TRUE);
 }
 
 /*
@@ -584,7 +732,7 @@ grl_sound_stop (GrlSound *self)
     if (!self->is_loaded)
         return;
 
-    StopSound (self->sound);
+    grl_audio_voice_push_state (self->voice, sound_voice_stop, 0.0f, NULL, NULL, FALSE);
 }
 
 /*
@@ -601,7 +749,9 @@ grl_sound_pause (GrlSound *self)
     if (!self->is_loaded)
         return;
 
-    PauseSound (self->sound);
+    /* resume() predicts playing only if it played when paused */
+    self->voice->resumable = grl_sound_is_playing (self);
+    grl_audio_voice_push_state (self->voice, sound_voice_pause, 0.0f, NULL, NULL, FALSE);
 }
 
 /*
@@ -618,7 +768,8 @@ grl_sound_resume (GrlSound *self)
     if (!self->is_loaded)
         return;
 
-    ResumeSound (self->sound);
+    grl_audio_voice_push_state (self->voice, sound_voice_resume, 0.0f, NULL, NULL,
+                                self->voice->resumable);
 }
 
 /*
@@ -633,11 +784,16 @@ gboolean
 grl_sound_is_playing (GrlSound *self)
 {
     unsigned char raw;
+    gboolean      playing;
 
     g_return_val_if_fail (GRL_IS_SOUND (self), FALSE);
 
     if (!self->is_loaded)
         return FALSE;
+
+    /* the audio thread's mirror: no wait on raylib's lock */
+    if (grl_audio_voice_peek_playing (self->voice, &playing))
+        return playing;
 
     /* Fix bool/gboolean ABI mismatch - use unsigned char intermediate */
     raw = IsSoundPlaying (self->sound);
@@ -677,6 +833,9 @@ grl_sound_update (GrlSound      *self,
                   gconstpointer  data,
                   gint           sample_count)
 {
+    SoundUpdate *update;
+    gsize        size;
+
     g_return_if_fail (GRL_IS_SOUND (self));
     g_return_if_fail (data != NULL);
     g_return_if_fail (sample_count > 0);
@@ -684,7 +843,12 @@ grl_sound_update (GrlSound      *self,
     if (!self->is_loaded)
         return;
 
-    UpdateSound (self->sound, data, sample_count);
+    /* raylib copies frames x channels x sample size; so does the command */
+    size = (gsize)sample_count * self->sound.stream.channels * (self->sound.stream.sampleSize / 8);
+    update = g_malloc (G_STRUCT_OFFSET (SoundUpdate, samples) + MAX (size, 1));
+    update->frames = sample_count;
+    memcpy (update->samples, data, size);
+    grl_audio_voice_push_state (self->voice, sound_voice_update, 0.0f, update, g_free, FALSE);
 }
 
 /*
@@ -707,7 +871,7 @@ grl_sound_set_volume (GrlSound *self,
         self->volume = volume;
 
         if (self->is_loaded)
-            SetSoundVolume (self->sound, volume);
+            grl_audio_voice_push (self->voice, sound_voice_set_volume, volume, NULL, NULL);
 
         g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_VOLUME]);
     }
@@ -750,7 +914,7 @@ grl_sound_set_pitch (GrlSound *self,
         self->pitch = pitch;
 
         if (self->is_loaded)
-            SetSoundPitch (self->sound, pitch);
+            grl_audio_voice_push (self->voice, sound_voice_set_pitch, pitch, NULL, NULL);
 
         g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_PITCH]);
     }
@@ -792,7 +956,7 @@ grl_sound_set_pan (GrlSound *self,
         self->pan = pan;
 
         if (self->is_loaded)
-            SetSoundPan (self->sound, pan); /* raylib 6.0: pan is -1.0..1.0 */
+            grl_audio_voice_push (self->voice, sound_voice_set_pan, pan, NULL, NULL);
 
         g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_PAN]);
     }
@@ -829,7 +993,7 @@ grl_sound_play_multi (GrlSound *self)
     if (!self->is_loaded)
         return;
 
-    PlaySound (self->sound);
+    grl_audio_voice_push_state (self->voice, sound_voice_play, 0.0f, NULL, NULL, TRUE);
 }
 
 /*
@@ -846,7 +1010,7 @@ grl_sound_stop_multi (GrlSound *self)
     if (!self->is_loaded)
         return;
 
-    StopSound (self->sound);
+    grl_audio_voice_push_state (self->voice, sound_voice_stop, 0.0f, NULL, NULL, FALSE);
 }
 
 /*
@@ -860,17 +1024,13 @@ grl_sound_stop_multi (GrlSound *self)
 gint
 grl_sound_get_sounds_playing (GrlSound *self)
 {
-    unsigned char raw;
-
     g_return_val_if_fail (GRL_IS_SOUND (self), 0);
 
     if (!self->is_loaded)
         return 0;
 
     /* raylib doesn't track multi-sound instances, return 1 if playing */
-    /* Fix bool/gboolean ABI mismatch - use unsigned char intermediate */
-    raw = IsSoundPlaying (self->sound);
-    return raw != 0 ? 1 : 0;
+    return grl_sound_is_playing (self) ? 1 : 0;
 }
 
 /*
