@@ -220,7 +220,7 @@ graylib/
   - [Input System](docs/api/input.org) - Keyboard, Mouse, Gamepad
   - [Graphics Types](docs/api/graphics.org) - Image, Texture, Font, Shader, RenderTexture
   - [Drawing Functions](docs/api/drawing.org) - Shapes, textures, text
-  - [Audio System](docs/api/audio.org) - Wave, Sound, Music, AudioStream
+  - [Audio System](docs/api/audio.org) - Wave, Sound, Music, AudioStream, per-voice processors
   - [Scene System](docs/api/scene.org) - Entity, Sprite, Scene, SceneManager
   - [Cameras](docs/api/cameras.org) - Camera2D, Camera3D
   - [Models](docs/api/models.org) - Mesh, Material, Model, ModelAnimation

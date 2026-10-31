@@ -851,9 +851,15 @@ gboolean valid = grl_font_is_valid (font);
 g_autoptr(GrlVector2) size = grl_font_measure_text (font, "Hello World", 24.0f, 2.0f);
 g_print ("Text size: %.0f x %.0f\n", size->x, size->y);
 
+/* Measure without allocating (layout code that runs every frame) */
+gfloat w, h;
+grl_font_measure_text_xy (font, "Hello World", 24.0f, 2.0f, &w, &h);
+
 /* Measure with default font */
 gint width = grl_measure_text ("Hello", 20);
 #+end_src
+
+*How text is laid out.* =grl_draw_text()=, =grl_draw_text_ex()=, =grl_measure_text()= and =grl_font_measure_text(_xy)()= do not call raylib's =DrawTextEx()= / =MeasureTextEx()=: those look every glyph up with a linear scan of the font's glyph table (twice per glyph when drawing), which dominates the CPU cost of text-heavy UIs. graylib lays the text out itself (=src/text/grl-text-layout-private.h=) with an O(1) lookup --- glyph =codepoint - glyphs[0].value= is tried first, which is where raylib puts it for the default font and for fonts loaded without an explicit codepoint list --- and falls back to raylib's exact search on a miss. The quads and measurements are identical to raylib's (=tests/test-text-layout.c= checks both pixel for pixel). Text containing a newline is passed to raylib unchanged, since raylib's line spacing is private state.
 
 *** Glyph Information
 :PROPERTIES:
@@ -1113,6 +1119,8 @@ g_autoptr(GrlColor) white = grl_color_new_white ();
 
 grl_draw_texture_pro (tex, source, dest, origin, 0.0f, white);
 #+end_src
+
+=grl_render_texture_get_texture()= returns a new reference to the same (non-owning) =GrlTexture= wrapper on every call, created on first use, so blitting a target every frame does not create a GObject per frame. Per-frame code can also keep the rectangles on the stack (=GrlRectangle source = { 0, 600, 800, -600 };=) instead of allocating them.
 
 *** Methods
 :PROPERTIES:

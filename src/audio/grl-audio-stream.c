@@ -9,6 +9,7 @@
 
 #include "config.h"
 #include "grl-audio-stream.h"
+#include "grl-audio-processor-private.h"
 #include <raylib.h>
 
 /**
@@ -60,9 +61,164 @@ struct _GrlAudioStream
     guint           sample_rate;
     guint           sample_size;
     guint           channels;
+
+    /* per-voice processors, made on first use */
+    GrlAudioProcessorSet *processors;
+
+    /* the callback (see "Callback streaming" below); slot is valid while
+     * has_callback, attached while the trampoline sits on raylib's buffer */
+    gboolean        has_callback;
+    gboolean        callback_attached;
+    guint           callback_slot;
+    GDestroyNotify  callback_destroy;
 };
 
 G_DEFINE_FINAL_TYPE (GrlAudioStream, grl_audio_stream, G_TYPE_OBJECT)
+
+/* ==========================================================================
+ * Callback streaming
+ *
+ * raylib's stream callback is a bare void (*)(void *, unsigned int)
+ * without user data, so (as for the per-voice processors) graylib keeps
+ * a table of trampolines, each a distinct static function that knows its
+ * slot.  Setting a callback takes a free slot, fills it, then hands that
+ * slot's trampoline to SetAudioStreamCallback(); removing one hands raylib
+ * NULL first and clears the slot afterwards.  SetAudioStreamCallback()
+ * takes raylib's audio lock, which the device thread holds while it runs
+ * the trampolines, so a slot is never seen half written and a cleared
+ * callback is not running.  A callback that cannot be detached (the
+ * device was closed under a loaded stream) retires its slot for good,
+ * since raylib may still hold the trampoline.
+ * ========================================================================== */
+
+typedef struct
+{
+    GrlAudioStreamCallback func;
+    gpointer               user_data;
+    gboolean               taken;
+} CallbackSlot;
+
+static GMutex       callback_lock;   /* guards taken; func/user_data are synchronized by raylib's lock */
+static CallbackSlot callback_slots[GRL_AUDIO_STREAM_MAX_CALLBACKS];
+
+/* what every trampoline does: the slot's callback on raylib's block */
+static void
+callback_run (guint         slot,
+              void         *buffer,
+              unsigned int  frames)
+{
+    GrlAudioStreamCallback func;
+
+    func = callback_slots[slot].func;
+    if (func != NULL && buffer != NULL && frames > 0)
+        func (buffer, (guint)frames, callback_slots[slot].user_data);
+}
+
+#define CALLBACK_TRAMPOLINE(hi, lo) \
+    static void \
+    callback_trampoline_##hi##_##lo (void *buffer, unsigned int frames) \
+    { \
+        callback_run ((guint)((hi) * 16 + (lo)), buffer, frames); \
+    }
+
+#define CALLBACK_TRAMPOLINE_ROW(hi) \
+    CALLBACK_TRAMPOLINE (hi, 0)  CALLBACK_TRAMPOLINE (hi, 1)  CALLBACK_TRAMPOLINE (hi, 2)  CALLBACK_TRAMPOLINE (hi, 3) \
+    CALLBACK_TRAMPOLINE (hi, 4)  CALLBACK_TRAMPOLINE (hi, 5)  CALLBACK_TRAMPOLINE (hi, 6)  CALLBACK_TRAMPOLINE (hi, 7) \
+    CALLBACK_TRAMPOLINE (hi, 8)  CALLBACK_TRAMPOLINE (hi, 9)  CALLBACK_TRAMPOLINE (hi, 10) CALLBACK_TRAMPOLINE (hi, 11) \
+    CALLBACK_TRAMPOLINE (hi, 12) CALLBACK_TRAMPOLINE (hi, 13) CALLBACK_TRAMPOLINE (hi, 14) CALLBACK_TRAMPOLINE (hi, 15)
+
+CALLBACK_TRAMPOLINE_ROW (0) CALLBACK_TRAMPOLINE_ROW (1) CALLBACK_TRAMPOLINE_ROW (2) CALLBACK_TRAMPOLINE_ROW (3)
+
+#define CALLBACK_TRAMPOLINE_REF_ROW(hi) \
+    callback_trampoline_##hi##_0,  callback_trampoline_##hi##_1,  callback_trampoline_##hi##_2, \
+    callback_trampoline_##hi##_3,  callback_trampoline_##hi##_4,  callback_trampoline_##hi##_5, \
+    callback_trampoline_##hi##_6,  callback_trampoline_##hi##_7,  callback_trampoline_##hi##_8, \
+    callback_trampoline_##hi##_9,  callback_trampoline_##hi##_10, callback_trampoline_##hi##_11, \
+    callback_trampoline_##hi##_12, callback_trampoline_##hi##_13, callback_trampoline_##hi##_14, \
+    callback_trampoline_##hi##_15
+
+static const AudioCallback callback_trampolines[GRL_AUDIO_STREAM_MAX_CALLBACKS] = {
+    CALLBACK_TRAMPOLINE_REF_ROW (0), CALLBACK_TRAMPOLINE_REF_ROW (1),
+    CALLBACK_TRAMPOLINE_REF_ROW (2), CALLBACK_TRAMPOLINE_REF_ROW (3)
+};
+
+G_STATIC_ASSERT (GRL_AUDIO_STREAM_MAX_CALLBACKS == 4 * 16);
+
+/* raylib's bool read through a byte (graylib's bool/gboolean rule) */
+static gboolean
+callback_device_ready (void)
+{
+    unsigned char raw;
+
+    raw = IsAudioDeviceReady ();
+    return raw != 0;
+}
+
+/* a free slot, marked taken; FALSE when every slot is */
+static gboolean
+callback_take_slot (guint *out_slot)
+{
+    guint i;
+
+    g_mutex_lock (&callback_lock);
+    for (i = 0; i < GRL_AUDIO_STREAM_MAX_CALLBACKS; i++)
+    {
+        if (!callback_slots[i].taken)
+        {
+            callback_slots[i].taken = TRUE;
+            g_mutex_unlock (&callback_lock);
+            *out_slot = i;
+            return TRUE;
+        }
+    }
+    g_mutex_unlock (&callback_lock);
+    return FALSE;
+}
+
+/*
+ * callback_drop:
+ * Detaches the stream's callback (raylib's lock: once this returns it is
+ * not running), clears and frees its slot, then runs the destroy notify.
+ * A trampoline left on a live buffer keeps its slot taken for good.
+ */
+static void
+callback_drop (GrlAudioStream *self)
+{
+    gpointer       user_data;
+    GDestroyNotify destroy;
+    gboolean       reusable;
+    guint          slot;
+
+    if (!self->has_callback)
+        return;
+
+    slot = self->callback_slot;
+    reusable = TRUE;
+    if (self->callback_attached)
+    {
+        if (self->is_loaded && self->stream.buffer != NULL && callback_device_ready ())
+            SetAudioStreamCallback (self->stream, NULL);
+        else
+            reusable = FALSE;
+        self->callback_attached = FALSE;
+    }
+
+    user_data = callback_slots[slot].user_data;
+    destroy = self->callback_destroy;
+    callback_slots[slot].func = NULL;
+    callback_slots[slot].user_data = NULL;
+    if (reusable)
+    {
+        g_mutex_lock (&callback_lock);
+        callback_slots[slot].taken = FALSE;
+        g_mutex_unlock (&callback_lock);
+    }
+    self->has_callback = FALSE;
+    self->callback_destroy = NULL;
+
+    if (destroy != NULL)
+        destroy (user_data);
+}
 
 enum
 {
@@ -78,6 +234,27 @@ enum
 };
 
 static GParamSpec *properties[N_PROPS];
+
+/*
+ * The processors leave raylib's stream before the voice can be unloaded
+ * (raylib does not free a stream's processors when it unloads it).
+ */
+static void
+grl_audio_stream_dispose (GObject *object)
+{
+    GrlAudioStream *self = (GrlAudioStream *)object;
+
+    /* the device stops calling us before anything is torn down */
+    callback_drop (self);
+
+    if (self->processors != NULL)
+    {
+        grl_audio_processor_set_clear (self->processors, self->is_loaded ? &self->stream : NULL, TRUE);
+        g_clear_pointer (&self->processors, grl_audio_processor_set_free);
+    }
+
+    G_OBJECT_CLASS (grl_audio_stream_parent_class)->dispose (object);
+}
 
 static void
 grl_audio_stream_finalize (GObject *object)
@@ -169,6 +346,7 @@ grl_audio_stream_class_init (GrlAudioStreamClass *klass)
 {
     GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
+    object_class->dispose = grl_audio_stream_dispose;
     object_class->finalize = grl_audio_stream_finalize;
     object_class->get_property = grl_audio_stream_get_property;
     object_class->set_property = grl_audio_stream_set_property;
@@ -464,7 +642,8 @@ grl_audio_stream_update (GrlAudioStream *self,
     g_return_if_fail (data != NULL);
     g_return_if_fail (frame_count > 0);
 
-    if (!self->is_loaded)
+    /* a callback stream is filled by the device thread, never pushed */
+    if (!self->is_loaded || self->has_callback)
         return;
 
     UpdateAudioStream (self->stream, data, frame_count);
@@ -487,7 +666,7 @@ grl_audio_stream_is_processed (GrlAudioStream *self)
 
     g_return_val_if_fail (GRL_IS_AUDIO_STREAM (self), FALSE);
 
-    if (!self->is_loaded)
+    if (!self->is_loaded || self->has_callback)
         return FALSE;
 
     /* Fix bool/gboolean ABI mismatch - use unsigned char intermediate */
@@ -682,4 +861,117 @@ grl_audio_stream_set_default_buffer_size (gint size)
     g_return_if_fail (size > 0);
 
     SetAudioStreamBufferSizeDefault (size);
+}
+
+/*
+ * grl_audio_stream_set_callback:
+ * 1. the old callback goes (detached, slot cleared, destroy run);
+ * 2. a new one takes a slot, which is filled before raylib can call its
+ *    trampoline; an unloaded object keeps it without attaching.
+ */
+void
+grl_audio_stream_set_callback (GrlAudioStream         *self,
+                               GrlAudioStreamCallback  callback,
+                               gpointer                user_data,
+                               GDestroyNotify          destroy)
+{
+    guint slot;
+
+    g_return_if_fail (GRL_IS_AUDIO_STREAM (self));
+
+    /* 1. */
+    callback_drop (self);
+    if (callback == NULL)
+    {
+        if (destroy != NULL)
+            destroy (user_data);
+        return;
+    }
+
+    /* 2. */
+    if (!callback_take_slot (&slot))
+    {
+        g_warning ("graylib: all %u audio stream callback slots are taken",
+                   (guint)GRL_AUDIO_STREAM_MAX_CALLBACKS);
+        if (destroy != NULL)
+            destroy (user_data);
+        return;
+    }
+    callback_slots[slot].user_data = user_data;
+    callback_slots[slot].func = callback;
+    self->callback_slot = slot;
+    self->callback_destroy = destroy;
+    self->has_callback = TRUE;
+    if (self->is_loaded && self->stream.buffer != NULL && callback_device_ready ())
+    {
+        SetAudioStreamCallback (self->stream, callback_trampolines[slot]);
+        self->callback_attached = TRUE;
+    }
+}
+
+gboolean
+grl_audio_stream_has_callback (GrlAudioStream *self)
+{
+    g_return_val_if_fail (GRL_IS_AUDIO_STREAM (self), FALSE);
+
+    return self->has_callback;
+}
+
+/*
+ * Per-voice processors (see grl-audio-processor.c): the set is made on
+ * first use; an unloaded object keeps its processors without a raylib
+ * stream, where only grl_audio_stream_process() runs them.
+ */
+guint
+grl_audio_stream_add_processor (GrlAudioStream            *self,
+                                GrlAudioProcessFunc  func,
+                                gpointer             user_data,
+                                GDestroyNotify       destroy)
+{
+    g_return_val_if_fail (GRL_IS_AUDIO_STREAM (self), 0);
+    g_return_val_if_fail (func != NULL, 0);
+
+    if (self->processors == NULL)
+        self->processors = grl_audio_processor_set_new ();
+    return grl_audio_processor_set_add (self->processors, self->is_loaded ? &self->stream : NULL,
+                                        func, user_data, destroy);
+}
+
+gboolean
+grl_audio_stream_remove_processor (GrlAudioStream *self,
+                                   guint     id)
+{
+    g_return_val_if_fail (GRL_IS_AUDIO_STREAM (self), FALSE);
+
+    if (self->processors == NULL || id == 0)
+        return FALSE;
+    return grl_audio_processor_set_remove (self->processors, self->is_loaded ? &self->stream : NULL, id);
+}
+
+void
+grl_audio_stream_clear_processors (GrlAudioStream *self)
+{
+    g_return_if_fail (GRL_IS_AUDIO_STREAM (self));
+
+    if (self->processors != NULL)
+        grl_audio_processor_set_clear (self->processors, self->is_loaded ? &self->stream : NULL, FALSE);
+}
+
+guint
+grl_audio_stream_get_n_processors (GrlAudioStream *self)
+{
+    g_return_val_if_fail (GRL_IS_AUDIO_STREAM (self), 0);
+
+    return grl_audio_processor_set_get_count (self->processors);
+}
+
+void
+grl_audio_stream_process (GrlAudioStream *self,
+                          gfloat   *frames,
+                          guint     n_frames)
+{
+    g_return_if_fail (GRL_IS_AUDIO_STREAM (self));
+    g_return_if_fail (frames != NULL || n_frames == 0);
+
+    grl_audio_processor_set_run (self->processors, frames, n_frames);
 }

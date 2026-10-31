@@ -15,6 +15,7 @@
 
 #include <glib-object.h>
 #include "../grl-version.h"
+#include "grl-audio-processor.h"
 
 G_BEGIN_DECLS
 
@@ -25,6 +26,15 @@ typedef struct _GrlWave GrlWave;
 
 GRL_AVAILABLE_IN_ALL
 G_DECLARE_FINAL_TYPE (GrlSound, grl_sound, GRL, SOUND, GObject)
+
+/**
+ * GRL_SOUND_VOICE_MAX_PCM_BYTES:
+ *
+ * Maximum canonical PCM retained for grl_sound_new_voice(), in bytes.
+ * Legacy constructors can still play larger sounds, but those sounds cannot
+ * supply independent voices and the checked voice constructor reports an error.
+ */
+#define GRL_SOUND_VOICE_MAX_PCM_BYTES (256U * 1024U * 1024U)
 
 /*
  * Constructors
@@ -55,6 +65,9 @@ GrlSound *          grl_sound_new_from_file         (const gchar        *filenam
  * @channels: Number of channels (1 for mono, 2 for stereo)
  *
  * Creates a sound from raw wave data.
+ * The size must contain complete frames, the sample rate/channels must be
+ * positive, and the sample size must be 8, 16 or 32. Invalid metadata returns
+ * %NULL before any division, copy or native allocation.
  *
  * Returns: (transfer full) (nullable): A new #GrlSound, or %NULL on error
  */
@@ -129,13 +142,39 @@ GrlSound *          grl_sound_new_from_resource     (GrlResourcePack    *pack,
  * This is a lightweight way to have multiple sounds that use the same
  * audio data but can have independent volume, pitch, and pan settings.
  *
- * Aliases do not own the sample data - the source sound must remain
- * valid for as long as any aliases exist.
+ * Aliases retain their root source so its shared sample data stays valid even
+ * after the caller drops its source reference. Writes through the source or
+ * an alias are reflected in every native alias. The pinned SDK's alias unload
+ * leaks its opaque residual buffer; this legacy shared-memory API retains
+ * that native limitation. Use grl_sound_new_voice() for independent storage.
  *
  * Returns: (transfer full) (nullable): A new #GrlSound alias
  */
 GRL_AVAILABLE_IN_ALL
 GrlSound *          grl_sound_new_alias             (GrlSound           *source);
+
+/**
+ * grl_sound_new_voice:
+ * @source: (transfer none): a loaded sound with retained PCM
+ * @error: (nullable): return location for an error
+ *
+ * Creates an independent native playback buffer from the source's current
+ * immutable PCM snapshot. This is explicitly not a shared-memory alias:
+ * grl_sound_is_alias() returns %FALSE, later source/voice updates are independent,
+ * and releasing either object cannot invalidate the other. Volume, pitch,
+ * pan and per-voice processors are independent. Release all voices before
+ * closing their audio device.
+ *
+ * All sound constructors retain canonical PCM up to
+ * %GRL_SOUND_VOICE_MAX_PCM_BYTES after checking component/frame arithmetic.
+ * Larger legacy sounds remain usable, but this constructor reports
+ * %G_IO_ERROR_NOT_SUPPORTED if no bounded snapshot is available. A current
+ * audio device is required; this function never initializes one.
+ *
+ * Returns: (transfer full) (nullable): the independent voice, or %NULL on error
+ */
+GRL_AVAILABLE_IN_ALL
+GrlSound *grl_sound_new_voice (GrlSound *source, GError **error);
 
 /*
  * Playback control
@@ -220,6 +259,29 @@ GRL_AVAILABLE_IN_ALL
 void                grl_sound_update                (GrlSound           *self,
                                                      gconstpointer       data,
                                                      gint                sample_count);
+
+/**
+ * grl_sound_update_checked:
+ * @self: a loaded sound or native alias
+ * @data: (array length=data_size): packed bytes in the playback format
+ * @data_size: exact input byte count
+ * @frame_count: positive complete frame count, no larger than the sound
+ * @error: (nullable): return location for a validation error
+ *
+ * Validates the complete byte/frame cardinality before writing the native
+ * buffer. Updates start at frame zero and preserve the rest of the sound.
+ * The source and its native aliases share these writes; their root's retained
+ * PCM snapshot is updated too. Independent voices keep their own snapshots.
+ * Callers must stop every voice sharing native alias storage before updating
+ * that storage; the SDK does not synchronize writes against other aliases.
+ * Raw handle mutation is unsupported: format and storage must stay owned by
+ * the wrapper. No opaque AudioBuffer field is inspected or freed.
+ *
+ * Returns: %TRUE on success, %FALSE without mutation on invalid input
+ */
+GRL_AVAILABLE_IN_ALL
+gboolean grl_sound_update_checked (GrlSound *self, const guint8 *data,
+                                  gsize data_size, guint frame_count, GError **error);
 
 /*
  * Volume and pitch
@@ -325,5 +387,86 @@ void                grl_sound_stop_multi            (GrlSound           *self);
  */
 GRL_AVAILABLE_IN_ALL
 gint                grl_sound_get_sounds_playing    (GrlSound           *self);
+
+/*
+ * Per-voice processors
+ */
+
+/**
+ * grl_sound_add_processor:
+ * @self: A #GrlSound
+ * @func: (scope notified) (closure user_data) (destroy destroy): the processor
+ * @user_data: data for @func
+ * @destroy: (nullable): frees @user_data when the processor is removed
+ *
+ * Adds a processor of this voice's samples, run after the processors
+ * added before it each time raylib mixes the voice (see
+ * #GrlAudioProcessFunc for the thread and the format it runs in).  The
+ * processor stays until it is removed, the processors are cleared or the
+ * voice is disposed; @destroy then runs.
+ *
+ * On an object without loaded audio the processor is kept and runs only
+ * through grl_sound_process().  While the audio device is closed it is not
+ * attached to raylib either.
+ *
+ * Returns: the processor's id (never 0), or 0 when all
+ *   %GRL_AUDIO_PROCESSOR_MAX_SLOTS slots are taken (@destroy has then
+ *   already been called)
+ */
+GRL_AVAILABLE_IN_ALL
+guint               grl_sound_add_processor (GrlSound           *self,
+                                         GrlAudioProcessFunc  func,
+                                         gpointer             user_data,
+                                         GDestroyNotify       destroy);
+
+/**
+ * grl_sound_remove_processor:
+ * @self: A #GrlSound
+ * @id: an id grl_sound_add_processor() returned
+ *
+ * Removes one processor; once this returns it no longer runs.
+ *
+ * Returns: %TRUE when @id was one of this voice's processors
+ */
+GRL_AVAILABLE_IN_ALL
+gboolean            grl_sound_remove_processor (GrlSound           *self,
+                                         guint                id);
+
+/**
+ * grl_sound_clear_processors:
+ * @self: A #GrlSound
+ *
+ * Removes every processor of this voice.
+ */
+GRL_AVAILABLE_IN_ALL
+void                grl_sound_clear_processors (GrlSound           *self);
+
+/**
+ * grl_sound_get_n_processors:
+ * @self: A #GrlSound
+ *
+ * Gets how many processors this voice has.
+ *
+ * Returns: the number of processors
+ */
+GRL_AVAILABLE_IN_ALL
+guint               grl_sound_get_n_processors (GrlSound           *self);
+
+/**
+ * grl_sound_process: (skip)
+ * @self: A #GrlSound
+ * @frames: @n_frames x %GRL_AUDIO_PROCESSOR_CHANNELS interleaved floats
+ * @n_frames: frames in @frames
+ *
+ * Runs this voice's processors over @frames in place, in order, as the
+ * device does before mixing the voice.  For offline rendering and tests;
+ * never call it on a playing voice's processors from another thread.
+ * Not available to language bindings (the block's size is in frames,
+ * not floats).
+ */
+GRL_AVAILABLE_IN_ALL
+void                grl_sound_process          (GrlSound           *self,
+                                         gfloat              *frames,
+                                         guint                n_frames);
 
 G_END_DECLS

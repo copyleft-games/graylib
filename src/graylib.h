@@ -66,6 +66,7 @@
 #include "core/grl-application.h"
 #include "core/grl-window.h"
 #include "core/grl-input.h"
+#include "core/grl-frame-sync.h"
 
 /* Graphics module */
 #include "graphics/grl-image.h"
@@ -99,11 +100,13 @@
 #include "audio/grl-sound.h"
 #include "audio/grl-music.h"
 #include "audio/grl-audio-stream.h"
+#include "audio/grl-audio-processor.h"
 
 /* Scene module */
 #include "scene/grl-drawable.h"
 #include "scene/grl-updatable.h"
 #include "scene/grl-collidable.h"
+#include "scene/grl-interpolation.h"
 #include "scene/grl-entity.h"
 #include "scene/grl-sprite.h"
 #include "scene/grl-animated-texture.h"

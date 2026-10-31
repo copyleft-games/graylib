@@ -25,6 +25,7 @@ TEST_SOURCES := \
 	test-bounding-box.c \
 	test-color.c \
 	test-input-event-mods.c \
+	test-frame-sync.c \
 	test-rectangle.c \
 	test-collision.c \
 	test-camera2d.c \
@@ -32,11 +33,14 @@ TEST_SOURCES := \
 	test-enums.c \
 	test-font.c \
 	test-entity.c \
+	test-interpolation.c \
 	test-scene.c \
 	test-interfaces.c \
 	test-math-utils.c \
 	test-wave.c \
 	test-audio-stream.c \
+	test-audio-processor.c \
+	test-music.c \
 	test-ui-control.c \
 	test-ui-button.c \
 	test-png.c \
@@ -59,8 +63,13 @@ TEST_SOURCES := \
 	test-text.c \
 	test-software-renderer.c \
 	test-sound-pan.c \
-	test-model-skinning.c
-TEST_SOURCES += test-texture-mipmaps.c
+	test-model-skinning.c \
+	test-text-layout.c \
+	test-texture-mipmaps.c
+TEST_SOURCES += test-audio-owned.c
+
+# Executable-owned public SDK adapters, never a device or private SDK layout.
+$(TESTOUTDIR)/test-audio-owned: TEST_LDFLAGS += -Wl,--export-dynamic
 
 # Test executables (with output directory and platform-specific extension)
 TEST_PROGRAMS := $(addprefix $(TESTOUTDIR)/,$(patsubst %.c,%$(EXE_EXT),$(TEST_SOURCES)))
@@ -71,6 +80,7 @@ TEST_CFLAGS := \
 	$(GLIB_CFLAGS) \
 	-I$(PROJROOT) \
 	-I$(PROJROOT)/src \
+	-I$(RAYLIB_LIBDIR) \
 	-DGRAYLIB_COMPILATION
 
 # Linker flags for tests

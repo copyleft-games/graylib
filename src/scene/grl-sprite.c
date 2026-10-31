@@ -79,60 +79,48 @@ grl_sprite_draw (GrlEntity *entity)
 {
     GrlSprite *self = GRL_SPRITE (entity);
     GrlSpritePrivate *priv = grl_sprite_get_instance_private (self);
-    gfloat x, y, width, height;
     gfloat rotation, scale;
-    g_autoptr(GrlVector2) origin = NULL;
-    g_autoptr(GrlRectangle) source = NULL;
-    g_autoptr(GrlRectangle) dest = NULL;
-    gfloat src_x, src_y, src_w, src_h;
+    GrlVector2 origin;
+    GrlRectangle source;
+    GrlRectangle dest;
 
     /* No texture, nothing to draw */
     if (priv->texture == NULL)
         return;
 
-    /* Get entity properties */
-    x = grl_entity_get_x (entity);
-    y = grl_entity_get_y (entity);
-    width = grl_entity_get_width (entity);
-    height = grl_entity_get_height (entity);
-    rotation = grl_entity_get_rotation (entity);
-    scale = grl_entity_get_scale (entity);
-    origin = grl_entity_get_origin (entity);
+    /* Entity transform, interpolated for drawing. Everything below lives
+     * on the stack: sprites are drawn every frame, often thousands. */
+    grl_entity_get_render_pose (entity, &dest.x, &dest.y, &rotation, &scale);
+    grl_entity_get_origin_xy (entity, &origin.x, &origin.y);
 
     /* Determine source rectangle */
     if (priv->source_rect != NULL)
     {
-        src_x = grl_rectangle_get_x (priv->source_rect);
-        src_y = grl_rectangle_get_y (priv->source_rect);
-        src_w = grl_rectangle_get_width (priv->source_rect);
-        src_h = grl_rectangle_get_height (priv->source_rect);
+        source = *priv->source_rect;
     }
     else
     {
         /* Use full texture */
-        src_x = 0.0f;
-        src_y = 0.0f;
-        src_w = (gfloat)grl_texture_get_width (priv->texture);
-        src_h = (gfloat)grl_texture_get_height (priv->texture);
+        source.x = 0.0f;
+        source.y = 0.0f;
+        source.width = (gfloat)grl_texture_get_width (priv->texture);
+        source.height = (gfloat)grl_texture_get_height (priv->texture);
     }
 
-    /* Apply flip by negating source dimensions */
+    /* Apply flip by negating source dimensions (raylib mirrors the
+     * sampled region for a negative width/height) */
     if (priv->flip_h)
-        src_w = -src_w;
+        source.width = -source.width;
 
     if (priv->flip_v)
-        src_h = -src_h;
+        source.height = -source.height;
 
-    /* Create source and destination rectangles */
-    source = grl_rectangle_new (src_x, src_y,
-                                priv->flip_h ? -src_w : src_w,
-                                priv->flip_v ? -src_h : src_h);
-
-    /* Apply scale to destination */
-    dest = grl_rectangle_new (x, y, width * scale, height * scale);
+    /* Apply scale to destination (position from the render pose) */
+    dest.width = grl_entity_get_width (entity) * scale;
+    dest.height = grl_entity_get_height (entity) * scale;
 
     /* Draw the texture */
-    grl_draw_texture_pro (priv->texture, source, dest, origin,
+    grl_draw_texture_pro (priv->texture, &source, &dest, &origin,
                           rotation, priv->tint);
 }
 

@@ -14,6 +14,7 @@
 #include <glib-object.h>
 #include "grl-image.h"
 #include "grl-texture.h"
+#include "grl-model.h"
 
 G_BEGIN_DECLS
 
@@ -25,5 +26,12 @@ G_BEGIN_DECLS
  * The returned GrlImage takes ownership of the handle data.
  */
 GrlImage *  grl_image_new_from_raw_handle   (gpointer handle);
+
+/*
+ * Records that CPU skinning (UpdateModelAnimation / UpdateModelAnimationEx)
+ * wrote a pose into the model's position and normal buffers, so the next
+ * grl_model_prepare_gpu_skinning() restores the bind pose there.
+ */
+void        grl_model_mark_cpu_posed        (GrlModel *self);
 
 G_END_DECLS

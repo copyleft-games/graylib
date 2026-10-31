@@ -42,6 +42,7 @@ PUBLIC_HEADERS := \
 	src/core/grl-application.h \
 	src/core/grl-window.h \
 	src/core/grl-input.h \
+	src/core/grl-frame-sync.h \
 	src/graphics/grl-image.h \
 	src/graphics/grl-path.h \
 	src/graphics/grl-svg.h \
@@ -66,9 +67,11 @@ PUBLIC_HEADERS := \
 	src/audio/grl-sound.h \
 	src/audio/grl-music.h \
 	src/audio/grl-audio-stream.h \
+	src/audio/grl-audio-processor.h \
 	src/scene/grl-drawable.h \
 	src/scene/grl-updatable.h \
 	src/scene/grl-collidable.h \
+	src/scene/grl-interpolation.h \
 	src/scene/grl-entity.h \
 	src/scene/grl-sprite.h \
 	src/scene/grl-animated-texture.h \
@@ -121,6 +124,7 @@ SOURCES := \
 	src/core/grl-application.c \
 	src/core/grl-window.c \
 	src/core/grl-input.c \
+	src/core/grl-frame-sync.c \
 	src/graphics/grl-image.c \
 	src/graphics/grl-path.c \
 	src/graphics/grl-svg.c \
@@ -149,9 +153,11 @@ SOURCES := \
 	src/audio/grl-sound.c \
 	src/audio/grl-music.c \
 	src/audio/grl-audio-stream.c \
+	src/audio/grl-audio-processor.c \
 	src/scene/grl-drawable.c \
 	src/scene/grl-updatable.c \
 	src/scene/grl-collidable.c \
+	src/scene/grl-interpolation.c \
 	src/scene/grl-entity.c \
 	src/scene/grl-sprite.c \
 	src/scene/grl-animated-texture.c \
@@ -208,6 +214,20 @@ GENERATED_HEADERS := src/grl-version.h src/config.h
 
 .PHONY: generate
 generate: $(GENERATED_HEADERS)
+
+# Recheck the source capability on every invocation. The content-stable header
+# also invalidates a stale music object when switching SDKs with older mtimes.
+.PHONY: audio-sdk-capability-force
+audio-sdk-capability-force:
+
+$(BUILDDIR)/grl-audio-sdk-capabilities.h: audio-sdk-capability-force
+	@$(MKDIR_P) $(dir $@)
+	@printf '#define GRL_SDK_WAV_EXTRA_FREE (%s)\n' '$(GRL_SDK_WAV_EXTRA_FREE)' > $@.tmp
+	@cmp -s $@.tmp $@ || mv $@.tmp $@
+	@$(RM) $@.tmp
+
+$(OBJDIR)/src/audio/grl-music.o: $(BUILDDIR)/grl-audio-sdk-capabilities.h
+$(OBJDIR)/src/audio/grl-music.o: LIB_CFLAGS += -include $(BUILDDIR)/grl-audio-sdk-capabilities.h
 
 # =============================================================================
 # Build Platform Tracking
@@ -270,9 +290,9 @@ ifeq ($(RAYLIB_SHARED),0)
 	$(call print_status,"Building raylib...")
 ifeq ($(TARGET_PLATFORM),windows)
 	cd $(RAYLIB_SRC) && $(MAKE) CC=$(CC) AR=$(AR) \
-		PLATFORM=PLATFORM_DESKTOP PLATFORM_OS=WINDOWS RAYLIB_LIBTYPE=STATIC
+		PLATFORM=PLATFORM_DESKTOP PLATFORM_OS=WINDOWS RAYLIB_LIBTYPE=STATIC $(RAYLIB_OPT_FLAGS)
 else
-	cd $(RAYLIB_SRC) && $(MAKE) PLATFORM=PLATFORM_DESKTOP RAYLIB_LIBTYPE=STATIC $(RAYLIB_GLFW_FLAGS)
+	cd $(RAYLIB_SRC) && $(MAKE) PLATFORM=PLATFORM_DESKTOP RAYLIB_LIBTYPE=STATIC $(RAYLIB_GLFW_FLAGS) $(RAYLIB_OPT_FLAGS)
 endif
 	@$(MKDIR_P) $(BUILDDIR)
 	@echo "$(RAYLIB_PLATFORM_TAG)" > $(RAYLIB_PLATFORM_MARKER)
@@ -306,7 +326,12 @@ $(LIBOUTDIR)/$(LIB_STATIC): $(OBJECTS) | $(LIBOUTDIR)
 	$(RANLIB) $@
 
 # Shared library
-$(LIBOUTDIR)/$(LIB_SHARED): $(OBJECTS) | $(LIBOUTDIR)
+# The bundled SDK is linked into the shared library. A rebuilt archive must
+# relink it even when the public headers and wrapper objects are unchanged.
+ifeq ($(RAYLIB_SHARED),0)
+_GRAYLIB_SDK_LINK_INPUT := $(RAYLIB_SRC)/libraylib.a
+endif
+$(LIBOUTDIR)/$(LIB_SHARED): $(OBJECTS) $(_GRAYLIB_SDK_LINK_INPUT) | $(LIBOUTDIR)
 	$(call print_status,"Creating shared library: $(LIB_SHARED)")
 ifeq ($(TARGET_PLATFORM),windows)
 	$(CC) $(LIB_LDFLAGS) -Wl,--out-implib,$(LIBOUTDIR)/$(LIB_IMPORT) \
@@ -469,6 +494,7 @@ endif
 	$(INSTALL_DATA) src/core/grl-application.h $(DESTDIR)$(INCLUDEDIR)/graylib/core/
 	$(INSTALL_DATA) src/core/grl-window.h $(DESTDIR)$(INCLUDEDIR)/graylib/core/
 	$(INSTALL_DATA) src/core/grl-input.h $(DESTDIR)$(INCLUDEDIR)/graylib/core/
+	$(INSTALL_DATA) src/core/grl-frame-sync.h $(DESTDIR)$(INCLUDEDIR)/graylib/core/
 	$(INSTALL_DATA) src/graphics/grl-image.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
 	$(INSTALL_DATA) src/graphics/grl-path.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
 	$(INSTALL_DATA) src/graphics/grl-svg.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
@@ -493,9 +519,11 @@ endif
 	$(INSTALL_DATA) src/audio/grl-sound.h $(DESTDIR)$(INCLUDEDIR)/graylib/audio/
 	$(INSTALL_DATA) src/audio/grl-music.h $(DESTDIR)$(INCLUDEDIR)/graylib/audio/
 	$(INSTALL_DATA) src/audio/grl-audio-stream.h $(DESTDIR)$(INCLUDEDIR)/graylib/audio/
+	$(INSTALL_DATA) src/audio/grl-audio-processor.h $(DESTDIR)$(INCLUDEDIR)/graylib/audio/
 	$(INSTALL_DATA) src/scene/grl-drawable.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
 	$(INSTALL_DATA) src/scene/grl-updatable.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
 	$(INSTALL_DATA) src/scene/grl-collidable.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
+	$(INSTALL_DATA) src/scene/grl-interpolation.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
 	$(INSTALL_DATA) src/scene/grl-entity.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
 	$(INSTALL_DATA) src/scene/grl-sprite.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
 	$(INSTALL_DATA) src/scene/grl-animated-texture.h $(DESTDIR)$(INCLUDEDIR)/graylib/scene/
@@ -639,6 +667,10 @@ $(OBJDIR)/src/core/grl-input.o: src/core/grl-input.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
+$(OBJDIR)/src/core/grl-frame-sync.o: src/core/grl-frame-sync.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(LIB_CFLAGS) -c -o $@ $<
+
 # Graphics module (grl-image.o is built below with the rpng flags)
 $(OBJDIR)/src/graphics/grl-gif-writer.o: src/graphics/grl-gif-writer.c
 	@$(MKDIR_P) $(dir $@)
@@ -761,6 +793,10 @@ $(OBJDIR)/src/audio/grl-audio-stream.o: src/audio/grl-audio-stream.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
+$(OBJDIR)/src/audio/grl-audio-processor.o: src/audio/grl-audio-processor.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(LIB_CFLAGS) -c -o $@ $<
+
 # Scene module
 $(OBJDIR)/src/scene/grl-drawable.o: src/scene/grl-drawable.c
 	@$(MKDIR_P) $(dir $@)
@@ -771,6 +807,10 @@ $(OBJDIR)/src/scene/grl-updatable.o: src/scene/grl-updatable.c
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
 $(OBJDIR)/src/scene/grl-collidable.o: src/scene/grl-collidable.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(LIB_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/scene/grl-interpolation.o: src/scene/grl-interpolation.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 

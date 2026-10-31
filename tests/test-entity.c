@@ -13,6 +13,8 @@
 #include <glib.h>
 #include <math.h>
 #include "src/scene/grl-entity.h"
+#include "src/scene/grl-updatable.h"
+#include "src/scene/grl-drawable.h"
 #include "src/math/grl-vector2.h"
 
 #define EPSILON 0.0001f
@@ -66,10 +68,11 @@ test_entity_set_position (void)
 {
     g_autoptr(GrlEntity) entity = grl_entity_new ();
     g_autoptr(GrlVector2) new_pos = grl_vector2_new (50.0f, 75.0f);
+	g_autoptr(GrlVector2) pos = NULL;
 
     grl_entity_set_position (entity, new_pos);
 
-    g_autoptr(GrlVector2) pos = grl_entity_get_position (entity);
+    pos = grl_entity_get_position (entity);
     g_assert_true (float_equal (pos->x, 50.0f));
     g_assert_true (float_equal (pos->y, 75.0f));
 }
@@ -171,10 +174,11 @@ test_entity_get_set_origin (void)
 {
     g_autoptr(GrlEntity) entity = grl_entity_new ();
     g_autoptr(GrlVector2) new_origin = grl_vector2_new (16.0f, 16.0f);
+	g_autoptr(GrlVector2) origin = NULL;
 
     grl_entity_set_origin (entity, new_origin);
 
-    g_autoptr(GrlVector2) origin = grl_entity_get_origin (entity);
+    origin = grl_entity_get_origin (entity);
     g_assert_true (float_equal (origin->x, 16.0f));
     g_assert_true (float_equal (origin->y, 16.0f));
 }
@@ -183,12 +187,13 @@ static void
 test_entity_center_origin (void)
 {
     g_autoptr(GrlEntity) entity = grl_entity_new ();
+	g_autoptr(GrlVector2) origin = NULL;
 
     grl_entity_set_width (entity, 100.0f);
     grl_entity_set_height (entity, 50.0f);
     grl_entity_center_origin (entity);
 
-    g_autoptr(GrlVector2) origin = grl_entity_get_origin (entity);
+    origin = grl_entity_get_origin (entity);
     g_assert_true (float_equal (origin->x, 50.0f));
     g_assert_true (float_equal (origin->y, 25.0f));
 }
@@ -358,6 +363,180 @@ test_entity_clear_tag (void)
 }
 
 /*
+ * Cached instance checks and interface dispatch
+ *
+ * The entity accessors and the GrlUpdatable/GrlDrawable entry points
+ * cache the last instance type that passed their check, and update()/
+ * draw() look the vtable up once for both of their calls. A subclass
+ * (which misses GLib's exact-type fast path) must be accepted, anything
+ * else still rejected after a cached pass, and a subclass that
+ * re-implements an interface must still be dispatched through its own
+ * vtable.
+ */
+
+#define TEST_TYPE_SUB_ENTITY (test_sub_entity_get_type ())
+G_DECLARE_FINAL_TYPE (TestSubEntity, test_sub_entity, TEST, SUB_ENTITY, GrlEntity)
+
+struct _TestSubEntity
+{
+    GrlEntity parent_instance;
+    guint     updates;
+    guint     draws;
+};
+
+G_DEFINE_TYPE (TestSubEntity, test_sub_entity, GRL_TYPE_ENTITY)
+
+static void
+test_sub_entity_update (GrlEntity *entity,
+                        gfloat     delta)
+{
+	(void)delta;
+    ((TestSubEntity *) entity)->updates++;
+}
+
+static void
+test_sub_entity_draw (GrlEntity *entity)
+{
+    ((TestSubEntity *) entity)->draws++;
+}
+
+static void
+test_sub_entity_class_init (TestSubEntityClass *klass)
+{
+    GRL_ENTITY_CLASS (klass)->update = test_sub_entity_update;
+    GRL_ENTITY_CLASS (klass)->draw = test_sub_entity_draw;
+}
+
+static void
+test_sub_entity_init (TestSubEntity *self)
+{
+	(void)self;
+}
+
+/* Re-implements both interfaces: never active, never visible */
+#define TEST_TYPE_HIDDEN_ENTITY (test_hidden_entity_get_type ())
+G_DECLARE_FINAL_TYPE (TestHiddenEntity, test_hidden_entity, TEST, HIDDEN_ENTITY, GrlEntity)
+
+struct _TestHiddenEntity
+{
+    GrlEntity parent_instance;
+    guint     calls;
+};
+
+static gboolean
+test_hidden_entity_never (GrlUpdatable *updatable)
+{
+	(void)updatable;
+    return FALSE;
+}
+
+static gboolean
+test_hidden_entity_never_visible (GrlDrawable *drawable)
+{
+	(void)drawable;
+    return FALSE;
+}
+
+static void
+test_hidden_entity_update (GrlUpdatable *updatable,
+                           gfloat        delta)
+{
+	(void)delta;
+    ((TestHiddenEntity *) updatable)->calls++;
+}
+
+static void
+test_hidden_entity_draw (GrlDrawable *drawable)
+{
+    ((TestHiddenEntity *) drawable)->calls++;
+}
+
+static void
+test_hidden_entity_updatable_init (GrlUpdatableInterface *iface)
+{
+    iface->update = test_hidden_entity_update;
+    iface->get_active = test_hidden_entity_never;
+}
+
+static void
+test_hidden_entity_drawable_init (GrlDrawableInterface *iface)
+{
+    iface->draw = test_hidden_entity_draw;
+    iface->get_visible = test_hidden_entity_never_visible;
+}
+
+G_DEFINE_TYPE_WITH_CODE (TestHiddenEntity, test_hidden_entity, GRL_TYPE_ENTITY,
+    G_IMPLEMENT_INTERFACE (GRL_TYPE_UPDATABLE, test_hidden_entity_updatable_init)
+    G_IMPLEMENT_INTERFACE (GRL_TYPE_DRAWABLE, test_hidden_entity_drawable_init))
+
+static void
+test_hidden_entity_class_init (TestHiddenEntityClass *klass)
+{
+	(void)klass;
+}
+
+static void
+test_hidden_entity_init (TestHiddenEntity *self)
+{
+	(void)self;
+}
+
+static void
+test_entity_cached_type_checks (void)
+{
+    g_autoptr(TestSubEntity) sub = g_object_new (TEST_TYPE_SUB_ENTITY, NULL);
+    g_autoptr(GObject) plain = g_object_new (G_TYPE_OBJECT, NULL);
+
+    /* Subclass instances pass, repeatedly (the second hits the cache) */
+    grl_entity_set_width (GRL_ENTITY (sub), 3.0f);
+    g_assert_true (float_equal (grl_entity_get_width (GRL_ENTITY (sub)), 3.0f));
+    g_assert_true (float_equal (grl_entity_get_width (GRL_ENTITY (sub)), 3.0f));
+    grl_updatable_update (GRL_UPDATABLE (sub), 0.1f);
+    grl_updatable_update (GRL_UPDATABLE (sub), 0.1f);
+    g_assert_cmpuint (sub->updates, ==, 2);
+    grl_drawable_draw (GRL_DRAWABLE (sub));
+    g_assert_cmpuint (sub->draws, ==, 1);
+
+    /* Inactive / invisible through the entity's own interface state */
+    grl_entity_set_active (GRL_ENTITY (sub), FALSE);
+    grl_updatable_update (GRL_UPDATABLE (sub), 0.1f);
+    g_assert_cmpuint (sub->updates, ==, 2);
+    grl_entity_set_visible (GRL_ENTITY (sub), FALSE);
+    grl_drawable_draw (GRL_DRAWABLE (sub));
+    g_assert_cmpuint (sub->draws, ==, 1);
+
+    /* Non-conforming instances are still refused after a cached pass */
+    g_test_expect_message (NULL, G_LOG_LEVEL_CRITICAL, "*GRL_IS_ENTITY*");
+    g_assert_true (float_equal (grl_entity_get_width ((GrlEntity *) plain), 0.0f));
+    g_test_assert_expected_messages ();
+    g_test_expect_message (NULL, G_LOG_LEVEL_CRITICAL, "*GRL_IS_ENTITY*");
+    g_assert_false (grl_entity_get_visible (NULL));
+    g_test_assert_expected_messages ();
+    g_test_expect_message (NULL, G_LOG_LEVEL_CRITICAL, "*GRL_IS_UPDATABLE*");
+    grl_updatable_update ((GrlUpdatable *) plain, 0.1f);
+    g_test_assert_expected_messages ();
+    g_test_expect_message (NULL, G_LOG_LEVEL_CRITICAL, "*GRL_IS_DRAWABLE*");
+    grl_drawable_draw ((GrlDrawable *) plain);
+    g_test_assert_expected_messages ();
+}
+
+static void
+test_entity_interface_override (void)
+{
+    g_autoptr(TestHiddenEntity) hidden = g_object_new (TEST_TYPE_HIDDEN_ENTITY, NULL);
+
+    /* The entity's own flags say active and visible; the re-implemented
+     * interfaces say neither, and they are what update()/draw() ask. */
+    g_assert_true (grl_entity_get_active (GRL_ENTITY (hidden)));
+    g_assert_true (grl_entity_get_visible (GRL_ENTITY (hidden)));
+    g_assert_false (grl_updatable_get_active (GRL_UPDATABLE (hidden)));
+    g_assert_false (grl_drawable_get_visible (GRL_DRAWABLE (hidden)));
+    grl_updatable_update (GRL_UPDATABLE (hidden), 0.1f);
+    grl_drawable_draw (GRL_DRAWABLE (hidden));
+    g_assert_cmpuint (hidden->calls, ==, 0);
+}
+
+/*
  * Test registration
  */
 
@@ -411,6 +590,10 @@ main (int   argc,
     g_test_add_func ("/entity/has-tag-false", test_entity_has_tag_false);
     g_test_add_func ("/entity/has-tag-null", test_entity_has_tag_null);
     g_test_add_func ("/entity/clear-tag", test_entity_clear_tag);
+
+    /* Cached checks and interface dispatch */
+    g_test_add_func ("/entity/cached-type-checks", test_entity_cached_type_checks);
+    g_test_add_func ("/entity/interface-override", test_entity_interface_override);
 
     return g_test_run ();
 }

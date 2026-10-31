@@ -49,7 +49,7 @@ See [[file:best_practices.org][Best Practices]] for common pitfalls and solution
 - [[file:api/graphics.org][Graphics]] - Images, textures, fonts, shaders, and render textures
 - [[file:api/svg.org][SVG]] - SVG import/export over a documented geometry+paint subset
 - [[file:api/drawing.org][Drawing]] - Shape, texture, and text drawing functions
-- [[file:api/audio.org][Audio]] - Sound effects and music
+- [[file:api/audio.org][Audio]] - Sound effects, music and per-voice processors
 - [[file:api/scene.org][Scene]] - Entity system, sprites, and animations
 - [[file:api/cameras.org][Cameras]] - 2D and 3D camera systems
 - [[file:api/models.org][Models]] - 3D meshes, materials, models, and skeletal animation (GPU skinning, bones, transforms)

@@ -164,6 +164,48 @@ test_mipmap_metadata (void)
 	g_assert_cmpint (gi_callable_info_get_caller_owns ((GICallableInfo *)method), ==, GI_TRANSFER_EVERYTHING);
 }
 
+/* Preserve the upstream native callbacks' notified lifetime, closure and
+ * destroy indices when combining them with the public raw-buffer contracts. */
+static void
+test_native_callback_metadata (void)
+{
+	g_autoptr(GIFunctionInfo) method = find_method ("AudioStream", "set_callback");
+	g_autoptr(GIArgInfo) callback = gi_callable_info_get_arg ((GICallableInfo *)method, 0);
+	g_autoptr(GITypeInfo) type = gi_arg_info_get_type_info (callback);
+	g_autoptr(GIBaseInfo) interface = gi_type_info_get_interface (type);
+	g_autoptr(GIFunctionInfo) background = find_method ("Music", "set_background_streaming");
+	guint index = 0;
+
+	g_assert_true (GI_IS_CALLBACK_INFO (interface));
+	g_assert_cmpstr (gi_base_info_get_name (interface), ==, "AudioStreamCallback");
+	g_assert_true (gi_arg_info_may_be_null (callback));
+	g_assert_cmpint (gi_arg_info_get_scope (callback), ==, GI_SCOPE_TYPE_NOTIFIED);
+	g_assert_true (gi_arg_info_get_closure_index (callback, &index));
+	g_assert_cmpuint (index, ==, 1);
+	g_assert_true (gi_arg_info_get_destroy_index (callback, &index));
+	g_assert_cmpuint (index, ==, 2);
+	g_assert_nonnull (background);
+}
+
+/* The independent policy is explicit; the shared-memory constructor remains
+ * present, while checked writes carry a real byte length and GError contract. */
+static void
+test_independent_voice_metadata (void)
+{
+	g_autoptr(GIFunctionInfo) voice = find_method ("Sound", "new_voice");
+	g_autoptr(GIFunctionInfo) alias = find_method ("Sound", "new_alias");
+	g_autoptr(GIFunctionInfo) update = find_method ("Sound", "update_checked");
+	g_autoptr(GIArgInfo) data = gi_callable_info_get_arg ((GICallableInfo *)update, 0);
+	g_autoptr(GITypeInfo) type = gi_arg_info_get_type_info (data);
+
+	g_assert_nonnull (alias);
+	g_assert_true (gi_callable_info_can_throw_gerror ((GICallableInfo *)voice));
+	g_assert_true (gi_callable_info_may_return_null ((GICallableInfo *)voice));
+	g_assert_cmpint (gi_callable_info_get_caller_owns ((GICallableInfo *)voice), ==, GI_TRANSFER_EVERYTHING);
+	assert_array (type, GI_TYPE_TAG_UINT8, 1);
+	g_assert_true (gi_callable_info_can_throw_gerror ((GICallableInfo *)update));
+}
+
 int
 main (int argc, char **argv)
 {
@@ -185,5 +227,7 @@ main (int argc, char **argv)
 	g_test_add_func ("/introspection/png", test_png_metadata);
 	g_test_add_func ("/introspection/audio-buffer-metadata", test_audio_buffer_metadata);
 	g_test_add_func ("/introspection/mipmap-metadata", test_mipmap_metadata);
+	g_test_add_func ("/introspection/native-callback-metadata", test_native_callback_metadata);
+	g_test_add_func ("/introspection/independent-voice", test_independent_voice_metadata);
 	return g_test_run ();
 }

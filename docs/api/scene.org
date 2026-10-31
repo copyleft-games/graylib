@@ -16,6 +16,15 @@ The scene module provides three interfaces that can be implemented by any GObjec
 | =GrlUpdatable=  | Objects that update each frame with delta time        |
 | =GrlCollidable= | Objects that participate in collision detection       |
 
+*** Per-call cost
+:PROPERTIES:
+:CUSTOM_ID: per-call-cost
+:END:
+Engines call =grl_updatable_update()=, =grl_drawable_draw()= and the =GrlEntity= getters for every object every frame, so their argument checks are cheap:
+
+- GLib's instance check only has an inline fast path for an exact type match; a subclass instance (every game object is one) or an interface check calls into the type system. The entity accessors and the =GrlUpdatable= / =GrlDrawable= entry points remember the last instance type that passed their check (one atomic word per source file, =src/grl-type-check-private.h=). Conformance never stops being true, so this is exact: non-conforming arguments still fail with the same critical.
+- =grl_updatable_update()= and =grl_drawable_draw()= look the instance's vtable up once and use it for both the active/visible test and the call; a subclass that re-implements an interface is still dispatched (and asked whether it is active or visible) through its own vtable.
+
 ** GrlDrawable Interface
 :PROPERTIES:
 :CUSTOM_ID: grldrawable-interface
@@ -245,7 +254,13 @@ grl_entity_set_origin (entity, origin);
 
 /* Center the origin automatically */
 grl_entity_center_origin (entity);  /* Sets origin to (width/2, height/2) */
+
+/* Read it without allocating (per-frame code) */
+gfloat ox, oy;
+grl_entity_get_origin_xy (entity, &ox, &oy);
 #+end_src
+
+=grl_entity_get_origin()= returns a new =GrlVector2= on every call; draw code that runs every frame should use =grl_entity_get_origin_xy()=.
 
 *** Movement
 :PROPERTIES:
@@ -315,6 +330,63 @@ g_autoptr(GrlRectangle) bounds = grl_entity_get_bounds (entity);
 /* Toggle collision detection */
 grl_collidable_set_collision_enabled (GRL_COLLIDABLE (entity), TRUE);
 #+end_src
+
+*** Render Interpolation
+:PROPERTIES:
+:CUSTOM_ID: render-interpolation
+:END:
+A game that simulates in fixed steps (e.g. 60 per second) on a display with another refresh rate (e.g. 144 Hz) runs 0, 1 or 2 steps per frame; drawn at their simulation pose, entities move on a 2,3,2,3 frame cadence (judder). =grl-interpolation.h= provides a process-wide interpolation clock and =GrlEntity= keeps the pose it had at the start of the latest step it moved in, so it can be drawn at a blend of that pose and its true pose. libregnum's =LrgGameTemplate= drives the clock; other game loops can drive it themselves.
+
+**** The clock
+| Function                             | Purpose                                                                 |
+|--------------------------------------+-------------------------------------------------------------------------|
+| =grl_interpolation_set_enabled()=    | Turn interpolation on (fixed-step loop) or off; a change starts a new step |
+| =grl_interpolation_begin_step()=     | Start of one fixed simulation step                                      |
+| =grl_interpolation_end_step()=       | End of the step                                                         |
+| =grl_interpolation_set_alpha()=      | Publish =accumulator / step= before drawing                             |
+| =grl_interpolation_get_alpha()=      | Read the blend factor from any draw code (1 while disabled)             |
+| =grl_interpolation_get_step()=       | Serial of the latest step                                               |
+| =grl_interpolation_lerp()=, =grl_interpolation_lerp_angle()= | Blend helpers; the angle blend takes the shorter arc |
+
+#+begin_src C
+/* A hand-written fixed-step loop */
+grl_interpolation_set_enabled (TRUE);
+accumulator += frame_delta;
+while (accumulator >= STEP)
+{
+    grl_interpolation_begin_step ();
+    simulate (STEP);                 /* moves entities with the normal setters */
+    grl_interpolation_end_step ();
+    accumulator -= STEP;
+}
+grl_interpolation_set_alpha ((gfloat) (accumulator / STEP));
+draw ();                             /* GrlSprite and friends use the render pose */
+#+end_src
+
+**** How the previous pose is kept
+The previous pose is captured lazily: the first write to =x=, =y=, =rotation= or =scale= inside a step copies the current pose aside (a =GrlInterpolationTrack= remembers which step that was). An entity that does not move costs nothing, there is no per-step pass over all entities, and an entity whose capture is older than the latest step did not move in it and is drawn at its true pose. Writes made outside a step (per-frame code) shift the previous pose by the same amount, so they show in full at once without disturbing the blend.
+
+**** Render getters
+The plain getters (=grl_entity_get_x()=, =get_rotation()=, ...) always return the true simulation state; gameplay, physics and collision keep using them (the default collision bounds do). Draw code uses:
+
+#+begin_src C
+gfloat x, y, rotation, scale;
+
+/* One call for everything a draw needs; any out argument may be NULL */
+grl_entity_get_render_pose (entity, &x, &y, &rotation, &scale);
+
+grl_entity_get_render_position_xy (entity, &x, &y);
+rotation = grl_entity_get_render_rotation (entity);
+scale = grl_entity_get_render_scale (entity);
+#+end_src
+
+Position and scale are blended linearly, rotation (degrees) along the shorter arc; width, height and origin are not interpolated. =GrlSprite= draws at the render pose.
+
+**** Teleports, spawns and opting out
+- =grl_entity_teleport (entity, x, y)= moves without a blend (respawns, warps). =grl_entity_reset_interpolation()= does the same after any setters. For the rest of that step later writes move both poses, so "teleport then move" does not streak either.
+- A new entity starts with previous == current, and writes in the step it was created in act like a teleport, so spawning and positioning in one step draws it at the spawn point.
+- The =interpolate= property (default =TRUE=) opts an entity out; toggling it resets the blend.
+- While the clock is disabled (variable timestep, or the game turned interpolation off) the render pose is the true pose and setters do no extra work beyond a branch.
 
 *** Subclassing GrlEntity
 :PROPERTIES:
@@ -464,6 +536,8 @@ gboolean flipped_h = grl_sprite_get_flip_h (sprite);
 grl_sprite_set_flip_v (sprite, TRUE);
 gboolean flipped_v = grl_sprite_get_flip_v (sprite);
 #+end_src
+
+Flipping mirrors the sampled region (the source rectangle's width or height is negated before drawing). Earlier versions negated the sign twice in =grl_sprite_draw()=, so =flip-h= and =flip-v= had no visible effect; they now flip as documented. =grl_sprite_draw()= builds its rectangles on the stack, so drawing a sprite allocates nothing.
 
 ** GrlAnimatedTexture
 :PROPERTIES:
@@ -746,6 +820,7 @@ main (int argc, char *argv[])
 | =active=   | gboolean | Read/Write | Whether entity updates      |
 | =z-index=  | gint     | Read/Write | Draw order                  |
 | =tag=      | gchar*   | Read/Write | Entity tag string           |
+| =interpolate= | gboolean | Read/Write | Draw at the interpolated pose (default TRUE) |
 
 *** GrlSprite Properties
 :PROPERTIES:
@@ -779,6 +854,8 @@ main (int argc, char *argv[])
 :CUSTOM_ID: grlscene
 :END:
 A container for entities with lifecycle management. Scenes can be subclassed to create custom game states (menus, levels, etc.).
+
+Draw order is by z-index, stable (equal z-indices draw in insertion order). The scene checks the order every frame in one linear pass and re-sorts only when an entity was added or an entity's z-index moved it out of order, so changing =z-index= on an entity already in a scene takes effect on the next draw (it used to be ignored until the next add). Adding, removing and counting entities is constant time apart from removal's list unlink; =grl_scene_get_entities()= still returns the scene's own =GList=.
 
 *** Creating Scenes
 :PROPERTIES:

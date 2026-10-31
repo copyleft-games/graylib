@@ -275,6 +275,20 @@ GRL_AVAILABLE_IN_ALL
 GrlVector2 *    grl_entity_get_origin       (GrlEntity      *self);
 
 /**
+ * grl_entity_get_origin_xy:
+ * @self: A #GrlEntity
+ * @x: (out) (optional): return location for the origin's X
+ * @y: (out) (optional): return location for the origin's Y
+ *
+ * Gets the entity's origin (pivot point) without allocating, for code
+ * that reads it every frame.
+ */
+GRL_AVAILABLE_IN_ALL
+void            grl_entity_get_origin_xy    (GrlEntity      *self,
+                                             gfloat         *x,
+                                             gfloat         *y);
+
+/**
  * grl_entity_set_origin:
  * @self: A #GrlEntity
  * @origin: The origin point
@@ -447,5 +461,120 @@ void            grl_entity_set_tag          (GrlEntity      *self,
 GRL_AVAILABLE_IN_ALL
 gboolean        grl_entity_has_tag          (GrlEntity      *self,
                                              const gchar    *tag);
+
+/*
+ * Render interpolation
+ */
+
+/**
+ * grl_entity_get_render_pose:
+ * @self: A #GrlEntity
+ * @x: (out) (optional): return location for the drawn X position
+ * @y: (out) (optional): return location for the drawn Y position
+ * @rotation: (out) (optional): return location for the drawn rotation
+ *   in degrees
+ * @scale: (out) (optional): return location for the drawn scale
+ *
+ * Gets the pose to draw the entity at. While render interpolation is
+ * active (see grl_interpolation_set_enabled()) and the entity moved in
+ * the latest simulation step, this blends the pose the step began with
+ * and the true pose by grl_interpolation_get_alpha(); rotation takes the
+ * shorter arc. Otherwise it is the true pose. Gameplay, physics and
+ * collision code keeps using the plain getters.
+ */
+GRL_AVAILABLE_IN_ALL
+void            grl_entity_get_render_pose  (GrlEntity      *self,
+                                             gfloat         *x,
+                                             gfloat         *y,
+                                             gfloat         *rotation,
+                                             gfloat         *scale);
+
+/**
+ * grl_entity_get_render_position_xy:
+ * @self: A #GrlEntity
+ * @x: (out) (optional): return location for the drawn X position
+ * @y: (out) (optional): return location for the drawn Y position
+ *
+ * Gets the interpolated position to draw the entity at; see
+ * grl_entity_get_render_pose().
+ */
+GRL_AVAILABLE_IN_ALL
+void            grl_entity_get_render_position_xy (GrlEntity *self,
+                                                   gfloat    *x,
+                                                   gfloat    *y);
+
+/**
+ * grl_entity_get_render_rotation:
+ * @self: A #GrlEntity
+ *
+ * Gets the interpolated rotation to draw the entity with; see
+ * grl_entity_get_render_pose().
+ *
+ * Returns: the drawn rotation in degrees
+ */
+GRL_AVAILABLE_IN_ALL
+gfloat          grl_entity_get_render_rotation (GrlEntity   *self);
+
+/**
+ * grl_entity_get_render_scale:
+ * @self: A #GrlEntity
+ *
+ * Gets the interpolated scale to draw the entity with; see
+ * grl_entity_get_render_pose().
+ *
+ * Returns: the drawn scale
+ */
+GRL_AVAILABLE_IN_ALL
+gfloat          grl_entity_get_render_scale (GrlEntity      *self);
+
+/**
+ * grl_entity_teleport:
+ * @self: A #GrlEntity
+ * @x: The new X position
+ * @y: The new Y position
+ *
+ * Moves the entity without interpolating the move: it is drawn at the
+ * new position at once instead of streaking there over a frame. Use it
+ * for spawns, respawns and warps made inside a simulation step.
+ */
+GRL_AVAILABLE_IN_ALL
+void            grl_entity_teleport         (GrlEntity      *self,
+                                             gfloat          x,
+                                             gfloat          y);
+
+/**
+ * grl_entity_reset_interpolation:
+ * @self: A #GrlEntity
+ *
+ * Drops the entity's in-flight blend: its previous pose becomes its
+ * current pose, and further writes in the current step move both, so
+ * the entity is drawn at its true pose. Call it after setting position,
+ * rotation or scale for a cut.
+ */
+GRL_AVAILABLE_IN_ALL
+void            grl_entity_reset_interpolation (GrlEntity   *self);
+
+/**
+ * grl_entity_get_interpolate:
+ * @self: A #GrlEntity
+ *
+ * Gets whether the entity is interpolated for drawing.
+ *
+ * Returns: the value of #GrlEntity:interpolate
+ */
+GRL_AVAILABLE_IN_ALL
+gboolean        grl_entity_get_interpolate  (GrlEntity      *self);
+
+/**
+ * grl_entity_set_interpolate:
+ * @self: A #GrlEntity
+ * @interpolate: whether to interpolate the entity for drawing
+ *
+ * Opts the entity in or out of render interpolation
+ * (#GrlEntity:interpolate). Either way its blend is reset.
+ */
+GRL_AVAILABLE_IN_ALL
+void            grl_entity_set_interpolate  (GrlEntity      *self,
+                                             gboolean        interpolate);
 
 G_END_DECLS

@@ -12,6 +12,17 @@
 #include "grl-drawable.h"
 #include "grl-updatable.h"
 #include "grl-collidable.h"
+#include "grl-interpolation-private.h"
+#include "../grl-type-check-private.h"
+
+/* Every accessor validates its instance, and game objects are subclasses,
+ * which miss G_TYPE_CHECK_INSTANCE_TYPE's exact-type fast path. Same check,
+ * cached per instance type (see grl-type-check-private.h); the stringified
+ * g_return_*_if_fail() expressions are unchanged. */
+static gsize entity_check_cache;
+#undef GRL_IS_ENTITY
+#define GRL_IS_ENTITY(obj) \
+    (grl_type_check_instance_cached ((obj), GRL_TYPE_ENTITY, &entity_check_cache))
 
 /**
  * SECTION:grl-entity
@@ -28,6 +39,17 @@
  *
  * Entities implement the #GrlDrawable, #GrlUpdatable, and #GrlCollidable
  * interfaces, making them suitable for use in scenes.
+ *
+ * # Render interpolation
+ *
+ * Position, rotation and scale are interpolated for drawing when a
+ * fixed-timestep game loop drives the #GrlInterpolationTrack clock (see
+ * grl_interpolation_set_enabled()). The getters always return the true
+ * simulation state; draw code reads grl_entity_get_render_pose(), which
+ * blends the pose at the start of the latest step with the current one.
+ * Use grl_entity_teleport() (or grl_entity_reset_interpolation() after
+ * the setters) for warps and respawns, and #GrlEntity:interpolate to opt
+ * an entity out.
  *
  * # Creating Custom Entities
  *
@@ -76,6 +98,14 @@ typedef struct
     gboolean    visible;
     gboolean    active;
     gchar      *tag;
+
+    /* Render interpolation: the pose at the start of the latest step
+     * this entity moved in (see grl-interpolation.h) */
+    gfloat                prev_x;
+    gfloat                prev_y;
+    gfloat                prev_rotation;
+    gfloat                prev_scale;
+    GrlInterpolationTrack interp;
 } GrlEntityPrivate;
 
 static void grl_entity_drawable_init   (GrlDrawableInterface   *iface);
@@ -101,10 +131,40 @@ enum
     PROP_VISIBLE,
     PROP_ACTIVE,
     PROP_TAG,
+    PROP_INTERPOLATE,
     N_PROPS
 };
 
 static GParamSpec *properties[N_PROPS];
+
+/*
+ * Render interpolation helpers
+ */
+
+/* The first write in a simulation step keeps the pose the step began
+ * with, before any field changes */
+static void
+entity_capture_previous (GrlEntityPrivate *priv)
+{
+    priv->prev_x = priv->x;
+    priv->prev_y = priv->y;
+    priv->prev_rotation = priv->rotation;
+    priv->prev_scale = priv->scale;
+}
+
+/* Stores one interpolated field (x, y, rotation or scale) */
+static void
+entity_write (GrlEntityPrivate *priv,
+              gfloat           *current,
+              gfloat           *previous,
+              gfloat            value)
+{
+    if (grl_interpolation_track_begin_write_inline (&priv->interp))
+        entity_capture_previous (priv);
+
+    grl_interpolation_track_write_float_inline (&priv->interp, current,
+                                                previous, value);
+}
 
 /*
  * GrlDrawable interface implementation
@@ -327,6 +387,10 @@ grl_entity_get_property (GObject    *object,
         g_value_set_string (value, priv->tag);
         break;
 
+    case PROP_INTERPOLATE:
+        g_value_set_boolean (value, priv->interp.enabled);
+        break;
+
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
     }
@@ -344,11 +408,11 @@ grl_entity_set_property (GObject      *object,
     switch (prop_id)
     {
     case PROP_X:
-        priv->x = g_value_get_float (value);
+        entity_write (priv, &priv->x, &priv->prev_x, g_value_get_float (value));
         break;
 
     case PROP_Y:
-        priv->y = g_value_get_float (value);
+        entity_write (priv, &priv->y, &priv->prev_y, g_value_get_float (value));
         break;
 
     case PROP_WIDTH:
@@ -360,11 +424,13 @@ grl_entity_set_property (GObject      *object,
         break;
 
     case PROP_ROTATION:
-        priv->rotation = g_value_get_float (value);
+        entity_write (priv, &priv->rotation, &priv->prev_rotation,
+                      g_value_get_float (value));
         break;
 
     case PROP_SCALE:
-        priv->scale = g_value_get_float (value);
+        entity_write (priv, &priv->scale, &priv->prev_scale,
+                      g_value_get_float (value));
         break;
 
     case PROP_Z_INDEX:
@@ -382,6 +448,10 @@ grl_entity_set_property (GObject      *object,
     case PROP_TAG:
         g_free (priv->tag);
         priv->tag = g_value_dup_string (value);
+        break;
+
+    case PROP_INTERPOLATE:
+        grl_entity_set_interpolate (self, g_value_get_boolean (value));
         break;
 
     default:
@@ -517,6 +587,23 @@ grl_entity_class_init (GrlEntityClass *klass)
                              G_PARAM_READWRITE |
                              G_PARAM_STATIC_STRINGS);
 
+    /**
+     * GrlEntity:interpolate:
+     *
+     * Whether the entity's position, rotation and scale are interpolated
+     * for drawing while a fixed-timestep loop drives render
+     * interpolation. Turn it off for entities that are positioned per
+     * frame (cursors, UI anchors) or that must be drawn exactly at their
+     * simulation pose.
+     */
+    properties[PROP_INTERPOLATE] =
+        g_param_spec_boolean ("interpolate", "Interpolate",
+                              "Whether the pose is interpolated for drawing",
+                              TRUE,
+                              G_PARAM_READWRITE |
+                              G_PARAM_STATIC_STRINGS |
+                              G_PARAM_EXPLICIT_NOTIFY);
+
     g_object_class_install_properties (object_class, N_PROPS, properties);
 }
 
@@ -537,6 +624,10 @@ grl_entity_init (GrlEntity *self)
     priv->visible = TRUE;
     priv->active = TRUE;
     priv->tag = NULL;
+
+    /* New entities start with previous == current */
+    entity_capture_previous (priv);
+    grl_interpolation_track_init (&priv->interp);
 }
 
 /*
@@ -594,13 +685,13 @@ grl_entity_set_position_xy (GrlEntity *self,
 
     if (priv->x != x)
     {
-        priv->x = x;
+        entity_write (priv, &priv->x, &priv->prev_x, x);
         g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_X]);
     }
 
     if (priv->y != y)
     {
-        priv->y = y;
+        entity_write (priv, &priv->y, &priv->prev_y, y);
         g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_Y]);
     }
 }
@@ -629,7 +720,7 @@ grl_entity_set_x (GrlEntity *self,
 
     if (priv->x != x)
     {
-        priv->x = x;
+        entity_write (priv, &priv->x, &priv->prev_x, x);
         g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_X]);
     }
 }
@@ -658,7 +749,7 @@ grl_entity_set_y (GrlEntity *self,
 
     if (priv->y != y)
     {
-        priv->y = y;
+        entity_write (priv, &priv->y, &priv->prev_y, y);
         g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_Y]);
     }
 }
@@ -745,7 +836,7 @@ grl_entity_set_rotation (GrlEntity *self,
 
     if (priv->rotation != rotation)
     {
-        priv->rotation = rotation;
+        entity_write (priv, &priv->rotation, &priv->prev_rotation, rotation);
         g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_ROTATION]);
     }
 }
@@ -774,7 +865,7 @@ grl_entity_set_scale (GrlEntity *self,
 
     if (priv->scale != scale)
     {
-        priv->scale = scale;
+        entity_write (priv, &priv->scale, &priv->prev_scale, scale);
         g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_SCALE]);
     }
 }
@@ -789,6 +880,23 @@ grl_entity_get_origin (GrlEntity *self)
     priv = grl_entity_get_instance_private (self);
 
     return grl_vector2_new (priv->origin_x, priv->origin_y);
+}
+
+void
+grl_entity_get_origin_xy (GrlEntity *self,
+                          gfloat    *x,
+                          gfloat    *y)
+{
+    GrlEntityPrivate *priv;
+
+    g_return_if_fail (GRL_IS_ENTITY (self));
+
+    priv = grl_entity_get_instance_private (self);
+
+    if (x != NULL)
+        *x = priv->origin_x;
+    if (y != NULL)
+        *y = priv->origin_y;
 }
 
 void
@@ -842,8 +950,8 @@ grl_entity_move_xy (GrlEntity *self,
 
     priv = grl_entity_get_instance_private (self);
 
-    priv->x += vx * delta;
-    priv->y += vy * delta;
+    entity_write (priv, &priv->x, &priv->prev_x, priv->x + vx * delta);
+    entity_write (priv, &priv->y, &priv->prev_y, priv->y + vy * delta);
 
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_X]);
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_Y]);
@@ -860,8 +968,8 @@ grl_entity_translate (GrlEntity  *self,
 
     priv = grl_entity_get_instance_private (self);
 
-    priv->x += offset->x;
-    priv->y += offset->y;
+    entity_write (priv, &priv->x, &priv->prev_x, priv->x + offset->x);
+    entity_write (priv, &priv->y, &priv->prev_y, priv->y + offset->y);
 
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_X]);
     g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_Y]);
@@ -969,4 +1077,139 @@ grl_entity_has_tag (GrlEntity   *self,
         return FALSE;
 
     return g_strcmp0 (priv->tag, tag) == 0;
+}
+
+/*
+ * Render interpolation
+ */
+
+void
+grl_entity_get_render_pose (GrlEntity *self,
+                            gfloat    *x,
+                            gfloat    *y,
+                            gfloat    *rotation,
+                            gfloat    *scale)
+{
+    GrlEntityPrivate *priv;
+    gfloat            alpha;
+
+    g_return_if_fail (GRL_IS_ENTITY (self));
+
+    priv = grl_entity_get_instance_private (self);
+
+    /* Not moved in the latest step (or interpolation off): true pose */
+    if (!grl_interpolation_track_get_blend_inline (&priv->interp, &alpha))
+    {
+        if (x != NULL)
+            *x = priv->x;
+        if (y != NULL)
+            *y = priv->y;
+        if (rotation != NULL)
+            *rotation = priv->rotation;
+        if (scale != NULL)
+            *scale = priv->scale;
+        return;
+    }
+
+    /* Blend from the pose the step began with to the true pose */
+    if (x != NULL)
+        *x = grl_interpolation_lerp_inline (priv->prev_x, priv->x, alpha);
+    if (y != NULL)
+        *y = grl_interpolation_lerp_inline (priv->prev_y, priv->y, alpha);
+    if (rotation != NULL)
+        *rotation = grl_interpolation_lerp_angle_inline (priv->prev_rotation,
+                                                         priv->rotation, alpha,
+                                                         360.0f);
+    if (scale != NULL)
+        *scale = grl_interpolation_lerp_inline (priv->prev_scale, priv->scale,
+                                                alpha);
+}
+
+void
+grl_entity_get_render_position_xy (GrlEntity *self,
+                                   gfloat    *x,
+                                   gfloat    *y)
+{
+    grl_entity_get_render_pose (self, x, y, NULL, NULL);
+}
+
+gfloat
+grl_entity_get_render_rotation (GrlEntity *self)
+{
+    gfloat rotation;
+
+    g_return_val_if_fail (GRL_IS_ENTITY (self), 0.0f);
+
+    rotation = 0.0f;
+    grl_entity_get_render_pose (self, NULL, NULL, &rotation, NULL);
+    return rotation;
+}
+
+gfloat
+grl_entity_get_render_scale (GrlEntity *self)
+{
+    gfloat scale;
+
+    g_return_val_if_fail (GRL_IS_ENTITY (self), 1.0f);
+
+    scale = 1.0f;
+    grl_entity_get_render_pose (self, NULL, NULL, NULL, &scale);
+    return scale;
+}
+
+void
+grl_entity_teleport (GrlEntity *self,
+                     gfloat     x,
+                     gfloat     y)
+{
+    g_return_if_fail (GRL_IS_ENTITY (self));
+
+    grl_entity_set_position_xy (self, x, y);
+    grl_entity_reset_interpolation (self);
+}
+
+void
+grl_entity_reset_interpolation (GrlEntity *self)
+{
+    GrlEntityPrivate *priv;
+
+    g_return_if_fail (GRL_IS_ENTITY (self));
+
+    priv = grl_entity_get_instance_private (self);
+
+    /* Previous == current, and later writes in this step follow along */
+    entity_capture_previous (priv);
+    grl_interpolation_track_reset (&priv->interp);
+}
+
+gboolean
+grl_entity_get_interpolate (GrlEntity *self)
+{
+    GrlEntityPrivate *priv;
+
+    g_return_val_if_fail (GRL_IS_ENTITY (self), FALSE);
+
+    priv = grl_entity_get_instance_private (self);
+
+    return priv->interp.enabled;
+}
+
+void
+grl_entity_set_interpolate (GrlEntity *self,
+                            gboolean   interpolate)
+{
+    GrlEntityPrivate *priv;
+
+    g_return_if_fail (GRL_IS_ENTITY (self));
+
+    priv = grl_entity_get_instance_private (self);
+
+    interpolate = (interpolate != FALSE);
+    if (priv->interp.enabled == interpolate)
+        return;
+
+    /* Either way the entity starts over from its true pose */
+    priv->interp.enabled = interpolate;
+    grl_entity_reset_interpolation (self);
+    g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_INTERPOLATE]);
 }

@@ -120,6 +120,35 @@ When possible, use graylib's built-in drawing functions (=grl_draw_cube()=, =grl
 - Are optimized for raylib's renderer
 - Reduce code complexity and potential for bugs
 
+** Performance
+:PROPERTIES:
+:CUSTOM_ID: performance
+:END:
+Per-frame code is where allocation and lookups add up. graylib's own hot paths follow these rules; game code built on it should too.
+
+*** Keep per-frame values on the stack
+=GrlColor=, =GrlVector2=, =GrlVector3=, =GrlRectangle= and the other boxed math types are plain structs. Every =grl_*_new()= is a heap allocation and every =g_autoptr= a free; in a loop that draws thousands of things that is thousands of malloc/free pairs per frame. Declare them as locals and pass their addresses:
+
+#+begin_src C
+GrlRectangle src = { 0.0f, 0.0f, 16.0f, 16.0f };
+GrlRectangle dst = { x, y, 32.0f, 32.0f };
+GrlVector2   origin = { 0.0f, 0.0f };
+GrlColor     tint = { 255, 255, 255, 255 };
+
+grl_draw_texture_pro (texture, &src, &dst, &origin, 0.0f, &tint);
+#+end_src
+
+Prefer the non-allocating getters where they exist: =grl_entity_get_origin_xy()=, =grl_font_measure_text_xy()=, =grl_camera2d_set_target_xy()=, =grl_camera3d_set_position_xyz()=.
+
+*** Batch-friendly draw order
+raylib batches quads until the texture (or shader, blend mode, scissor) changes. Shapes use raylib's internal shapes texture, so alternating a rectangle and a sprite flushes the batch on every call. Group draws by texture where the visual order allows (all tiles, then all sprites, then all UI shapes).
+
+*** Change notifications
+Camera setters only notify a property when its value changes, so setting a follow camera to the same target every frame costs no signal emissions.
+
+*** Build flags
+Release builds use =-O2 -fno-semantic-interposition -DG_DISABLE_CAST_CHECKS= (cast macros become plain casts; =g_return_if_fail()= argument checks stay on), and the bundled raylib is built at =-O2= (raylib's own Makefile defaults to =-O1= for desktop release builds; graylib passes =CUSTOM_CFLAGS=-O2=, raylib's sources are unchanged). =DEBUG=1= builds keep full cast checks.
+
 ** Memory Management
 :PROPERTIES:
 :CUSTOM_ID: memory-management

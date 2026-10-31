@@ -436,13 +436,21 @@ grl_camera3d_set_position (GrlCamera3D *self,
     g_return_if_fail (position != NULL);
 
     priv = grl_camera3d_get_instance_private (self);
-    priv->position_x = position->x;
-    priv->position_y = position->y;
-    priv->position_z = position->z;
-
-    g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_POSITION_X]);
-    g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_POSITION_Y]);
-    g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_POSITION_Z]);
+    if (priv->position_x != position->x)
+    {
+        priv->position_x = position->x;
+        g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_POSITION_X]);
+    }
+    if (priv->position_y != position->y)
+    {
+        priv->position_y = position->y;
+        g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_POSITION_Y]);
+    }
+    if (priv->position_z != position->z)
+    {
+        priv->position_z = position->z;
+        g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_POSITION_Z]);
+    }
 }
 
 /*
@@ -465,13 +473,21 @@ grl_camera3d_set_position_xyz (GrlCamera3D *self,
     g_return_if_fail (GRL_IS_CAMERA3D (self));
 
     priv = grl_camera3d_get_instance_private (self);
-    priv->position_x = x;
-    priv->position_y = y;
-    priv->position_z = z;
-
-    g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_POSITION_X]);
-    g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_POSITION_Y]);
-    g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_POSITION_Z]);
+    if (priv->position_x != x)
+    {
+        priv->position_x = x;
+        g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_POSITION_X]);
+    }
+    if (priv->position_y != y)
+    {
+        priv->position_y = y;
+        g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_POSITION_Y]);
+    }
+    if (priv->position_z != z)
+    {
+        priv->position_z = z;
+        g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_POSITION_Z]);
+    }
 }
 
 /*
@@ -510,13 +526,21 @@ grl_camera3d_set_target (GrlCamera3D *self,
     g_return_if_fail (target != NULL);
 
     priv = grl_camera3d_get_instance_private (self);
-    priv->target_x = target->x;
-    priv->target_y = target->y;
-    priv->target_z = target->z;
-
-    g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TARGET_X]);
-    g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TARGET_Y]);
-    g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TARGET_Z]);
+    if (priv->target_x != target->x)
+    {
+        priv->target_x = target->x;
+        g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TARGET_X]);
+    }
+    if (priv->target_y != target->y)
+    {
+        priv->target_y = target->y;
+        g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TARGET_Y]);
+    }
+    if (priv->target_z != target->z)
+    {
+        priv->target_z = target->z;
+        g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TARGET_Z]);
+    }
 }
 
 /*
@@ -539,13 +563,21 @@ grl_camera3d_set_target_xyz (GrlCamera3D *self,
     g_return_if_fail (GRL_IS_CAMERA3D (self));
 
     priv = grl_camera3d_get_instance_private (self);
-    priv->target_x = x;
-    priv->target_y = y;
-    priv->target_z = z;
-
-    g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TARGET_X]);
-    g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TARGET_Y]);
-    g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TARGET_Z]);
+    if (priv->target_x != x)
+    {
+        priv->target_x = x;
+        g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TARGET_X]);
+    }
+    if (priv->target_y != y)
+    {
+        priv->target_y = y;
+        g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TARGET_Y]);
+    }
+    if (priv->target_z != z)
+    {
+        priv->target_z = z;
+        g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TARGET_Z]);
+    }
 }
 
 /*
@@ -584,13 +616,21 @@ grl_camera3d_set_up (GrlCamera3D *self,
     g_return_if_fail (up != NULL);
 
     priv = grl_camera3d_get_instance_private (self);
-    priv->up_x = up->x;
-    priv->up_y = up->y;
-    priv->up_z = up->z;
-
-    g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_UP_X]);
-    g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_UP_Y]);
-    g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_UP_Z]);
+    if (priv->up_x != up->x)
+    {
+        priv->up_x = up->x;
+        g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_UP_X]);
+    }
+    if (priv->up_y != up->y)
+    {
+        priv->up_y = up->y;
+        g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_UP_Y]);
+    }
+    if (priv->up_z != up->z)
+    {
+        priv->up_z = up->z;
+        g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_UP_Z]);
+    }
 }
 
 /*
@@ -629,9 +669,11 @@ grl_camera3d_set_fovy (GrlCamera3D *self,
     g_return_if_fail (fovy > 0.0f && fovy < 180.0f);
 
     priv = grl_camera3d_get_instance_private (self);
-    priv->fovy = fovy;
-
-    g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_FOVY]);
+    if (priv->fovy != fovy)
+    {
+        priv->fovy = fovy;
+        g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_FOVY]);
+    }
 }
 
 /*
@@ -669,9 +711,11 @@ grl_camera3d_set_projection (GrlCamera3D        *self,
     g_return_if_fail (GRL_IS_CAMERA3D (self));
 
     priv = grl_camera3d_get_instance_private (self);
-    priv->projection = projection;
-
-    g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_PROJECTION]);
+    if (priv->projection != projection)
+    {
+        priv->projection = projection;
+        g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_PROJECTION]);
+    }
 }
 
 /*

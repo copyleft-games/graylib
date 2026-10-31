@@ -133,6 +133,43 @@ void                grl_model_animation_blend       (GrlModel           *model,
                                                      gfloat              blend);
 
 /**
+ * grl_model_animation_update_bones:
+ * @self: A #GrlModelAnimation
+ * @model: The model to pose
+ * @frame: The animation frame; fractional frames interpolate between
+ *   keyframes and frames past the end wrap
+ *
+ * Poses @model's skeleton (current pose and bone matrices) like
+ * grl_model_animation_update(), without skinning vertices on the CPU or
+ * re-uploading vertex buffers. Use it for models drawn with a skinning
+ * shader after grl_model_prepare_gpu_skinning().
+ */
+GRL_AVAILABLE_IN_ALL
+void                grl_model_animation_update_bones (GrlModelAnimation *self,
+                                                      GrlModel          *model,
+                                                      gfloat             frame);
+
+/**
+ * grl_model_animation_blend_bones:
+ * @model: The model to pose
+ * @anim_a: First animation
+ * @frame_a: Frame within @anim_a
+ * @anim_b: Second animation to blend toward
+ * @frame_b: Frame within @anim_b
+ * @blend: Blend factor in [0.0, 1.0] (0.0 = @anim_a, 1.0 = @anim_b)
+ *
+ * Poses @model's skeleton like grl_model_animation_blend(), without the
+ * CPU skinning: only the current pose and bone matrices change.
+ */
+GRL_AVAILABLE_IN_ALL
+void                grl_model_animation_blend_bones (GrlModel          *model,
+                                                     GrlModelAnimation *anim_a,
+                                                     gfloat             frame_a,
+                                                     GrlModelAnimation *anim_b,
+                                                     gfloat             frame_b,
+                                                     gfloat             blend);
+
+/**
  * grl_model_animation_is_valid:
  * @self: A #GrlModelAnimation
  * @model: The model to check against

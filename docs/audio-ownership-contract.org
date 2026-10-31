@@ -1,0 +1,82 @@
+#+title: Owned audio cleanup and independent voice contract
+
+The standalone SDK warning scope below is not the configured game's release gate. The subsequent [[file:../../completion/docs/sdk-build-warning-proof.org][configured root warning proof]] records the game-owned padded-copy adapter and a warning-free fresh default parent/dependency build at -O2. The unrelated vanilla SDK baseline remains distinct from that passing port configuration.
+
+* Disposition
+The fingerprinted bundled SDK's WAV-context leak is repaired through its public Music descriptor and MemFree API. An explicit independent-voice constructor avoids the native alias allocation leak without changing the shared-memory meaning of =grl_sound_new_alias()=. The independent-policy null-backend sanitizer gate passes; the legacy shared-alias gate remains open. No opaque AudioBuffer layout, borrowed field free, vendor source patch or sanitizer suppression is used.
+
+* WAV decoder ownership and compatibility guard
+The wrapper owns the native Music returned by its file/memory constructors. When the constructor is known to load WAV, it captures the original public =Music.ctxData= pointer only if all of the following match: static bundled SDK mode; SDK revision =dbc56a87da87d973a9c5baa4e7438a9d20121d28=; a clean tracked SDK tree; =raudio.c= SHA-256 =2a5b42a701fd872dbf6a9715964344ce44b891bdcd7643122774d5cac9589812=; =raylib.h= SHA-256 =047e7255f93f8c34039cab906ad76136706b5c7b4c5b5b065d84141963ee9b6b=; and public version 6.0. On that source, UnloadMusicStream uninitializes the WAV decoder but does not free the separately allocated decoder object. The wrapper calls native unload first, then MemFree on its saved original pointer, then releases its encoded memory buffer. This includes zero-frame/failed-native-stream constructor unwind. The existing background-pump unregister/join and processor detachment ordering is preserved.
+
+The capability is computed from explicit build inputs, not runtime environment inspection. A content-stable generated header under each build directory invalidates stale music objects when SDK selection changes, including a new SDK with older source timestamps. Command-line attempts to force the private capability do not override the computed source checks. A changed, dirty, unrecognized or system SDK has capability zero: no added free is performed, so a future SDK that frees the context itself is not double-freed. Such SDKs retain their native ownership behavior and are not covered by this pinned-source zero-leak claim; an update needs an ownership review before enabling another compatibility case.
+
+The linked native archive must be built from the selected SDK source. Replacing it independently with a different implementation is outside this compile-time capability contract. The engine's explicit Wayland-only archive uses the same committed SDK source, so the same WAV ownership case applies. Raw SDK descriptor mutation/library hot-swapping while wrapper objects exist is unsupported; the saved constructor pointer is not replaced by a caller's borrowed view.
+
+Music construction now reports =G_IO_ERROR_NOT_INITIALIZED= before native loading when no device is current, never opening one implicitly. Encoded memory counts must fit the SDK's signed byte-count range before copying. File-not-found and malformed/empty input still fail explicitly. File and memory WAV streams both participate in the native lifetime stress test.
+
+* Native shared aliases and independent voices
+** Legacy shared-memory contract
+=grl_sound_new_alias(source)= still calls the public native alias API and shares sample memory. Its volume/pitch/pan and processor state are separate native voice state. It now strongly retains the original root source, flattening alias-of-alias ownership rather than creating parent/child reference cycles. Callers can release their source reference while aliases live. Alias native unload happens before the final root reference is released.
+
+The pinned SDK's UnloadSoundAlias omits an opaque converter residual allocation. The wrapper cannot legitimately free that allocation through public APIs, so the legacy shared-alias cleanup limitation is retained and documented. No independent copy is covertly substituted under this symbol, and no zero-leak claim includes this path.
+
+** Explicit independent policy
+=grl_sound_new_voice(source, error)= allocates an ordinary owned native Sound buffer from the source's retained immutable canonical PCM. =grl_sound_is_alias()= returns FALSE. It never uses LoadSoundAlias. The native buffer has independent playback state, gain/pitch/pan, processors and updates. The source object can be finalized immediately: the new voice owns its native playback storage and retains its immutable PCM snapshot independently. Matching-format voices share a GBytes snapshot reference, not native playback storage; writes publish a new snapshot rather than mutating a shared GBytes.
+
+All existing sound creation routes converge on the same ownership adapter: file -> owned GrlWave -> public Wave conversion; encoded memory -> owned GrlWave; borrowed raw PCM -> synchronous native copy; and caller-owned GrlWave -> synchronous native copy. Resource construction continues to delegate to the encoded-memory route. Every retained-copy arithmetic operation is checked before copying. Retention is limited to =GRL_SOUND_VOICE_MAX_PCM_BYTES= (256 MiB), covering both original and canonical playback bytes. Larger legacy sounds remain usable but have no retained snapshot; new_voice then returns =G_IO_ERROR_NOT_SUPPORTED=. The limit does not silently reject or truncate a legacy native alias. It is not a global memory/voice-count budget.
+
+Raw PCM metadata must describe complete frames, positive rates/channels and 8/16/32-bit samples. Invalid division/counts fail before copying or native allocation. Encoded sound counts must fit the SDK's signed byte count. An independent voice requires an explicitly initialized audio device and returns a meaningful GError on unsupported snapshot, absent device or native construction failure. It never initializes hardware.
+
+** Checked writes and callback lifetime
+=grl_sound_update_checked(self, data, data_size, frame_count, error)= validates exact playback-format byte/frame cardinality and allocated frame capacity before any write. Partial writes preserve the untouched tail. Writes through either a native shared alias or its root also update the root's retained snapshot, so a subsequently created independent voice sees the current data. Existing independent voices retain their own prior snapshots and native buffers. The old void update method uses the checked path after its programming-contract guards.
+
+Callers must stop every voice sharing native alias storage before updating it: the native SDK does not synchronize a shared write against other aliases' playback. No new cross-thread Sound-control guarantee is introduced. Stream callbacks and processors retain their existing no-block/no-audio-reentry rules. Sound disposal stops its voice before detaching its processors; detachment synchronizes with the device callback, and native storage is unloaded only afterward. Release sounds/streams before closing their device. The existing background-music close/reopen behavior and pump locking are preserved.
+
+* Acceptance evidence
+- =tests/test-audio-owned.c= supplies executable-owned public SDK adapters; its FakeBuffer is explicitly a test type, not an SDK layout. Five GTests cover exactly-one context deallocation for the known old SDK, a simulated fixed SDK and non-WAV ownership; independent/native-alias distinction; source retention and absence of cycles; immutable snapshot copy-on-write; shared partial writes; malformed cardinalities; absent device/snapshot; and 100 iterations through each of four sound constructor routes. The same five checks pass under ASan/UBSan with unsuppressed LSan.
+- Full-typelib tests verify that both policies remain public, the independent constructor returns full nullable ownership with GError, and checked writes expose the actual byte-array length. Eight metadata checks pass against the complete namespace.
+- The explicit kernel-restricted null-only fixture, retained in the sibling engine's ignored build directory, executes 30 WAV-music/independent-voice/callback-stream lifetimes across three device open/close cycles. Half of the music objects are file-backed and half memory-backed. It replaces pull callbacks, detaches music processors, disposes playing voices with processors, drops sources before playback, checks weak-reference finalization, and validates callback/destroy ordering. Three empty-WAV construction failures are unwound too. It also executes 100 file + 100 encoded-memory + 100 raw-PCM + 100 GrlWave source/independent-voice smoke cases. The instrumented wrapper/helper/fixture exit 0 with leak detection enabled and no ASan/UBSan/LSan report. The SDK archive itself is not instrumented; its allocations are still observed by ASan's allocator interceptors. This is finite stress evidence, not a TSAN proof or hardware/audible acceptance.
+- A separately compiled legacy-policy variant still fails LSan with 1,920 bytes in 30 allocations (one native alias residual per lifetime), instead of the original 14,160 bytes/60 allocations. Its successful lifetime assertions are not relabeled as overall acceptance. Existing parent callers using new_alias retain that open gate until they explicitly choose independent voices or the SDK fixes its native alias unload.
+- A fresh normal SDK rebuild still emits four unchanged upstream GCC warnings in =external/m3d.h= and =rcore.c=. No vendor edit or reduced warning flag is used. Prepared-archive wrapper/all/GIR builds are warning-free; the fresh default SDK zero-warning gate is not declared passed.
+
+The dedicated null helper asserts filesystem/socket barriers before device startup and forces exactly miniaudio's null backend. No ordinary test enables an audio device; regular tests pass =--no-sound= through the silent wrapper. No credential inspection or inherited-environment dump is used. Source changes remain unstaged in the ongoing merge; no version/SO, gitlink, commit, tag or push is part of this work.
+
+* Integration and retained receipts
+Build the owned Graylib before the engine and parent, retaining explicit GRAYLIB_DIR/YAMLGLIB_DIR and BUILD_DEPS=0 selections described by the sibling engine's integration receipt. The shared Graylib library now depends on its linked SDK archive, so a native archive rebuild cannot leave it stale. The new capability header is private build output, never an installed public API or a generated-GIR patch.
+
+Local evidence is under =build/merge-verification/audio-*= in this repository and the sibling engine. The final positive native log is =../libregnum-visual/build/merge-verification/audio-owned-final-native-sanitize.log=; the explicit legacy failure is =audio-legacy-final-native-sanitize.log= beside it. These are separate results, not a global all-clean claim. Compiler/scanner receipts, selected artifact identities and downstream consumer results are retained with the final handoff.
+
+** Final downstream checks
+Graylib's complete device-free executable set, including the new ownership tests and full-typelib tests, produces 789 TAP results: 778 passes and 11 explicit display/device skips. The five ownership tests additionally pass with the instrumented wrapper and leak detection enabled. The complete Graylib GIR/typelib and normal engine all/GIR/typelib builds pass without wrapper/compiler/scanner warnings against the prepared SDK archive. Parent canonical release and root-sanitized fresh-profile all/tests/GIR each pass 384 GTests plus 60 hermetic shell checks; parent source is not modified. The current copied engine Graylib typelib compares identical to the owned build.
+
+Parent products use only =completion/build/deps-audio-owned-main= and =completion/build/deps-audio-owned-profile-consumer-main=. The private Wayland engine was freshly snapshotted into =completion/build/deps-audio-owned-profile-main= and relinked again after the final wrapper change, using the exact same committed SDK source. Six material/source-UV pixel checks and the menu -> match -> menu flow pass with explicitly empty LSAN_OPTIONS and leak detection enabled. The render screenshots are retained privately in the engine's ignored verification directory. The standard default SDK rebuild's four native compiler warnings remain a separate failed zero-warning gate, and the legacy audio API is not part of a zero-leak claim.
+
+** Selected final SHA-256 identities
+| Artifact | SHA-256 |
+|----------+---------|
+| Graylib release shared library | 2351995add3514aba5d18133e06747aae71b2d901f782a572dd47f0e2958739d |
+| Graylib full GIR | 1a8292336486baae95842addc28de3c0e07bec2b8df92f9cfa388af8f945e4b9 |
+| Graylib typelib | 2e1df5cef195056d6804a873a07a70f5ce225cd261dc752e48e69ebc0c651893 |
+| Instrumented Graylib | 5631511adcb78814e2616a391205c24eaedda6519c4762240de7597a40b741c8 |
+| Sound wrapper source | 6b84849118f0f1fbcbc9d40fcc5766887e11323b8518c715729e62928f8eba0f |
+| Music wrapper source | 70e9276c983d8c4e00045de85023f0a3bd2d0d632de043726f56f59ce785f3e2 |
+| Engine release shared library | d4631654540620855d7a5e919b4eaf0a38c958e7a966834038503d720a0663b4 |
+| Positive native stress executable | 8a277a801bcf5b05df66a557f076faf4f78f3c77b4ae7d8b0da0e43e772655f2 |
+| Native stress source | c35c4c20bc673916ed572741f57c0ff5c4c372218e868a12ac45acb66c7087aa |
+| Parent normal shared library | 0dddfdbaf7dc685745eed3c10008f8275b90afd8a4b81544d983f62cfdae78c4 |
+| Fresh profile engine shared library | 42600c4b2d84978594c8c2ffef43d8a42d51afb1c27a6b084d0e485cea99e737 |
+| Parent sanitized profile shared library | 570efbef8809d7dfcaccbd62e547e80579832b2c863cb1f61d605ff10666e9b1 |
+
+** Reproduction selections
+From the Graylib worktree, =make -j8 CC=gcc all= prepares its owned bundled SDK and builds both libraries plus full GIR. An independent instrumented wrapper is built with =make -j8 CC=gcc DEBUG=1 ASAN=1 UBSAN=1 BUILDDIR="$PWD/build/merge-sanitize" _lib=. SDK source changes are never made. The source capability can be inspected without dumping any inherited state through an explicit make target printing only GRL_SDK_WAV_EXTRA_FREE: the pinned clean input evaluates to 1, and a missing/unrecognized RAYLIB_SRC evaluates to 0 even when a command-line attempt sets that private variable to 1.
+
+From =trees/completion=, the final native runs are:
+#+begin_src bash
+bash tests/run-audio-null ../libregnum-visual/build/merge-null-threads/test-audio-null-owned \
+    /var/home/zach/.local/share/OldUnreal/UT2004 --null-audio-test --sanitize
+# Deliberately fails LSan: retained separate native shared-alias gate.
+bash tests/run-audio-null ../libregnum-visual/build/merge-null-threads/test-audio-null-legacy \
+    /var/home/zach/.local/share/OldUnreal/UT2004 --null-audio-test --sanitize
+#+end_src
+
+Both variants are compiled from the retained stress source; only the latter defines GRL_NULL_LEGACY_ALIAS_TEST=1. The helper is compiled unchanged from =completion/tests/audio-null-helper.c= against the same instrumented Graylib. Both are linked with GCC gnu89, =-fsanitize=address,undefined -fno-omit-frame-pointer= and warning-fatal flags. The runner resolves the actual versioned ASan DSO and applies its fixed empty-environment/kernel-barrier policy. No global null backend or audible test is enabled. Normal parent commands retain BUILD_DEPS=0, canonical USCRIPT_GLIB_DIR/LIBREGNUM_DIR/GRAYLIB_DIR/YAMLGLIB_DIR selections and the dedicated OUT prefix above; profile commands additionally select SANITIZE=1, WAYLAND_LIFECYCLE=1 and the freshly rebuilt profile ENGINE_OUT. Full flag recipes are the same as the engine upstream-merge receipt with these dedicated output prefixes.

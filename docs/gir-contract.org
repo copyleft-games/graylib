@@ -1,5 +1,7 @@
 #+title: Full introspection and ownership contract
 
+The initial 79-header/87-source integration counts and results below are historical. The merged upstream namespace has 82 public headers and 90 source files. Current fresh build, callback metadata, mipmap, GPU and restricted null-thread results (including the native LSan failure) are recorded in the sibling engine's [[file:../../libregnum-visual/docs/modules/graphics/upstream-merge-verification.org][upstream-merge verification receipt]].
+
 * Boundary and ownership
 Graylib owns the gtk-doc contracts of its public C API. The full scanner input remains all 79 public headers and 87 implementation files in the root Makefile. There is no reduced renderer-only namespace, generated-GIR patching, or public-API removal to obtain a clean scan. Five rlgl definitions formerly duplicated their header documentation; their public contracts now have one authoritative header block, with ordinary implementation comments retained where useful. This change does not alter C signatures, object layouts, or executable statements.
 

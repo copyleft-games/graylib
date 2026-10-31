@@ -56,6 +56,7 @@
 #include "../math/grl-color.h"
 #include <math.h>
 #include <string.h>
+#include <raylib.h>
 
 struct _GrlImageAccumulator
 {
@@ -192,6 +193,7 @@ grl_image_accumulator_add (GrlImageAccumulator *self,
     gint      w;
     gint      h;
     gint      idx;
+    const Image *src_image;
 
     g_return_if_fail (GRL_IS_IMAGE_ACCUMULATOR (self));
     g_return_if_fail (GRL_IS_IMAGE (frame));
@@ -211,16 +213,18 @@ grl_image_accumulator_add (GrlImageAccumulator *self,
         need_unref = FALSE;
     }
 
-    /* Accumulate pixels. */
+    /* Accumulate pixels. GetImageColor() reads any pixel format, as
+     * grl_image_get_pixel() does, without a heap colour per pixel. */
+    src_image = (const Image *)grl_image_get_handle (src);
     for (y = 0; y < self->height; y++)
     {
         for (x = 0; x < self->width; x++)
         {
-            g_autoptr(GrlColor) c  = grl_image_get_pixel (src, x, y);
-            gfloat              fr = (gfloat)c->r / 255.0f;
-            gfloat              fg = (gfloat)c->g / 255.0f;
-            gfloat              fb = (gfloat)c->b / 255.0f;
-            gfloat              fa = (gfloat)c->a / 255.0f;
+            Color               c  = GetImageColor (*src_image, x, y);
+            gfloat              fr = (gfloat)c.r / 255.0f;
+            gfloat              fg = (gfloat)c.g / 255.0f;
+            gfloat              fb = (gfloat)c.b / 255.0f;
+            gfloat              fa = (gfloat)c.a / 255.0f;
 
             if (self->linear)
             {
@@ -258,6 +262,7 @@ grl_image_accumulator_resolve (GrlImageAccumulator *self)
 {
     g_autoptr(GrlColor) transparent = NULL;
     GrlImage           *result;
+    Image              *result_image;
     gfloat              inv_w;
     gint                x;
     gint                y;
@@ -272,12 +277,13 @@ grl_image_accumulator_resolve (GrlImageAccumulator *self)
 
     transparent = grl_color_new (0, 0, 0, 0);
     result      = grl_image_new_color (self->width, self->height, transparent);
+    result_image = (Image *)grl_image_get_handle (result);
 
     for (y = 0; y < self->height; y++)
     {
         for (x = 0; x < self->width; x++)
         {
-            g_autoptr(GrlColor) c  = NULL;
+            Color               c;
             gfloat              fr;
             gfloat              fg;
             gfloat              fb;
@@ -307,8 +313,11 @@ grl_image_accumulator_resolve (GrlImageAccumulator *self)
             b    = (guint8)(CLAMP (fb * 255.0f + 0.5f, 0.0f, 255.0f));
             a    = (guint8)(CLAMP (fa * 255.0f + 0.5f, 0.0f, 255.0f));
 
-            c = grl_color_new (r, g_ch, b, a);
-            grl_image_draw_pixel (result, x, y, c);
+            c.r = r;
+            c.g = g_ch;
+            c.b = b;
+            c.a = a;
+            ImageDrawPixel (result_image, x, y, c);
         }
     }
 
