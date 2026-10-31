@@ -324,6 +324,50 @@ grl_window_set_property (GObject      *object,
     }
 }
 
+/* TRUE after one successful glfwInit(). CloseWindow() calls
+   glfwTerminate(), so the next window initializes GLFW again. */
+static gboolean grl_window_saw_glfw = FALSE;
+
+/* g_log_set_writer_func() may be called only once per process. */
+static gboolean grl_window_writer_set = FALSE;
+
+/* libdecor's GTK plugin logs gtk_disable_setlocale() through structured
+   logging on every libdecor_new(). The first window initializes GTK.
+   The next window hits the warning, and g_test's fatal mask aborts.
+   Legacy domain handlers do not see this message. Drop only that
+   warning. The replacement writer stays for the process, because
+   g_log_set_writer_func() cannot be called twice, and chains every
+   other message to the default writer. */
+static GLogWriterOutput
+grl_window_log_writer (GLogLevelFlags   log_level,
+                        const GLogField *fields,
+                        gsize            n_fields,
+                        gpointer         user_data)
+{
+    const gchar *domain;
+    const gchar *message;
+    gsize i;
+
+    (void) user_data;
+    domain = NULL;
+    message = NULL;
+
+    for (i = 0; i < n_fields; i++)
+    {
+        if (strcmp (fields[i].key, "GLIB_DOMAIN") == 0)
+            domain = (const gchar *) fields[i].value;
+        else if (strcmp (fields[i].key, "MESSAGE") == 0)
+            message = (const gchar *) fields[i].value;
+    }
+
+    if (domain != NULL && message != NULL
+        && strcmp (domain, "Gtk") == 0
+        && strstr (message, "gtk_disable_setlocale") != NULL)
+        return G_LOG_WRITER_HANDLED;
+
+    return g_log_writer_default (log_level, fields, n_fields, NULL);
+}
+
 static void
 grl_window_constructed (GObject *object)
 {
@@ -341,6 +385,13 @@ grl_window_constructed (GObject *object)
        counted, so InitWindow()'s own glfwInit() call below is then a no-op. */
     {
         extern int glfwInit (void);
+
+        if (grl_window_saw_glfw && !grl_window_writer_set)
+        {
+            g_log_set_writer_func (grl_window_log_writer, NULL, NULL);
+            grl_window_writer_set = TRUE;
+        }
+
         if (!glfwInit ())
         {
             g_warning ("graylib: GLFW could not initialize (no usable display? "
@@ -348,6 +399,8 @@ grl_window_constructed (GObject *object)
             priv->is_initialized = FALSE;
             return;
         }
+
+        grl_window_saw_glfw = TRUE;
     }
 
     /* Initialize the raylib window */
