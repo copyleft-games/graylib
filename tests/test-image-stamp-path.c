@@ -82,6 +82,7 @@ test_stamp_deterministic (void)
     g_autoptr (GrlImage) b = make_canvas ();
     g_autoptr (GrlImage) brush = make_white_brush ();
     g_autoptr (GrlPath)  path  = grl_path_new ();
+	gint x, y;
 
     grl_path_move_to (path, 10.0f, 64.0f);
     grl_path_line_to (path, 118.0f, 64.0f);
@@ -89,7 +90,6 @@ test_stamp_deterministic (void)
     grl_image_stamp_along_path (a, brush, path, 8.0f, 5.0f, 42);
     grl_image_stamp_along_path (b, brush, path, 8.0f, 5.0f, 42);
 
-    gint x, y;
     for (y = 0; y < H; y++) {
         for (x = 0; x < W; x++) {
             g_autoptr (GrlColor) ca = grl_image_get_pixel (a, x, y);

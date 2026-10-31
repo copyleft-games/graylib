@@ -149,11 +149,12 @@ static void
 test_collidable_get_bounds (void)
 {
     g_autoptr(GrlEntity) entity = grl_entity_new_at (100.0f, 200.0f);
+	g_autoptr(GrlRectangle) bounds = NULL;
 
     grl_entity_set_width (entity, 50.0f);
     grl_entity_set_height (entity, 30.0f);
 
-    g_autoptr(GrlRectangle) bounds = grl_collidable_get_bounds (GRL_COLLIDABLE (entity));
+	bounds = grl_collidable_get_bounds (GRL_COLLIDABLE (entity));
 
     g_assert_nonnull (bounds);
     g_assert_true (float_equal (bounds->x, 100.0f));

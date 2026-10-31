@@ -26,8 +26,9 @@ static void
 test_layer_new (void)
 {
     GrlLayer *layer = grl_layer_new (W, H);
+	GrlImage *img;
     g_assert_nonnull (layer);
-    GrlImage *img = grl_layer_get_image (layer);
+	img = grl_layer_get_image (layer);
     g_assert_nonnull (img);
     grl_layer_unref (layer);
 }
@@ -39,6 +40,7 @@ test_composite_opaque_overwrites (void)
     g_autoptr (GrlImage) dst = make_solid (0, 0, 0, 255);
     GrlLayer *layer = grl_layer_new (W, H);
     GrlImage *limg  = grl_layer_get_image (layer);
+	g_autoptr (GrlColor) px = NULL;
 
     /* Paint the layer white. */
     g_autoptr (GrlColor) white = grl_color_new (255, 255, 255, 255);
@@ -46,7 +48,7 @@ test_composite_opaque_overwrites (void)
 
     grl_image_composite_layer (dst, layer, 0, 0, GRL_LAYER_BLEND_NORMAL, 1.0f);
 
-    g_autoptr (GrlColor) px = grl_image_get_pixel (dst, W/2, H/2);
+	px = grl_image_get_pixel (dst, W/2, H/2);
     g_assert_cmpuint (px->r, >=, 240);
     grl_layer_unref (layer);
 }
@@ -58,13 +60,14 @@ test_composite_zero_opacity_unchanged (void)
     g_autoptr (GrlImage) dst = make_solid (100, 100, 100, 255);
     GrlLayer *layer = grl_layer_new (W, H);
     GrlImage *limg  = grl_layer_get_image (layer);
+	g_autoptr (GrlColor) px = NULL;
 
     g_autoptr (GrlColor) white = grl_color_new (255, 255, 255, 255);
     grl_image_clear_background (limg, white);
 
     grl_image_composite_layer (dst, layer, 0, 0, GRL_LAYER_BLEND_NORMAL, 0.0f);
 
-    g_autoptr (GrlColor) px = grl_image_get_pixel (dst, W/2, H/2);
+	px = grl_image_get_pixel (dst, W/2, H/2);
     g_assert_cmpuint (px->r, ==, 100);
     grl_layer_unref (layer);
 }
@@ -76,13 +79,14 @@ test_composite_multiply_neutral (void)
     g_autoptr (GrlImage) dst = make_solid (128, 128, 128, 255);
     GrlLayer *layer = grl_layer_new (W, H);
     GrlImage *limg  = grl_layer_get_image (layer);
+	g_autoptr (GrlColor) px = NULL;
 
     g_autoptr (GrlColor) white = grl_color_new (255, 255, 255, 255);
     grl_image_clear_background (limg, white);
 
     grl_image_composite_layer (dst, layer, 0, 0, GRL_LAYER_BLEND_MULTIPLY, 1.0f);
 
-    g_autoptr (GrlColor) px = grl_image_get_pixel (dst, W/2, H/2);
+	px = grl_image_get_pixel (dst, W/2, H/2);
     /* white multiply = identity, so result should stay near 128 */
     g_assert_cmpuint (px->r, >=, 120);
     g_assert_cmpuint (px->r, <=, 135);
@@ -96,13 +100,14 @@ test_composite_add_clamps (void)
     g_autoptr (GrlImage) dst = make_solid (200, 200, 200, 255);
     GrlLayer *layer = grl_layer_new (W, H);
     GrlImage *limg  = grl_layer_get_image (layer);
+	g_autoptr (GrlColor) px = NULL;
 
     g_autoptr (GrlColor) white = grl_color_new (255, 255, 255, 255);
     grl_image_clear_background (limg, white);
 
     grl_image_composite_layer (dst, layer, 0, 0, GRL_LAYER_BLEND_ADD, 1.0f);
 
-    g_autoptr (GrlColor) px = grl_image_get_pixel (dst, W/2, H/2);
+	px = grl_image_get_pixel (dst, W/2, H/2);
     g_assert_cmpuint (px->r, ==, 255);
     grl_layer_unref (layer);
 }

@@ -84,10 +84,11 @@ test_camera2d_set_offset (void)
 {
     g_autoptr(GrlCamera2D) camera = grl_camera2d_new ();
     g_autoptr(GrlVector2) new_offset = grl_vector2_new (100.0f, 200.0f);
+	g_autoptr(GrlVector2) offset = NULL;
 
     grl_camera2d_set_offset (camera, new_offset);
 
-    g_autoptr(GrlVector2) offset = grl_camera2d_get_offset (camera);
+	offset = grl_camera2d_get_offset (camera);
     g_assert_true (float_equal (offset->x, 100.0f));
     g_assert_true (float_equal (offset->y, 200.0f));
 }
@@ -96,10 +97,11 @@ static void
 test_camera2d_set_offset_xy (void)
 {
     g_autoptr(GrlCamera2D) camera = grl_camera2d_new ();
+	g_autoptr(GrlVector2) offset = NULL;
 
     grl_camera2d_set_offset_xy (camera, 150.0f, 250.0f);
 
-    g_autoptr(GrlVector2) offset = grl_camera2d_get_offset (camera);
+	offset = grl_camera2d_get_offset (camera);
     g_assert_true (float_equal (offset->x, 150.0f));
     g_assert_true (float_equal (offset->y, 250.0f));
 }
@@ -109,10 +111,11 @@ test_camera2d_set_target (void)
 {
     g_autoptr(GrlCamera2D) camera = grl_camera2d_new ();
     g_autoptr(GrlVector2) new_target = grl_vector2_new (500.0f, 300.0f);
+	g_autoptr(GrlVector2) target = NULL;
 
     grl_camera2d_set_target (camera, new_target);
 
-    g_autoptr(GrlVector2) target = grl_camera2d_get_target (camera);
+	target = grl_camera2d_get_target (camera);
     g_assert_true (float_equal (target->x, 500.0f));
     g_assert_true (float_equal (target->y, 300.0f));
 }
@@ -121,10 +124,11 @@ static void
 test_camera2d_set_target_xy (void)
 {
     g_autoptr(GrlCamera2D) camera = grl_camera2d_new ();
+	g_autoptr(GrlVector2) target = NULL;
 
     grl_camera2d_set_target_xy (camera, 600.0f, 400.0f);
 
-    g_autoptr(GrlVector2) target = grl_camera2d_get_target (camera);
+	target = grl_camera2d_get_target (camera);
     g_assert_true (float_equal (target->x, 600.0f));
     g_assert_true (float_equal (target->y, 400.0f));
 }
@@ -133,10 +137,11 @@ static void
 test_camera2d_set_rotation (void)
 {
     g_autoptr(GrlCamera2D) camera = grl_camera2d_new ();
+	gfloat rotation;
 
     grl_camera2d_set_rotation (camera, 45.0f);
 
-    gfloat rotation = grl_camera2d_get_rotation (camera);
+	rotation = grl_camera2d_get_rotation (camera);
     g_assert_true (float_equal (rotation, 45.0f));
 }
 
@@ -144,10 +149,11 @@ static void
 test_camera2d_set_zoom (void)
 {
     g_autoptr(GrlCamera2D) camera = grl_camera2d_new ();
+	gfloat zoom;
 
     grl_camera2d_set_zoom (camera, 2.0f);
 
-    gfloat zoom = grl_camera2d_get_zoom (camera);
+	zoom = grl_camera2d_get_zoom (camera);
     g_assert_true (float_equal (zoom, 2.0f));
 }
 
@@ -155,10 +161,11 @@ static void
 test_camera2d_set_zoom_half (void)
 {
     g_autoptr(GrlCamera2D) camera = grl_camera2d_new ();
+	gfloat zoom;
 
     grl_camera2d_set_zoom (camera, 0.5f);
 
-    gfloat zoom = grl_camera2d_get_zoom (camera);
+	zoom = grl_camera2d_get_zoom (camera);
     g_assert_true (float_equal (zoom, 0.5f));
 }
 
