@@ -284,7 +284,7 @@ ifeq ($(RAYLIB_SHARED),0)
 	fi
 endif
 
-# Build raylib from source
+# Build raylib from source (flags, -fPIC included: RAYLIB_OPT_FLAGS in rules.mk).
 raylib:
 ifeq ($(RAYLIB_SHARED),0)
 	$(call print_status,"Building raylib...")
