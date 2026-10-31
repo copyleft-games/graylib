@@ -239,7 +239,7 @@ GrlPngChunk *   grl_png_chunk_read          (const gchar    *filename,
  *
  * Reads all chunks from a PNG file.
  *
- * Returns: (transfer full) (array length=count): Array of chunks, or %NULL on error
+ * Returns: (transfer full) (array length=count) (nullable): Array of chunks, or %NULL on error
  */
 GRL_AVAILABLE_IN_ALL
 GrlPngChunk **  grl_png_chunk_read_all      (const gchar    *filename,

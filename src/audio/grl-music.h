@@ -36,6 +36,7 @@ G_DECLARE_FINAL_TYPE (GrlMusic, grl_music, GRL, MUSIC, GObject)
  * Loads music from a file. The music is streamed from disk rather
  * than loaded entirely into memory, making this suitable for
  * background music and other long audio tracks.
+ * A current audio device is required; this constructor never opens one.
  *
  * Supported formats: WAV, OGG, MP3, FLAC, XM, MOD (depending on raylib build)
  *
@@ -54,6 +55,8 @@ GrlMusic *          grl_music_new_from_file         (const gchar        *filenam
  *
  * Loads music from memory data. The data is copied internally
  * and will be streamed during playback.
+ * A current audio device is required, and @data_size must fit the SDK's
+ * signed byte count. This constructor never opens an audio device.
  *
  * This is useful for loading music from embedded resources,
  * archives, or network downloads without writing to disk.

@@ -29,6 +29,8 @@ on_notify (GObject    *object,
            GParamSpec *pspec,
            gpointer    user_data)
 {
+	(void)object;
+	(void)pspec;
     (*(guint *)user_data)++;
 }
 

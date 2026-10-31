@@ -12,7 +12,7 @@
 
 VERSION_MAJOR := 0
 VERSION_MINOR := 3
-VERSION_MICRO := 1
+VERSION_MICRO := 2
 VERSION := $(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_MICRO)
 
 # API version for parallel installability (bump on ABI breaks)

@@ -43,9 +43,10 @@ test_bloom_dark_unchanged (void)
 {
     g_autoptr (GrlImage) before = make_solid (30, 30, 30);
     g_autoptr (GrlImage) after  = make_solid (30, 30, 30);
+	gdouble db, da;
     grl_image_apply_bloom (after, 200, 4, 1.0f);
-    gdouble db = avg_brightness (before);
-    gdouble da = avg_brightness (after);
+	db = avg_brightness (before);
+	da = avg_brightness (after);
     /* expect no meaningful change — tolerance 2 */
     g_assert_cmpfloat (fabs (da - db), <, 2.0);
 }
@@ -56,9 +57,10 @@ test_bloom_bright_brightens (void)
 {
     g_autoptr (GrlImage) before = make_solid (240, 240, 240);
     g_autoptr (GrlImage) after  = make_solid (240, 240, 240);
+	gdouble db, da;
     grl_image_apply_bloom (after, 100, 4, 2.0f);
-    gdouble db = avg_brightness (before);
-    gdouble da = avg_brightness (after);
+	db = avg_brightness (before);
+	da = avg_brightness (after);
     /* bloom with intensity 2 should push brightness higher */
     g_assert_cmpfloat (da, >=, db);
 }
@@ -69,9 +71,10 @@ test_bloom_zero_intensity_unchanged (void)
 {
     g_autoptr (GrlImage) before = make_solid (200, 200, 200);
     g_autoptr (GrlImage) after  = make_solid (200, 200, 200);
+	gdouble db, da;
     grl_image_apply_bloom (after, 100, 4, 0.0f);
-    gdouble db = avg_brightness (before);
-    gdouble da = avg_brightness (after);
+	db = avg_brightness (before);
+	da = avg_brightness (after);
     g_assert_cmpfloat (fabs (da - db), <, 2.0);
 }
 
@@ -81,9 +84,10 @@ test_bloom_max_threshold_unchanged (void)
 {
     g_autoptr (GrlImage) before = make_solid (200, 200, 200);
     g_autoptr (GrlImage) after  = make_solid (200, 200, 200);
+	gdouble db, da;
     grl_image_apply_bloom (after, 255, 4, 1.0f);
-    gdouble db = avg_brightness (before);
-    gdouble da = avg_brightness (after);
+	db = avg_brightness (before);
+	da = avg_brightness (after);
     g_assert_cmpfloat (fabs (da - db), <, 2.0);
 }
 
@@ -92,8 +96,8 @@ static void
 test_bloom_clamps_255 (void)
 {
     g_autoptr (GrlImage) img = make_solid (255, 255, 255);
+	gint x, y;
     grl_image_apply_bloom (img, 0, 4, 10.0f);
-    gint x, y;
     for (y = 0; y < H; y++) {
         for (x = 0; x < W; x++) {
             g_autoptr (GrlColor) c = grl_image_get_pixel (img, x, y);

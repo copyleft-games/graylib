@@ -68,10 +68,11 @@ test_entity_set_position (void)
 {
     g_autoptr(GrlEntity) entity = grl_entity_new ();
     g_autoptr(GrlVector2) new_pos = grl_vector2_new (50.0f, 75.0f);
+	g_autoptr(GrlVector2) pos = NULL;
 
     grl_entity_set_position (entity, new_pos);
 
-    g_autoptr(GrlVector2) pos = grl_entity_get_position (entity);
+    pos = grl_entity_get_position (entity);
     g_assert_true (float_equal (pos->x, 50.0f));
     g_assert_true (float_equal (pos->y, 75.0f));
 }
@@ -173,10 +174,11 @@ test_entity_get_set_origin (void)
 {
     g_autoptr(GrlEntity) entity = grl_entity_new ();
     g_autoptr(GrlVector2) new_origin = grl_vector2_new (16.0f, 16.0f);
+	g_autoptr(GrlVector2) origin = NULL;
 
     grl_entity_set_origin (entity, new_origin);
 
-    g_autoptr(GrlVector2) origin = grl_entity_get_origin (entity);
+    origin = grl_entity_get_origin (entity);
     g_assert_true (float_equal (origin->x, 16.0f));
     g_assert_true (float_equal (origin->y, 16.0f));
 }
@@ -185,12 +187,13 @@ static void
 test_entity_center_origin (void)
 {
     g_autoptr(GrlEntity) entity = grl_entity_new ();
+	g_autoptr(GrlVector2) origin = NULL;
 
     grl_entity_set_width (entity, 100.0f);
     grl_entity_set_height (entity, 50.0f);
     grl_entity_center_origin (entity);
 
-    g_autoptr(GrlVector2) origin = grl_entity_get_origin (entity);
+    origin = grl_entity_get_origin (entity);
     g_assert_true (float_equal (origin->x, 50.0f));
     g_assert_true (float_equal (origin->y, 25.0f));
 }
@@ -387,6 +390,7 @@ static void
 test_sub_entity_update (GrlEntity *entity,
                         gfloat     delta)
 {
+	(void)delta;
     ((TestSubEntity *) entity)->updates++;
 }
 
@@ -406,6 +410,7 @@ test_sub_entity_class_init (TestSubEntityClass *klass)
 static void
 test_sub_entity_init (TestSubEntity *self)
 {
+	(void)self;
 }
 
 /* Re-implements both interfaces: never active, never visible */
@@ -421,12 +426,14 @@ struct _TestHiddenEntity
 static gboolean
 test_hidden_entity_never (GrlUpdatable *updatable)
 {
+	(void)updatable;
     return FALSE;
 }
 
 static gboolean
 test_hidden_entity_never_visible (GrlDrawable *drawable)
 {
+	(void)drawable;
     return FALSE;
 }
 
@@ -434,6 +441,7 @@ static void
 test_hidden_entity_update (GrlUpdatable *updatable,
                            gfloat        delta)
 {
+	(void)delta;
     ((TestHiddenEntity *) updatable)->calls++;
 }
 
@@ -464,11 +472,13 @@ G_DEFINE_TYPE_WITH_CODE (TestHiddenEntity, test_hidden_entity, GRL_TYPE_ENTITY,
 static void
 test_hidden_entity_class_init (TestHiddenEntityClass *klass)
 {
+	(void)klass;
 }
 
 static void
 test_hidden_entity_init (TestHiddenEntity *self)
 {
+	(void)self;
 }
 
 static void

@@ -360,7 +360,7 @@ void                grl_rlgl_cubemap_parameters         (guint id,
 
 /**
  * grl_rlgl_load_texture:
- * @data: (nullable) (array) (element-type guint8): pixel data, every
+ * @data: (nullable) (array zero-terminated=0) (element-type guint8): pixel data, every
  *   mipmap level packed one after another, largest first (block
  *   compressed formats included); %NULL allocates an empty texture
  * @width: width of level 0
@@ -370,6 +370,10 @@ void                grl_rlgl_cubemap_parameters         (guint id,
  *
  * Uploads raw or block-compressed texture data straight to the GPU, for
  * formats a #GrlImage does not carry (DXT data with its own mip chain).
+ * The caller retains @data; the upload consumes it during this call only.
+ * Its byte count is determined by @format and all @mipmap_count level sizes,
+ * not by a terminator. The returned GPU handle must be released with
+ * grl_rlgl_unload_texture() while its graphics context is still current.
  *
  * Returns: the GL texture id, or 0 on failure
  */
@@ -388,9 +392,11 @@ guint               grl_rlgl_load_texture               (gconstpointer  data,
  * @width: region width
  * @height: region height
  * @format: the pixel format of @data
- * @data: (array) (element-type guint8): the region's pixels
+ * @data: (array zero-terminated=0) (element-type guint8): the region's pixels
  *
  * Replaces a region of level 0 (uncompressed formats).
+ * The caller retains @data, which is read only during this call and must
+ * contain the bytes required by @width, @height and @format.
  */
 GRL_AVAILABLE_IN_ALL
 void                grl_rlgl_update_texture             (guint          id,

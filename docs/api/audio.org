@@ -88,6 +88,13 @@ g_autoptr(GrlSound) beep = grl_sound_new_from_wave (
 );
 #+end_src
 
+*** Independent voices and shared native aliases
+=grl_sound_new_voice(source, error)= creates an explicitly independent native playback buffer from retained canonical PCM. Volume, pitch, pan, processors and later updates are independent; the source may be released immediately. =grl_sound_is_alias()= returns FALSE. Retained PCM is bounded to 256 MiB and missing/unsupported snapshots return a GError rather than falling back to a native alias.
+
+=grl_sound_new_alias(source)= retains its genuine shared-memory semantics and now retains its root source automatically. Shared writes affect the root and all native aliases. The pinned SDK still leaks an opaque residual allocation on this legacy path; no private-layout cleanup or silent policy replacement is performed. Choose the independent constructor explicitly when that sharing is unnecessary.
+
+=grl_sound_update_checked()= validates exact byte/frame cardinality before writing and keeps retained snapshots coherent. Partial writes preserve the tail; independent snapshots use copy-on-write. Stop all voices sharing native alias storage before updating it. See the [[file:../audio-ownership-contract.org][full ownership, SDK compatibility and verification contract]] for the exact WAV-context cleanup guard, resource bounds, native null-only sanitizer proof and the still-open legacy gate.
+
 *** Playback Control
 :PROPERTIES:
 :CUSTOM_ID: playback-control

@@ -51,7 +51,8 @@ GrlFont *           grl_font_new_default        (void);
  * Loads a font from a file. Supports TrueType (.ttf), OpenType (.otf),
  * BMFont (.fnt), and other common formats.
  *
- * Returns: (transfer full): A new #GrlFont, or %NULL on error
+ * Returns: (transfer full): A new #GrlFont; raylib may substitute its default
+ *   font if loading fails. Check grl_font_is_valid() before drawing.
  */
 GRL_AVAILABLE_IN_ALL
 GrlFont *           grl_font_new_from_file      (const gchar        *filename);

@@ -104,10 +104,11 @@ test_camera3d_set_position (void)
 {
     g_autoptr(GrlCamera3D) camera = grl_camera3d_new ();
     g_autoptr(GrlVector3) new_pos = grl_vector3_new (5.0f, 15.0f, 20.0f);
+	g_autoptr(GrlVector3) position = NULL;
 
     grl_camera3d_set_position (camera, new_pos);
 
-    g_autoptr(GrlVector3) position = grl_camera3d_get_position (camera);
+	position = grl_camera3d_get_position (camera);
     g_assert_true (float_equal (position->x, 5.0f));
     g_assert_true (float_equal (position->y, 15.0f));
     g_assert_true (float_equal (position->z, 20.0f));
@@ -117,10 +118,11 @@ static void
 test_camera3d_set_position_xyz (void)
 {
     g_autoptr(GrlCamera3D) camera = grl_camera3d_new ();
+	g_autoptr(GrlVector3) position = NULL;
 
     grl_camera3d_set_position_xyz (camera, 10.0f, 25.0f, 30.0f);
 
-    g_autoptr(GrlVector3) position = grl_camera3d_get_position (camera);
+	position = grl_camera3d_get_position (camera);
     g_assert_true (float_equal (position->x, 10.0f));
     g_assert_true (float_equal (position->y, 25.0f));
     g_assert_true (float_equal (position->z, 30.0f));
@@ -131,10 +133,11 @@ test_camera3d_set_target (void)
 {
     g_autoptr(GrlCamera3D) camera = grl_camera3d_new ();
     g_autoptr(GrlVector3) new_target = grl_vector3_new (5.0f, 5.0f, 5.0f);
+	g_autoptr(GrlVector3) target = NULL;
 
     grl_camera3d_set_target (camera, new_target);
 
-    g_autoptr(GrlVector3) target = grl_camera3d_get_target (camera);
+	target = grl_camera3d_get_target (camera);
     g_assert_true (float_equal (target->x, 5.0f));
     g_assert_true (float_equal (target->y, 5.0f));
     g_assert_true (float_equal (target->z, 5.0f));
@@ -144,10 +147,11 @@ static void
 test_camera3d_set_target_xyz (void)
 {
     g_autoptr(GrlCamera3D) camera = grl_camera3d_new ();
+	g_autoptr(GrlVector3) target = NULL;
 
     grl_camera3d_set_target_xyz (camera, 1.0f, 2.0f, 3.0f);
 
-    g_autoptr(GrlVector3) target = grl_camera3d_get_target (camera);
+	target = grl_camera3d_get_target (camera);
     g_assert_true (float_equal (target->x, 1.0f));
     g_assert_true (float_equal (target->y, 2.0f));
     g_assert_true (float_equal (target->z, 3.0f));
@@ -158,10 +162,11 @@ test_camera3d_set_up (void)
 {
     g_autoptr(GrlCamera3D) camera = grl_camera3d_new ();
     g_autoptr(GrlVector3) new_up = grl_vector3_new (0.0f, 0.0f, 1.0f);
+	g_autoptr(GrlVector3) up = NULL;
 
     grl_camera3d_set_up (camera, new_up);
 
-    g_autoptr(GrlVector3) up = grl_camera3d_get_up (camera);
+	up = grl_camera3d_get_up (camera);
     g_assert_true (float_equal (up->x, 0.0f));
     g_assert_true (float_equal (up->y, 0.0f));
     g_assert_true (float_equal (up->z, 1.0f));
@@ -171,10 +176,11 @@ static void
 test_camera3d_set_fovy (void)
 {
     g_autoptr(GrlCamera3D) camera = grl_camera3d_new ();
+	gfloat fovy;
 
     grl_camera3d_set_fovy (camera, 60.0f);
 
-    gfloat fovy = grl_camera3d_get_fovy (camera);
+	fovy = grl_camera3d_get_fovy (camera);
     g_assert_true (float_equal (fovy, 60.0f));
 }
 
@@ -182,10 +188,11 @@ static void
 test_camera3d_set_projection_orthographic (void)
 {
     g_autoptr(GrlCamera3D) camera = grl_camera3d_new ();
+	GrlCameraProjection projection;
 
     grl_camera3d_set_projection (camera, GRL_CAMERA_ORTHOGRAPHIC);
 
-    GrlCameraProjection projection = grl_camera3d_get_projection (camera);
+	projection = grl_camera3d_get_projection (camera);
     g_assert_true (projection == GRL_CAMERA_ORTHOGRAPHIC);
 }
 
@@ -193,12 +200,13 @@ static void
 test_camera3d_set_projection_perspective (void)
 {
     g_autoptr(GrlCamera3D) camera = grl_camera3d_new ();
+	GrlCameraProjection projection;
 
     /* First set to orthographic, then back to perspective */
     grl_camera3d_set_projection (camera, GRL_CAMERA_ORTHOGRAPHIC);
     grl_camera3d_set_projection (camera, GRL_CAMERA_PERSPECTIVE);
 
-    GrlCameraProjection projection = grl_camera3d_get_projection (camera);
+	projection = grl_camera3d_get_projection (camera);
     g_assert_true (projection == GRL_CAMERA_PERSPECTIVE);
 }
 

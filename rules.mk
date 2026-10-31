@@ -33,6 +33,27 @@ else
     RAYLIB_VERSION := 6.0
 endif
 
+# The extra WAV-context free is valid ONLY for this unmodified bundled SDK.
+# Unknown/system SDKs keep their native ownership contract (no extra free).
+# Checking both revision and bytes prevents a future fixed decoder from being
+# freed twice merely because it still advertises raylib 6.0.
+override GRL_SDK_WAV_EXTRA_FREE := 0
+ifeq ($(RAYLIB_SHARED),0)
+override _GRL_SDK_REV := $(shell git -C "$(RAYLIB_SRC)" rev-parse HEAD 2>/dev/null)
+override _GRL_SDK_CLEAN := $(shell git -C "$(RAYLIB_SRC)/.." diff --quiet HEAD -- . 2>/dev/null && printf clean)
+override _GRL_SDK_AUDIO_SHA := $(shell sha256sum "$(RAYLIB_SRC)/raudio.c" 2>/dev/null | sed 's/ .*//')
+override _GRL_SDK_HEADER_SHA := $(shell sha256sum "$(RAYLIB_SRC)/raylib.h" 2>/dev/null | sed 's/ .*//')
+ifeq ($(_GRL_SDK_REV),dbc56a87da87d973a9c5baa4e7438a9d20121d28)
+ifeq ($(_GRL_SDK_CLEAN),clean)
+ifeq ($(_GRL_SDK_AUDIO_SHA),2a5b42a701fd872dbf6a9715964344ce44b891bdcd7643122774d5cac9589812)
+ifeq ($(_GRL_SDK_HEADER_SHA),047e7255f93f8c34039cab906ad76136706b5c7b4c5b5b065d84141963ee9b6b)
+override GRL_SDK_WAV_EXTRA_FREE := 1
+endif
+endif
+endif
+endif
+endif
+
 # =============================================================================
 # GLFW Wayland backend (see WAYLAND in config.mk)
 # =============================================================================
@@ -76,6 +97,19 @@ RAYLIB_PLATFORM_TAG := $(RAYLIB_PLATFORM_TAG)+O2
 else
 RAYLIB_OPT_FLAGS := CUSTOM_CFLAGS="-O2 -fPIC"
 RAYLIB_PLATFORM_TAG := $(RAYLIB_PLATFORM_TAG)+O2+pic
+endif
+
+# External SDK configuration is an actual build input, not a feature policy
+# of graylib. Distinguish configured archives from vanilla archives and let
+# consumers name included headers whose content must invalidate that archive.
+RAYLIB_CONFIG_INPUTS ?=
+ifneq ($(strip $(RAYLIB_CONFIG_FLAGS) $(RAYLIB_CONFIG_INPUTS)),)
+_RAYLIB_MISSING_CONFIG_INPUTS := $(filter-out $(wildcard $(RAYLIB_CONFIG_INPUTS)),$(RAYLIB_CONFIG_INPUTS))
+ifneq ($(_RAYLIB_MISSING_CONFIG_INPUTS),)
+$(error Missing explicit RAYLIB_CONFIG_INPUTS: $(_RAYLIB_MISSING_CONFIG_INPUTS))
+endif
+_RAYLIB_CONFIG_DIGEST := $(shell printf '%s\n' '$(RAYLIB_CONFIG_FLAGS)' '$(RAYLIB_CONFIG_INPUTS)' '$(foreach input,$(RAYLIB_CONFIG_INPUTS),$(shell sha256sum "$(input)"))' | sha256sum | sed 's/ .*//')
+RAYLIB_PLATFORM_TAG := $(RAYLIB_PLATFORM_TAG)+cfg$(_RAYLIB_CONFIG_DIGEST)
 endif
 
 # =============================================================================
@@ -188,7 +222,7 @@ ALL_LIBS := $(GLIB_LIBS) $(RAYLIB_LIBS) $(MATH_LIBS)
 # =============================================================================
 
 ifeq ($(BUILD_GIR),1)
-    GIR_SCANNER_FLAGS := --warn-all
+    GIR_SCANNER_FLAGS := --warn-all --warn-error
     GIR_SCANNER_FLAGS += --namespace=Graylib
     GIR_SCANNER_FLAGS += --nsversion=$(API_VERSION)
     GIR_SCANNER_FLAGS += --identifier-prefix=Grl

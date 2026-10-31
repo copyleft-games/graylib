@@ -10,6 +10,7 @@
 #include "config.h"
 #include "grl-texture.h"
 #include "grl-graphics-private.h"
+#include <gio/gio.h>
 #include <raylib.h>
 
 /**
@@ -293,6 +294,61 @@ grl_texture_new_from_memory (const gchar  *file_type,
     UnloadImage (img);
 
     return grl_texture_new_internal (tex, TRUE);
+}
+
+/* The exact sum matters for rectangular chains: base_size * 4 / 3 loses
+ * bytes once only one dimension has reached one. No decoder owns this view. */
+GrlTexture *
+grl_texture_new_from_rgba_mipmaps (gint width,
+                                  gint height,
+                                  gint mipmaps,
+                                  GBytes *pixels,
+                                  GError **error)
+{
+	gsize expected = 0, level_size;
+	gint w, h, level;
+	Image image;
+	Texture2D texture;
+
+	g_return_val_if_fail (pixels != NULL, NULL);
+	g_return_val_if_fail (error == NULL || *error == NULL, NULL);
+	if (width < 1 || width > 16384 || height < 1 || height > 16384 || mipmaps < 1 || mipmaps > 15)
+		goto invalid;
+	w = width;
+	h = height;
+	for (level = 0; level < mipmaps; level++) {
+		level_size = (gsize)w * (gsize)h * 4;
+		if (level_size > 256U * 1048576U - expected)
+			goto invalid;
+		expected += level_size;
+		if (w == 1 && h == 1 && level + 1 != mipmaps)
+			goto invalid;
+		w = MAX (1, w / 2);
+		h = MAX (1, h / 2);
+	}
+	if (g_bytes_get_size (pixels) != expected)
+		goto invalid;
+	if (!IsWindowReady ()) {
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_INITIALIZED,
+		                     "RGBA mipmap upload requires a current window");
+		return NULL;
+	}
+	image.data = (gpointer)g_bytes_get_data (pixels, NULL);
+	image.width = width;
+	image.height = height;
+	image.mipmaps = mipmaps;
+	image.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
+	texture = LoadTextureFromImage (image);
+	if (texture.id == 0) {
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_FAILED,
+		                     "Cannot upload RGBA mipmap chain");
+		return NULL;
+	}
+	return grl_texture_new_internal (texture, TRUE);
+invalid:
+	g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA,
+	                     "Invalid RGBA mipmap dimensions, level count or byte size");
+	return NULL;
 }
 
 /*

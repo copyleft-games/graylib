@@ -169,11 +169,12 @@ test_scene_get_entities (void)
     g_autoptr(GrlScene) scene = grl_scene_new ();
     g_autoptr(GrlEntity) e1 = grl_entity_new ();
     g_autoptr(GrlEntity) e2 = grl_entity_new ();
+	GList *entities;
 
     grl_scene_add_entity (scene, e1);
     grl_scene_add_entity (scene, e2);
 
-    GList *entities = grl_scene_get_entities (scene);
+    entities = grl_scene_get_entities (scene);
     g_assert_cmpuint (g_list_length (entities), ==, 2);
 }
 
@@ -195,6 +196,7 @@ test_scene_find_entity_by_tag (void)
     g_autoptr(GrlScene) scene = grl_scene_new ();
     g_autoptr(GrlEntity) player = grl_entity_new ();
     g_autoptr(GrlEntity) enemy = grl_entity_new ();
+	GrlEntity *found;
 
     grl_entity_set_tag (player, "player");
     grl_entity_set_tag (enemy, "enemy");
@@ -202,7 +204,7 @@ test_scene_find_entity_by_tag (void)
     grl_scene_add_entity (scene, player);
     grl_scene_add_entity (scene, enemy);
 
-    GrlEntity *found = grl_scene_find_entity_by_tag (scene, "player");
+    found = grl_scene_find_entity_by_tag (scene, "player");
     g_assert_nonnull (found);
     g_assert_true (found == player);
 }
@@ -212,11 +214,12 @@ test_scene_find_entity_by_tag_not_found (void)
 {
     g_autoptr(GrlScene) scene = grl_scene_new ();
     g_autoptr(GrlEntity) entity = grl_entity_new ();
+	GrlEntity *found;
 
     grl_entity_set_tag (entity, "enemy");
     grl_scene_add_entity (scene, entity);
 
-    GrlEntity *found = grl_scene_find_entity_by_tag (scene, "player");
+    found = grl_scene_find_entity_by_tag (scene, "player");
     g_assert_null (found);
 }
 
@@ -227,6 +230,7 @@ test_scene_find_entities_by_tag (void)
     g_autoptr(GrlEntity) e1 = grl_entity_new ();
     g_autoptr(GrlEntity) e2 = grl_entity_new ();
     g_autoptr(GrlEntity) e3 = grl_entity_new ();
+	GList *enemies;
 
     grl_entity_set_tag (e1, "enemy");
     grl_entity_set_tag (e2, "enemy");
@@ -236,7 +240,7 @@ test_scene_find_entities_by_tag (void)
     grl_scene_add_entity (scene, e2);
     grl_scene_add_entity (scene, e3);
 
-    GList *enemies = grl_scene_find_entities_by_tag (scene, "enemy");
+    enemies = grl_scene_find_entities_by_tag (scene, "enemy");
     g_assert_cmpuint (g_list_length (enemies), ==, 2);
     g_list_free (enemies);
 }
@@ -246,11 +250,12 @@ test_scene_find_entities_by_tag_empty (void)
 {
     g_autoptr(GrlScene) scene = grl_scene_new ();
     g_autoptr(GrlEntity) entity = grl_entity_new ();
+	GList *enemies;
 
     grl_entity_set_tag (entity, "player");
     grl_scene_add_entity (scene, entity);
 
-    GList *enemies = grl_scene_find_entities_by_tag (scene, "enemy");
+    enemies = grl_scene_find_entities_by_tag (scene, "enemy");
     g_assert_null (enemies);
 }
 
@@ -263,6 +268,7 @@ count_entities_callback (GrlEntity *entity,
                          gpointer   user_data)
 {
     gint *count = (gint *)user_data;
+	(void)entity;
     (*count)++;
     return TRUE;
 }
@@ -290,6 +296,7 @@ stop_early_callback (GrlEntity *entity,
                      gpointer   user_data)
 {
     gint *count = (gint *)user_data;
+	(void)entity;
     (*count)++;
     return (*count < 2);  /* Stop after 2 */
 }

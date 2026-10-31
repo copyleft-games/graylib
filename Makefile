@@ -215,6 +215,20 @@ GENERATED_HEADERS := src/grl-version.h src/config.h
 .PHONY: generate
 generate: $(GENERATED_HEADERS)
 
+# Recheck the source capability on every invocation. The content-stable header
+# also invalidates a stale music object when switching SDKs with older mtimes.
+.PHONY: audio-sdk-capability-force
+audio-sdk-capability-force:
+
+$(BUILDDIR)/grl-audio-sdk-capabilities.h: audio-sdk-capability-force
+	@$(MKDIR_P) $(dir $@)
+	@printf '#define GRL_SDK_WAV_EXTRA_FREE (%s)\n' '$(GRL_SDK_WAV_EXTRA_FREE)' > $@.tmp
+	@cmp -s $@.tmp $@ || mv $@.tmp $@
+	@$(RM) $@.tmp
+
+$(OBJDIR)/src/audio/grl-music.o: $(BUILDDIR)/grl-audio-sdk-capabilities.h
+$(OBJDIR)/src/audio/grl-music.o: LIB_CFLAGS += -include $(BUILDDIR)/grl-audio-sdk-capabilities.h
+
 # =============================================================================
 # Build Platform Tracking
 # =============================================================================
@@ -312,7 +326,12 @@ $(LIBOUTDIR)/$(LIB_STATIC): $(OBJECTS) | $(LIBOUTDIR)
 	$(RANLIB) $@
 
 # Shared library
-$(LIBOUTDIR)/$(LIB_SHARED): $(OBJECTS) | $(LIBOUTDIR)
+# The bundled SDK is linked into the shared library. A rebuilt archive must
+# relink it even when the public headers and wrapper objects are unchanged.
+ifeq ($(RAYLIB_SHARED),0)
+_GRAYLIB_SDK_LINK_INPUT := $(RAYLIB_SRC)/libraylib.a
+endif
+$(LIBOUTDIR)/$(LIB_SHARED): $(OBJECTS) $(_GRAYLIB_SDK_LINK_INPUT) | $(LIBOUTDIR)
 	$(call print_status,"Creating shared library: $(LIB_SHARED)")
 ifeq ($(TARGET_PLATFORM),windows)
 	$(CC) $(LIB_LDFLAGS) -Wl,--out-implib,$(LIBOUTDIR)/$(LIB_IMPORT) \

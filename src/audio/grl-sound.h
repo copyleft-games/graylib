@@ -27,6 +27,15 @@ typedef struct _GrlWave GrlWave;
 GRL_AVAILABLE_IN_ALL
 G_DECLARE_FINAL_TYPE (GrlSound, grl_sound, GRL, SOUND, GObject)
 
+/**
+ * GRL_SOUND_VOICE_MAX_PCM_BYTES:
+ *
+ * Maximum canonical PCM retained for grl_sound_new_voice(), in bytes.
+ * Legacy constructors can still play larger sounds, but those sounds cannot
+ * supply independent voices and the checked voice constructor reports an error.
+ */
+#define GRL_SOUND_VOICE_MAX_PCM_BYTES (256U * 1024U * 1024U)
+
 /*
  * Constructors
  */
@@ -56,6 +65,9 @@ GrlSound *          grl_sound_new_from_file         (const gchar        *filenam
  * @channels: Number of channels (1 for mono, 2 for stereo)
  *
  * Creates a sound from raw wave data.
+ * The size must contain complete frames, the sample rate/channels must be
+ * positive, and the sample size must be 8, 16 or 32. Invalid metadata returns
+ * %NULL before any division, copy or native allocation.
  *
  * Returns: (transfer full) (nullable): A new #GrlSound, or %NULL on error
  */
@@ -130,13 +142,39 @@ GrlSound *          grl_sound_new_from_resource     (GrlResourcePack    *pack,
  * This is a lightweight way to have multiple sounds that use the same
  * audio data but can have independent volume, pitch, and pan settings.
  *
- * Aliases do not own the sample data - the source sound must remain
- * valid for as long as any aliases exist.
+ * Aliases retain their root source so its shared sample data stays valid even
+ * after the caller drops its source reference. Writes through the source or
+ * an alias are reflected in every native alias. The pinned SDK's alias unload
+ * leaks its opaque residual buffer; this legacy shared-memory API retains
+ * that native limitation. Use grl_sound_new_voice() for independent storage.
  *
  * Returns: (transfer full) (nullable): A new #GrlSound alias
  */
 GRL_AVAILABLE_IN_ALL
 GrlSound *          grl_sound_new_alias             (GrlSound           *source);
+
+/**
+ * grl_sound_new_voice:
+ * @source: (transfer none): a loaded sound with retained PCM
+ * @error: (nullable): return location for an error
+ *
+ * Creates an independent native playback buffer from the source's current
+ * immutable PCM snapshot. This is explicitly not a shared-memory alias:
+ * grl_sound_is_alias() returns %FALSE, later source/voice updates are independent,
+ * and releasing either object cannot invalidate the other. Volume, pitch,
+ * pan and per-voice processors are independent. Release all voices before
+ * closing their audio device.
+ *
+ * All sound constructors retain canonical PCM up to
+ * %GRL_SOUND_VOICE_MAX_PCM_BYTES after checking component/frame arithmetic.
+ * Larger legacy sounds remain usable, but this constructor reports
+ * %G_IO_ERROR_NOT_SUPPORTED if no bounded snapshot is available. A current
+ * audio device is required; this function never initializes one.
+ *
+ * Returns: (transfer full) (nullable): the independent voice, or %NULL on error
+ */
+GRL_AVAILABLE_IN_ALL
+GrlSound *grl_sound_new_voice (GrlSound *source, GError **error);
 
 /*
  * Playback control
@@ -202,23 +240,48 @@ GRL_AVAILABLE_IN_ALL
 gboolean            grl_sound_is_alias              (GrlSound           *self);
 
 /**
- * grl_sound_update: (skip)
+ * grl_sound_update:
  * @self: A #GrlSound
- * @data: New sample data, @sample_count samples in the sound's format
- * @sample_count: Number of samples to update
+ * @data: (array zero-terminated=0) (element-type guint8): Packed playback bytes
+ * @sample_count: Number of playback frames to update (the C parameter name
+ *   is retained for compatibility); must not exceed the sound's frame count
  *
  * Updates the sound buffer with new sample data. This can be used
  * for real-time audio generation or streaming.
  *
- * The sample data format must match the format the sound was
- * originally created with.  Not available to language bindings: the
- * buffer's byte size depends on that format, which GObject Introspection
- * cannot describe.
+ * The caller retains @data, which is read only during this call. Its format
+ * must match the converted playback buffer, not necessarily the source wave
+ * (raylib's default is 32-bit float stereo). Provide @sample_count complete
+ * frames in that format. Bindings must validate the computed byte count:
+ * @sample_count is not a byte-array length, and no terminator is used.
  */
 GRL_AVAILABLE_IN_ALL
 void                grl_sound_update                (GrlSound           *self,
                                                      gconstpointer       data,
                                                      gint                sample_count);
+
+/**
+ * grl_sound_update_checked:
+ * @self: a loaded sound or native alias
+ * @data: (array length=data_size): packed bytes in the playback format
+ * @data_size: exact input byte count
+ * @frame_count: positive complete frame count, no larger than the sound
+ * @error: (nullable): return location for a validation error
+ *
+ * Validates the complete byte/frame cardinality before writing the native
+ * buffer. Updates start at frame zero and preserve the rest of the sound.
+ * The source and its native aliases share these writes; their root's retained
+ * PCM snapshot is updated too. Independent voices keep their own snapshots.
+ * Callers must stop every voice sharing native alias storage before updating
+ * that storage; the SDK does not synchronize writes against other aliases.
+ * Raw handle mutation is unsupported: format and storage must stay owned by
+ * the wrapper. No opaque AudioBuffer field is inspected or freed.
+ *
+ * Returns: %TRUE on success, %FALSE without mutation on invalid input
+ */
+GRL_AVAILABLE_IN_ALL
+gboolean grl_sound_update_checked (GrlSound *self, const guint8 *data,
+                                  gsize data_size, guint frame_count, GError **error);
 
 /*
  * Volume and pitch

@@ -624,7 +624,7 @@ grl_audio_stream_is_valid (GrlAudioStream *self)
 /*
  * grl_audio_stream_update:
  * @self: A #GrlAudioStream
- * @data: (array length=frame_count): Audio sample data
+ * @data: Packed audio bytes, borrowed for this call
  * @frame_count: Number of frames to write
  *
  * Updates the audio stream buffers with new sample data.

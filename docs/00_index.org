@@ -1,0 +1,5 @@
+#+title: Graylib documentation index
+
+- [[file:index.org][Library documentation and API guides]]
+- [[file:gir-contract.org][Full introspection and ownership contract]]
+- [[file:audio-ownership-contract.org][Pinned SDK WAV cleanup, independent voices and explicit legacy alias gate]]

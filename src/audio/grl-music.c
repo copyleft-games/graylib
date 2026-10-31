@@ -9,10 +9,12 @@
 
 #include "config.h"
 #include "grl-music.h"
+#include "grl-audio-cleanup-private.h"
 #include "grl-audio-processor-private.h"
 #include "grl-music-private.h"
 #include <gio/gio.h>
 #include <raylib.h>
+#include <string.h>
 
 /**
  * SECTION:grl-music
@@ -68,6 +70,8 @@ struct _GrlMusic
     /* For memory-loaded music: raylib streams from this buffer */
     guint8         *memory_data;
     gsize           memory_size;
+	/* Original constructor-owned decoder pointer, not a borrowed handle view. */
+	gpointer        wav_extra_context;
 
     /* per-voice processors, made on first use */
     GrlAudioProcessorSet *processors;
@@ -307,7 +311,9 @@ grl_music_finalize (GObject *object)
     if (self->is_loaded)
     {
         StopMusicStream (self->music);
-        UnloadMusicStream (self->music);
+		grl_audio_unload_music_owned (self->music,
+		                             g_steal_pointer (&self->wav_extra_context),
+		                             UnloadMusicStream, MemFree);
         self->is_loaded = FALSE;
     }
 
@@ -571,6 +577,8 @@ grl_music_new_from_file (const gchar  *filename,
 {
     GrlMusic *self;
     Music music;
+	gpointer extra_context;
+	unsigned char ready;
 
     g_return_val_if_fail (filename != NULL, NULL);
     g_return_val_if_fail (error == NULL || *error == NULL, NULL);
@@ -586,11 +594,23 @@ grl_music_new_from_file (const gchar  *filename,
         return NULL;
     }
 
+	ready = IsAudioDeviceReady ();
+	if (!ready)
+	{
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_INITIALIZED, "Music loading requires an audio device");
+		return NULL;
+	}
     music = LoadMusicStream (filename);
+	extra_context = grl_audio_wav_extra_context (music,
+		g_ascii_strcasecmp (strrchr (filename, '.') != NULL ? strrchr (filename, '.') : "", ".wav") == 0,
+		GRL_SDK_WAV_EXTRA_FREE && RAYLIB_VERSION_MAJOR == 6 && RAYLIB_VERSION_MINOR == 0);
 
     /* Check if music loaded successfully */
-    if (music.frameCount == 0)
+    if (music.frameCount == 0 || music.stream.buffer == NULL)
     {
+		/* A zero-frame decoded WAV can still own its decoder and stream. */
+		if (music.ctxData != NULL)
+			grl_audio_unload_music_owned (music, extra_context, UnloadMusicStream, MemFree);
         g_set_error (error,
                      G_IO_ERROR,
                      G_IO_ERROR_FAILED,
@@ -605,6 +625,8 @@ grl_music_new_from_file (const gchar  *filename,
     self->music.looping = self->looping;
     self->is_loaded = TRUE;
     self->filename = g_strdup (filename);
+	/* No decoder-private fields: ctxData is part of raylib's public Music. */
+	self->wav_extra_context = extra_context;
 
     return self;
 }
@@ -635,11 +657,24 @@ grl_music_new_from_memory (const gchar  *file_type,
     GrlMusic *self;
     Music music;
     guint8 *data_copy;
+	gpointer extra_context;
+	unsigned char ready;
 
     g_return_val_if_fail (file_type != NULL, NULL);
     g_return_val_if_fail (data != NULL, NULL);
     g_return_val_if_fail (data_size > 0, NULL);
     g_return_val_if_fail (error == NULL || *error == NULL, NULL);
+	if (data_size > G_MAXINT)
+	{
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA, "Encoded music exceeds the SDK byte-count range");
+		return NULL;
+	}
+	ready = IsAudioDeviceReady ();
+	if (!ready)
+	{
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_INITIALIZED, "Music loading requires an audio device");
+		return NULL;
+	}
 
     /* Copy the data - raylib streams from this buffer, so it must persist */
     data_copy = g_memdup2 (data, data_size);
@@ -655,11 +690,16 @@ grl_music_new_from_memory (const gchar  *file_type,
     /* Load music stream from memory */
     music = LoadMusicStreamFromMemory (file_type,
                                        (const unsigned char *)data_copy,
-                                       (int)data_size);
+                                        (int)data_size);
+	extra_context = grl_audio_wav_extra_context (music,
+		g_ascii_strcasecmp (file_type, ".wav") == 0,
+		GRL_SDK_WAV_EXTRA_FREE && RAYLIB_VERSION_MAJOR == 6 && RAYLIB_VERSION_MINOR == 0);
 
     /* Check if music loaded successfully */
-    if (music.frameCount == 0)
+    if (music.frameCount == 0 || music.stream.buffer == NULL)
     {
+		if (music.ctxData != NULL)
+			grl_audio_unload_music_owned (music, extra_context, UnloadMusicStream, MemFree);
         g_free (data_copy);
         g_set_error (error,
                      G_IO_ERROR,
@@ -677,6 +717,7 @@ grl_music_new_from_memory (const gchar  *file_type,
     self->filename = g_strdup_printf ("(memory:%s)", file_type);
     self->memory_data = data_copy;
     self->memory_size = data_size;
+	self->wav_extra_context = extra_context;
 
     return self;
 }
