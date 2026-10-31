@@ -328,46 +328,6 @@ grl_window_set_property (GObject      *object,
    glfwTerminate(), so the next window initializes GLFW again. */
 static gboolean grl_window_saw_glfw = FALSE;
 
-/* g_log_set_writer_func() may be called only once per process. */
-static gboolean grl_window_writer_set = FALSE;
-
-/* libdecor's GTK plugin logs gtk_disable_setlocale() through structured
-   logging on every libdecor_new(). The first window initializes GTK.
-   The next window hits the warning, and g_test's fatal mask aborts.
-   Legacy domain handlers do not see this message. Drop only that
-   warning. The replacement writer stays for the process, because
-   g_log_set_writer_func() cannot be called twice, and chains every
-   other message to the default writer. */
-static GLogWriterOutput
-grl_window_log_writer (GLogLevelFlags   log_level,
-                        const GLogField *fields,
-                        gsize            n_fields,
-                        gpointer         user_data)
-{
-    const gchar *domain;
-    const gchar *message;
-    gsize i;
-
-    (void) user_data;
-    domain = NULL;
-    message = NULL;
-
-    for (i = 0; i < n_fields; i++)
-    {
-        if (strcmp (fields[i].key, "GLIB_DOMAIN") == 0)
-            domain = (const gchar *) fields[i].value;
-        else if (strcmp (fields[i].key, "MESSAGE") == 0)
-            message = (const gchar *) fields[i].value;
-    }
-
-    if (domain != NULL && message != NULL
-        && strcmp (domain, "Gtk") == 0
-        && strstr (message, "gtk_disable_setlocale") != NULL)
-        return G_LOG_WRITER_HANDLED;
-
-    return g_log_writer_default (log_level, fields, n_fields, NULL);
-}
-
 static void
 grl_window_constructed (GObject *object)
 {
@@ -385,21 +345,38 @@ grl_window_constructed (GObject *object)
        counted, so InitWindow()'s own glfwInit() call below is then a no-op. */
     {
         extern int glfwInit (void);
+        GLogLevelFlags old_always = (GLogLevelFlags) 0;
+        GLogLevelFlags old_gtk = (GLogLevelFlags) 0;
 
-        if (grl_window_saw_glfw && !grl_window_writer_set)
+        /* libdecor's GTK plugin calls gtk_disable_setlocale() on every
+           libdecor_new(). The second glfwInit() therefore logs a Gtk
+           warning. g_test makes warnings fatal, and g_log_set_writer_func()
+           can be installed only once, so a library must not take that
+           slot. Drop the fatal bit for this call only. */
+        if (grl_window_saw_glfw)
         {
-            g_log_set_writer_func (grl_window_log_writer, NULL, NULL);
-            grl_window_writer_set = TRUE;
+            old_always = g_log_set_always_fatal ((GLogLevelFlags) G_LOG_LEVEL_ERROR);
+            old_gtk = g_log_set_fatal_mask ("Gtk", (GLogLevelFlags) G_LOG_LEVEL_ERROR);
         }
 
         if (!glfwInit ())
         {
+            if (grl_window_saw_glfw)
+            {
+                g_log_set_always_fatal (old_always);
+                g_log_set_fatal_mask ("Gtk", old_gtk);
+            }
             g_warning ("graylib: GLFW could not initialize (no usable display? "
                        "X11 needs DISPLAY) -- window not created");
             priv->is_initialized = FALSE;
             return;
         }
 
+        if (grl_window_saw_glfw)
+        {
+            g_log_set_always_fatal (old_always);
+            g_log_set_fatal_mask ("Gtk", old_gtk);
+        }
         grl_window_saw_glfw = TRUE;
     }
 
