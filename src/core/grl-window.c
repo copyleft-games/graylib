@@ -11,6 +11,7 @@
 #include "grl-window.h"
 #include "grl-input-private.h"	/* grl_input_drain_injections (grl_window_poll_events) */
 #include "grl-frame-sync.h"	/* bounded frames in flight on the present path */
+#include "../drawing/grl-fast2d-private.h"	/* grl_fast2d_shutdown (grl_window_dispose) */
 #include <raylib.h>
 #include <rlgl.h>		/* rlDrawRenderBatchActive (grl_window_swap_buffers) */
 #include <math.h>
@@ -411,6 +412,9 @@ grl_window_dispose (GObject *object)
     {
         /* fences belong to the GL context about to be destroyed */
         grl_frame_sync_reset ();
+        /* graylib's 2D batch too (and raylib's default batch active
+           again, which CloseWindow() unloads) */
+        grl_fast2d_shutdown ();
         CloseWindow ();
         priv->is_initialized = FALSE;
     }

@@ -9,6 +9,8 @@
 
 #include "config.h"
 #include "grl-draw.h"
+#include "grl-fast2d-private.h"
+#include <math.h>
 #include <raylib.h>
 
 /**
@@ -51,8 +53,37 @@
 /*
  * =============================================================================
  * Texture Drawing Functions
+ *
+ * Every form ends in DrawTexturePro(); graylib computes the same source
+ * and destination rectangles raylib's DrawTexture*() wrappers compute and
+ * draws through the fast 2D path (grl-fast2d-private.h).
  * =============================================================================
  */
+
+/* draw_texture_ex: DrawTextureEx()'s rectangles, then the fast path */
+static void
+draw_texture_ex (const Texture2D *tex,
+                 Vector2          position,
+                 gfloat           rotation,
+                 gfloat           scale,
+                 Color            tint)
+{
+    Rectangle source;
+    Rectangle dest;
+    Vector2   origin;
+
+    source.x = 0.0f;
+    source.y = 0.0f;
+    source.width = (float) tex->width;
+    source.height = (float) tex->height;
+    dest.x = position.x;
+    dest.y = position.y;
+    dest.width = (float) tex->width * scale;
+    dest.height = (float) tex->height * scale;
+    origin.x = 0.0f;
+    origin.y = 0.0f;
+    grl_fast2d_draw_texture_pro (*tex, source, dest, origin, rotation, tint);
+}
 
 /*
  * grl_draw_texture:
@@ -70,12 +101,15 @@ grl_draw_texture (GrlTexture     *texture,
                   const GrlColor *tint)
 {
     Texture2D *tex;
+    Vector2    position;
 
     g_return_if_fail (GRL_IS_TEXTURE (texture));
     g_return_if_fail (tint != NULL);
 
     tex = (Texture2D *)grl_texture_get_handle (texture);
-    DrawTexture (*tex, x, y, GRL_TO_RAYLIB_COLOR (tint));
+    position.x = (gfloat) x;
+    position.y = (gfloat) y;
+    draw_texture_ex (tex, position, 0.0f, 1.0f, GRL_TO_RAYLIB_COLOR (tint));
 }
 
 /*
@@ -98,7 +132,8 @@ grl_draw_texture_v (GrlTexture       *texture,
     g_return_if_fail (tint != NULL);
 
     tex = (Texture2D *)grl_texture_get_handle (texture);
-    DrawTextureV (*tex, GRL_TO_RAYLIB_VECTOR2 (position), GRL_TO_RAYLIB_COLOR (tint));
+    draw_texture_ex (tex, GRL_TO_RAYLIB_VECTOR2 (position), 0.0f, 1.0f,
+                     GRL_TO_RAYLIB_COLOR (tint));
 }
 
 /*
@@ -125,7 +160,8 @@ grl_draw_texture_ex (GrlTexture       *texture,
     g_return_if_fail (tint != NULL);
 
     tex = (Texture2D *)grl_texture_get_handle (texture);
-    DrawTextureEx (*tex, GRL_TO_RAYLIB_VECTOR2 (position), rotation, scale, GRL_TO_RAYLIB_COLOR (tint));
+    draw_texture_ex (tex, GRL_TO_RAYLIB_VECTOR2 (position), rotation, scale,
+                     GRL_TO_RAYLIB_COLOR (tint));
 }
 
 /*
@@ -145,6 +181,8 @@ grl_draw_texture_rec (GrlTexture         *texture,
                       const GrlColor     *tint)
 {
     Texture2D *tex;
+    Rectangle  dest;
+    Vector2    origin;
 
     g_return_if_fail (GRL_IS_TEXTURE (texture));
     g_return_if_fail (source != NULL);
@@ -152,10 +190,16 @@ grl_draw_texture_rec (GrlTexture         *texture,
     g_return_if_fail (tint != NULL);
 
     tex = (Texture2D *)grl_texture_get_handle (texture);
-    DrawTextureRec (*tex,
-                    GRL_TO_RAYLIB_RECTANGLE (source),
-                    GRL_TO_RAYLIB_VECTOR2 (position),
-                    GRL_TO_RAYLIB_COLOR (tint));
+
+    /* DrawTextureRec(): the destination is the source's size */
+    dest.x = position->x;
+    dest.y = position->y;
+    dest.width = fabsf (source->width);
+    dest.height = fabsf (source->height);
+    origin.x = 0.0f;
+    origin.y = 0.0f;
+    grl_fast2d_draw_texture_pro (*tex, GRL_TO_RAYLIB_RECTANGLE (source), dest,
+                                 origin, 0.0f, GRL_TO_RAYLIB_COLOR (tint));
 }
 
 /*
@@ -192,10 +236,10 @@ grl_draw_texture_pro (GrlTexture         *texture,
     g_return_if_fail (tint != NULL);
 
     tex = (Texture2D *)grl_texture_get_handle (texture);
-    DrawTexturePro (*tex,
-                    GRL_TO_RAYLIB_RECTANGLE (source),
-                    GRL_TO_RAYLIB_RECTANGLE (dest),
-                    GRL_TO_RAYLIB_VECTOR2 (origin),
-                    rotation,
-                    GRL_TO_RAYLIB_COLOR (tint));
+    grl_fast2d_draw_texture_pro (*tex,
+                                 GRL_TO_RAYLIB_RECTANGLE (source),
+                                 GRL_TO_RAYLIB_RECTANGLE (dest),
+                                 GRL_TO_RAYLIB_VECTOR2 (origin),
+                                 rotation,
+                                 GRL_TO_RAYLIB_COLOR (tint));
 }

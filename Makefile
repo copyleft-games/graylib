@@ -148,6 +148,7 @@ SOURCES := \
 	src/drawing/grl-draw-textures.c \
 	src/drawing/grl-draw-text.c \
 	src/drawing/grl-draw-3d.c \
+	src/drawing/grl-fast2d.c \
 	src/audio/grl-audio-device.c \
 	src/audio/grl-wave.c \
 	src/audio/grl-sound.c \
@@ -770,6 +771,10 @@ $(OBJDIR)/src/drawing/grl-draw-text.o: src/drawing/grl-draw-text.c
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
 $(OBJDIR)/src/drawing/grl-draw-3d.o: src/drawing/grl-draw-3d.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(LIB_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/drawing/grl-fast2d.o: src/drawing/grl-fast2d.c src/drawing/grl-fast2d-private.h
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 

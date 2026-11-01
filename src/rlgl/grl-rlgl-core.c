@@ -9,6 +9,7 @@
 
 #include "config.h"
 #include "grl-rlgl.h"
+#include "../drawing/grl-fast2d-private.h"
 #include <rlgl.h>
 
 /**
@@ -34,6 +35,8 @@ grl_rlgl_init (gint width,
 void
 grl_rlgl_close (void)
 {
+    /* graylib's 2D batch first: rlglClose() unloads only raylib's own */
+    grl_fast2d_shutdown ();
     rlglClose ();
 }
 

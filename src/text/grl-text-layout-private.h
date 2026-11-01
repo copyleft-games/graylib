@@ -32,6 +32,8 @@
 #include <string.h>
 #include <glib.h>
 #include <raylib.h>
+#include <rlgl.h>
+#include "../drawing/grl-fast2d-private.h"
 
 G_BEGIN_DECLS
 
@@ -83,11 +85,15 @@ grl_text_draw_ex (Font         font,
                   gfloat       spacing,
                   Color        tint)
 {
-    gfloat offset_x;
-    gfloat scale;
-    gfloat pad;
-    gint   size;
-    gint   i;
+    gfloat   offset_x;
+    gfloat   scale;
+    gfloat   pad;
+    gint     size;
+    gint     i;
+    gboolean fast;
+    gboolean last_fast;
+    gfloat   last_u;
+    gfloat   last_v;
 
     /* Security check in case of not valid font, as raylib does */
     if (font.texture.id == 0)
@@ -105,6 +111,16 @@ grl_text_draw_ex (Font         font,
     offset_x = 0.0f;
     scale = font_size / (gfloat) font.baseSize;
     pad = (gfloat) font.glyphPadding;
+
+    /* Glyph quads go through the fast 2D path (grl-fast2d-private.h);
+     * the transform check holds for the whole string. Each glyph is one
+     * DrawTexturePro() for raylib: one depth step per glyph, and rlgl's
+     * current colour/texcoord/normal set once at the end, as the last
+     * glyph's DrawTexturePro() would leave them. */
+    fast = font.texture.id > 0 && grl_fast2d_begin ();
+    last_fast = FALSE;
+    last_u = 0.0f;
+    last_v = 0.0f;
 
     for (i = 0; i < size;)
     {
@@ -135,7 +151,29 @@ grl_text_draw_ex (Font         font,
 
             origin.x = 0.0f;
             origin.y = 0.0f;
-            DrawTexturePro (font.texture, src, dst, origin, 0.0f, tint);
+            if (fast)
+            {
+                gfloat xy[8];
+                gfloat uv[8];
+
+                grl_fast2d_texture_quad (&font.texture, src, dst, origin, 0.0f, xy, uv);
+                last_fast = grl_fast2d_quads (font.texture.id, 1, xy, uv, tint);
+                if (last_fast)
+                {
+                    grl_fast2d_advance_depth ();
+                    last_u = uv[6];
+                    last_v = uv[7];
+                }
+                else
+                {
+                    DrawTexturePro (font.texture, src, dst, origin, 0.0f, tint);
+                    grl_fast2d_fallback_done (font.texture.id);
+                }
+            }
+            else
+            {
+                DrawTexturePro (font.texture, src, dst, origin, 0.0f, tint);
+            }
         }
 
         if (font.glyphs[index].advanceX == 0)
@@ -144,6 +182,15 @@ grl_text_draw_ex (Font         font,
             offset_x += ((gfloat) font.glyphs[index].advanceX * scale + spacing);
 
         i += codepoint_bytes;
+    }
+
+    /* grl_fast2d_advance_depth() already stepped the depth: set only the
+     * attribute state the last glyph's DrawTexturePro() would leave */
+    if (last_fast)
+    {
+        rlColor4ub (tint.r, tint.g, tint.b, tint.a);
+        rlNormal3f (0.0f, 0.0f, 1.0f);
+        rlTexCoord2f (last_u, last_v);
     }
 }
 

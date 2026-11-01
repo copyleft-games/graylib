@@ -9,6 +9,7 @@
 
 #include "config.h"
 #include "grl-draw.h"
+#include "grl-fast2d-private.h"
 #include <raylib.h>
 
 /**
@@ -315,9 +316,14 @@ grl_draw_circle (gint            center_x,
                  gfloat          radius,
                  const GrlColor *color)
 {
+    Vector2 center;
+
     g_return_if_fail (color != NULL);
 
-    DrawCircle (center_x, center_y, radius, GRL_TO_RAYLIB_COLOR (color));
+    /* DrawCircle() is DrawCircleV() at the integer centre */
+    center.x = (gfloat) center_x;
+    center.y = (gfloat) center_y;
+    grl_fast2d_draw_circle_v (center, radius, GRL_TO_RAYLIB_COLOR (color));
 }
 
 /**
@@ -336,7 +342,7 @@ grl_draw_circle_v (const GrlVector2 *center,
     g_return_if_fail (center != NULL);
     g_return_if_fail (color != NULL);
 
-    DrawCircleV (GRL_TO_RAYLIB_VECTOR2 (center), radius, GRL_TO_RAYLIB_COLOR (color));
+    grl_fast2d_draw_circle_v (GRL_TO_RAYLIB_VECTOR2 (center), radius, GRL_TO_RAYLIB_COLOR (color));
 }
 
 /**
@@ -604,9 +610,16 @@ grl_draw_rectangle (gint            x,
                     gint            height,
                     const GrlColor *color)
 {
+    Rectangle rec;
+
     g_return_if_fail (color != NULL);
 
-    DrawRectangle (x, y, width, height, GRL_TO_RAYLIB_COLOR (color));
+    /* DrawRectangle() -> DrawRectangleV() -> DrawRectangleRec() */
+    rec.x = (gfloat) x;
+    rec.y = (gfloat) y;
+    rec.width = (gfloat) width;
+    rec.height = (gfloat) height;
+    grl_fast2d_draw_rectangle_rec (rec, GRL_TO_RAYLIB_COLOR (color));
 }
 
 /**
@@ -622,13 +635,17 @@ grl_draw_rectangle_v (const GrlVector2 *position,
                       const GrlVector2 *size,
                       const GrlColor   *color)
 {
+    Rectangle rec;
+
     g_return_if_fail (position != NULL);
     g_return_if_fail (size != NULL);
     g_return_if_fail (color != NULL);
 
-    DrawRectangleV (GRL_TO_RAYLIB_VECTOR2 (position),
-                    GRL_TO_RAYLIB_VECTOR2 (size),
-                    GRL_TO_RAYLIB_COLOR (color));
+    rec.x = position->x;
+    rec.y = position->y;
+    rec.width = size->x;
+    rec.height = size->y;
+    grl_fast2d_draw_rectangle_rec (rec, GRL_TO_RAYLIB_COLOR (color));
 }
 
 /**
@@ -645,7 +662,7 @@ grl_draw_rectangle_rec (const GrlRectangle *rect,
     g_return_if_fail (rect != NULL);
     g_return_if_fail (color != NULL);
 
-    DrawRectangleRec (GRL_TO_RAYLIB_RECTANGLE (rect), GRL_TO_RAYLIB_COLOR (color));
+    grl_fast2d_draw_rectangle_rec (GRL_TO_RAYLIB_RECTANGLE (rect), GRL_TO_RAYLIB_COLOR (color));
 }
 
 /**
@@ -667,10 +684,10 @@ grl_draw_rectangle_pro (const GrlRectangle *rect,
     g_return_if_fail (origin != NULL);
     g_return_if_fail (color != NULL);
 
-    DrawRectanglePro (GRL_TO_RAYLIB_RECTANGLE (rect),
-                      GRL_TO_RAYLIB_VECTOR2 (origin),
-                      rotation,
-                      GRL_TO_RAYLIB_COLOR (color));
+    grl_fast2d_draw_rectangle_pro (GRL_TO_RAYLIB_RECTANGLE (rect),
+                                   GRL_TO_RAYLIB_VECTOR2 (origin),
+                                   rotation,
+                                   GRL_TO_RAYLIB_COLOR (color));
 }
 
 /**
@@ -711,9 +728,9 @@ grl_draw_rectangle_lines_ex (const GrlRectangle *rect,
     g_return_if_fail (rect != NULL);
     g_return_if_fail (color != NULL);
 
-    DrawRectangleLinesEx (GRL_TO_RAYLIB_RECTANGLE (rect),
-                          line_thickness,
-                          GRL_TO_RAYLIB_COLOR (color));
+    grl_fast2d_draw_rectangle_lines_ex (GRL_TO_RAYLIB_RECTANGLE (rect),
+                                        line_thickness,
+                                        GRL_TO_RAYLIB_COLOR (color));
 }
 
 /**
@@ -734,10 +751,10 @@ grl_draw_rectangle_rounded (const GrlRectangle *rect,
     g_return_if_fail (rect != NULL);
     g_return_if_fail (color != NULL);
 
-    DrawRectangleRounded (GRL_TO_RAYLIB_RECTANGLE (rect),
-                          roundness,
-                          segments,
-                          GRL_TO_RAYLIB_COLOR (color));
+    grl_fast2d_draw_rectangle_rounded (GRL_TO_RAYLIB_RECTANGLE (rect),
+                                       roundness,
+                                       segments,
+                                       GRL_TO_RAYLIB_COLOR (color));
 }
 
 /**

@@ -56,6 +56,16 @@ GRL_AVAILABLE_IN_ALL
 void    grl_draw_end_scissor_mode       (void);
 
 /*
+ * Fast 2D vertex path
+ */
+
+GRL_AVAILABLE_IN_ALL
+void     grl_draw_set_fast_path_enabled (gboolean            enabled);
+
+GRL_AVAILABLE_IN_ALL
+gboolean grl_draw_get_fast_path_enabled (void);
+
+/*
  * Pixel drawing
  */
 
