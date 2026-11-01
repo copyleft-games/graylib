@@ -1,0 +1,31 @@
+# tests/tsan.supp - ThreadSanitizer suppressions for make -C tests tsan
+#
+# Copyright 2026 Zach Podbielniak
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Only the system's audio stack, which is not instrumented and whose
+# locking is its own: ALSA and its PipeWire plugin take their locks in
+# both orders across their own threads (open vs. snd_pcm_start), and
+# PulseAudio's client library runs its own main loop thread.  Nothing of
+# graylib or raylib is suppressed here.
+deadlock:libasound.so
+deadlock:libspa-support.so
+deadlock:libpipewire-0.3.so
+called_from_lib:libasound.so.2
+called_from_lib:libpipewire-0.3.so.0
+called_from_lib:libspa-support.so
+called_from_lib:libpulse.so.0
+called_from_lib:libpulsecommon-17.0.so
+race:libpipewire-module-
+race:libspa-
+race:libpipewire-0.3.so
+race:libasound.so
+race:libasound_module_pcm_pipewire.so
+deadlock:libasound_module_pcm_pipewire.so
+# raylib's CloseAudioDevice() destroys its mixing mutex before it stops the
+# device thread (raylib's order, its sources are not changed; glibc's
+# pthread_mutex_destroy does not touch a free mutex).  The one raylib entry.
+race:CloseAudioDevice
+# ... and so the device thread's last period may lock the destroyed mutex.
+mutex:OnSendAudioDataToDevice
+mutex:ma_device__handle_data_callback

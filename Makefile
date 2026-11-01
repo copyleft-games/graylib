@@ -154,6 +154,7 @@ SOURCES := \
 	src/audio/grl-music.c \
 	src/audio/grl-audio-stream.c \
 	src/audio/grl-audio-processor.c \
+	src/audio/grl-audio-queue.c \
 	src/scene/grl-drawable.c \
 	src/scene/grl-updatable.c \
 	src/scene/grl-collidable.c \
@@ -794,6 +795,10 @@ $(OBJDIR)/src/audio/grl-audio-stream.o: src/audio/grl-audio-stream.c
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
 $(OBJDIR)/src/audio/grl-audio-processor.o: src/audio/grl-audio-processor.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(LIB_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/audio/grl-audio-queue.o: src/audio/grl-audio-queue.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 

@@ -11,6 +11,7 @@
 #include "grl-sound.h"
 #include <stdbool.h>
 #include "grl-audio-processor-private.h"
+#include "grl-audio-queue-private.h"
 #include "grl-wave.h"
 #include "grl-wave-private.h"
 #include "../resources/grl-resource-pack.h"
@@ -29,6 +30,11 @@
  *
  * For longer audio like background music, use #GrlMusic instead, which
  * streams the audio from disk.
+ *
+ * Playback calls (play, stop, pause, resume, volume, pitch, pan, update)
+ * return at once: graylib's audio thread applies them, so they never wait
+ * on raylib's audio lock while the mixer or a music decode holds it, and
+ * grl_sound_is_playing() reports the state the last call leaves at once.
  *
  * # Example
  *
@@ -58,16 +64,248 @@ struct _GrlSound
     gfloat          pitch;
     gfloat          pan;
     gchar          *filename;
-	/* Immutable canonical playback PCM; independent voices share this snapshot,
-	 * never an opaque native buffer. Legacy aliases retain their root owner. */
-	GBytes         *pcm;
-	GrlSound       *alias_source;
 
     /* per-voice processors, made on first use */
     GrlAudioProcessorSet *processors;
+
+    /* Immutable canonical playback PCM; independent voices share this
+     * snapshot, never an opaque native buffer.  Legacy aliases retain their
+     * root owner (flattened: an alias of an alias retains the root). */
+    GBytes         *pcm;
+    GrlSound       *alias_source;
+
+    /* what the audio thread plays (NULL until loaded), see below */
+    GrlAudioVoice  *voice;
 };
 
 G_DEFINE_FINAL_TYPE (GrlSound, grl_sound, G_TYPE_OBJECT)
+
+/* ==========================================================================
+ * The audio thread's side (grl-audio-queue-private.h)
+ *
+ * Every raylib call that takes raylib's audio lock (play, stop, pause,
+ * resume, volume, pitch, pan, update, unload) is a command for graylib's
+ * audio thread, so the caller never waits on the mixer or a music decode.
+ * The voice keeps its own copy of the raylib Sound (its fields never
+ * change after loading).  is_playing() reads the thread's mirror: the
+ * state the last call will leave until the thread has applied it, then
+ * raylib's state as the thread last read it (within ~5 ms of a sound's
+ * natural end).
+ * ========================================================================== */
+
+typedef struct
+{
+    GrlAudioVoice parent;
+    Sound         sound;
+    gboolean      is_alias;
+} SoundVoice;
+
+/* raylib's bool read through a byte (graylib's bool/gboolean rule) */
+static gboolean
+sound_voice_refresh (GrlAudioVoice *voice)
+{
+    SoundVoice    *sv = (SoundVoice *)voice;
+    unsigned char  raw;
+
+    raw = IsSoundPlaying (sv->sound);
+    grl_audio_voice_publish_playing (voice, raw != 0);
+    return raw != 0;
+}
+
+static void
+sound_voice_release (GrlAudioVoice *voice)
+{
+    SoundVoice *sv = (SoundVoice *)voice;
+
+    if (sv->is_alias)
+        UnloadSoundAlias (sv->sound);
+    else
+        UnloadSound (sv->sound);
+}
+
+static void
+sound_voice_finalize (GrlAudioVoice *voice)
+{
+    g_free (voice);
+}
+
+static const GrlAudioVoiceClass sound_voice_class = {
+    sound_voice_refresh,
+    sound_voice_release,
+    sound_voice_finalize
+};
+
+static void
+sound_voice_play (GrlAudioVoice *voice,
+                  gfloat         value,
+                  gpointer       data)
+{
+    PlaySound (((SoundVoice *)voice)->sound);
+}
+
+static void
+sound_voice_stop (GrlAudioVoice *voice,
+                  gfloat         value,
+                  gpointer       data)
+{
+    StopSound (((SoundVoice *)voice)->sound);
+}
+
+static void
+sound_voice_pause (GrlAudioVoice *voice,
+                   gfloat         value,
+                   gpointer       data)
+{
+    PauseSound (((SoundVoice *)voice)->sound);
+}
+
+static void
+sound_voice_resume (GrlAudioVoice *voice,
+                    gfloat         value,
+                    gpointer       data)
+{
+    ResumeSound (((SoundVoice *)voice)->sound);
+}
+
+static void
+sound_voice_set_volume (GrlAudioVoice *voice,
+                        gfloat         value,
+                        gpointer       data)
+{
+    SetSoundVolume (((SoundVoice *)voice)->sound, value);
+}
+
+static void
+sound_voice_set_pitch (GrlAudioVoice *voice,
+                       gfloat         value,
+                       gpointer       data)
+{
+    SetSoundPitch (((SoundVoice *)voice)->sound, value);
+}
+
+static void
+sound_voice_set_pan (GrlAudioVoice *voice,
+                     gfloat         value,
+                     gpointer       data)
+{
+    SetSoundPan (((SoundVoice *)voice)->sound, value); /* raylib 6.0: pan is -1.0..1.0 */
+}
+
+/* new samples for UpdateSound(), copied when queued */
+typedef struct
+{
+    gint   frames;
+    guint8 samples[1];   /* frames x channels x sample size bytes */
+} SoundUpdate;
+
+static void
+sound_voice_update (GrlAudioVoice *voice,
+                    gfloat         value,
+                    gpointer       data)
+{
+    SoundUpdate *update = data;
+
+    UpdateSound (((SoundVoice *)voice)->sound, update->samples, update->frames);
+}
+
+/* a loaded raylib Sound becomes the object's, with its voice */
+static void
+sound_adopt (GrlSound *self,
+             Sound     sound,
+             gboolean  is_alias)
+{
+    SoundVoice *sv;
+
+    self->is_loaded = TRUE;
+    self->sound = sound;
+    self->is_alias = is_alias;
+
+    sv = g_new0 (SoundVoice, 1);
+    grl_audio_voice_init (&sv->parent, &sound_voice_class);
+    sv->sound = sound;
+    sv->is_alias = is_alias;
+    self->voice = &sv->parent;
+}
+
+/* Bound all metadata arithmetic before copying any PCM.  Retention has a
+ * documented budget; oversized legacy sounds remain playable, but cannot be
+ * used as independent-voice sources. */
+static gboolean
+pcm_size (guint  frames,
+          guint  sample_size,
+          guint  channels,
+          gsize *size)
+{
+    gsize frame_bytes;
+
+    if ((sample_size != 8 && sample_size != 16 && sample_size != 32) ||
+        channels == 0 || channels > G_MAXINT || frames == 0)
+        return FALSE;
+    if (channels > G_MAXSIZE / (sample_size / 8))
+        return FALSE;
+    frame_bytes = (gsize)channels * (sample_size / 8);
+    if (frames > G_MAXSIZE / frame_bytes)
+        return FALSE;
+    *size = (gsize)frames * frame_bytes;
+    return TRUE;
+}
+
+/* Use only public Wave conversion and Sound stream-format fields.  The same
+ * SDK conversion feeds the playback buffer and this immutable snapshot. */
+static GBytes *
+capture_pcm (Wave  source,
+             Sound sound)
+{
+    Wave  copy;
+    gsize input_size;
+    gsize output_size;
+
+    if (source.data == NULL || source.sampleRate == 0 || source.sampleRate > G_MAXINT ||
+        sound.stream.sampleRate == 0 || sound.stream.sampleRate > G_MAXINT ||
+        !pcm_size (source.frameCount, source.sampleSize, source.channels, &input_size) ||
+        !pcm_size (sound.frameCount, sound.stream.sampleSize, sound.stream.channels, &output_size) ||
+        input_size > GRL_SOUND_VOICE_MAX_PCM_BYTES || output_size > GRL_SOUND_VOICE_MAX_PCM_BYTES)
+        return NULL;
+    copy = WaveCopy (source);
+    if (copy.data == NULL)
+        return NULL;
+    WaveFormat (&copy, (gint)sound.stream.sampleRate,
+                (gint)sound.stream.sampleSize, (gint)sound.stream.channels);
+    if (copy.data == NULL || copy.frameCount != sound.frameCount || copy.sampleRate != sound.stream.sampleRate ||
+        copy.sampleSize != sound.stream.sampleSize || copy.channels != sound.stream.channels)
+    {
+        UnloadWave (copy);
+        return NULL;
+    }
+    return g_bytes_new_with_free_func (copy.data, output_size, MemFree, copy.data);
+}
+
+/* A single creation path keeps file/raw/decoded/resource ownership identical;
+ * the loaded Sound gets its audio-thread voice here. */
+static GrlSound *
+sound_from_wave (Wave    wave,
+                 GBytes *canonical)
+{
+    GrlSound *self;
+    Sound     sound;
+
+    sound = LoadSoundFromWave (wave);
+    if (sound.frameCount == 0)
+    {
+        if (sound.stream.buffer != NULL)
+            UnloadSound (sound);
+        return NULL;
+    }
+    self = g_object_new (GRL_TYPE_SOUND, NULL);
+    sound_adopt (self, sound, FALSE);
+    if (canonical != NULL && wave.frameCount == sound.frameCount &&
+        wave.sampleRate == sound.stream.sampleRate && wave.sampleSize == sound.stream.sampleSize &&
+        wave.channels == sound.stream.channels)
+        self->pcm = g_bytes_ref (canonical);
+    else
+        self->pcm = capture_pcm (wave, sound);
+    return self;
+}
 
 enum
 {
@@ -82,80 +320,6 @@ enum
 
 static GParamSpec *properties[N_PROPS];
 
-/* Bound all metadata arithmetic before copying any PCM. Retention has a
- * documented budget; oversized legacy sounds remain playable, but cannot be
- * used as independent-voice sources. */
-static gboolean
-pcm_size (guint frames, guint sample_size, guint channels, gsize *size)
-{
-	gsize frame_bytes;
-
-	if ((sample_size != 8 && sample_size != 16 && sample_size != 32) ||
-	    channels == 0 || channels > G_MAXINT || frames == 0)
-		return FALSE;
-	if (channels > G_MAXSIZE / (sample_size / 8))
-		return FALSE;
-	frame_bytes = (gsize)channels * (sample_size / 8);
-	if (frames > G_MAXSIZE / frame_bytes)
-		return FALSE;
-	*size = (gsize)frames * frame_bytes;
-	return TRUE;
-}
-
-/* Use only public Wave conversion and Sound stream-format fields. The same
- * SDK conversion feeds the playback buffer and this immutable snapshot. */
-static GBytes *
-capture_pcm (Wave source, Sound sound)
-{
-	Wave copy;
-	gsize input_size, output_size;
-
-	if (source.data == NULL || source.sampleRate == 0 || source.sampleRate > G_MAXINT ||
-	    sound.stream.sampleRate == 0 || sound.stream.sampleRate > G_MAXINT ||
-	    !pcm_size (source.frameCount, source.sampleSize, source.channels, &input_size) ||
-	    !pcm_size (sound.frameCount, sound.stream.sampleSize, sound.stream.channels, &output_size) ||
-	    input_size > GRL_SOUND_VOICE_MAX_PCM_BYTES || output_size > GRL_SOUND_VOICE_MAX_PCM_BYTES)
-		return NULL;
-	copy = WaveCopy (source);
-	if (copy.data == NULL)
-		return NULL;
-	WaveFormat (&copy, (gint)sound.stream.sampleRate,
-	            (gint)sound.stream.sampleSize, (gint)sound.stream.channels);
-	if (copy.data == NULL || copy.frameCount != sound.frameCount || copy.sampleRate != sound.stream.sampleRate ||
-	    copy.sampleSize != sound.stream.sampleSize || copy.channels != sound.stream.channels)
-	{
-		UnloadWave (copy);
-		return NULL;
-	}
-	return g_bytes_new_with_free_func (copy.data, output_size, MemFree, copy.data);
-}
-
-/* A single creation path keeps file/raw/decoded/resource ownership identical. */
-static GrlSound *
-sound_from_wave (Wave wave, GBytes *canonical)
-{
-	GrlSound *self;
-	Sound sound;
-
-	sound = LoadSoundFromWave (wave);
-	if (sound.frameCount == 0)
-	{
-		if (sound.stream.buffer != NULL)
-			UnloadSound (sound);
-		return NULL;
-	}
-	self = g_object_new (GRL_TYPE_SOUND, NULL);
-	self->sound = sound;
-	self->is_loaded = TRUE;
-	if (canonical != NULL && wave.frameCount == sound.frameCount &&
-	    wave.sampleRate == sound.stream.sampleRate && wave.sampleSize == sound.stream.sampleSize &&
-	    wave.channels == sound.stream.channels)
-		self->pcm = g_bytes_ref (canonical);
-	else
-		self->pcm = capture_pcm (wave, sound);
-	return self;
-}
-
 /*
  * The processors leave raylib's stream before the voice can be unloaded
  * (raylib does not free a stream's processors when it unloads it).
@@ -167,10 +331,15 @@ grl_sound_dispose (GObject *object)
 
     if (self->processors != NULL)
     {
-		/* Stop this voice before detaching callbacks. The host keeps the device
-		 * alive until its voices have been released, as for native unload. */
-		if (self->is_loaded)
-			StopSound (self->sound);
+        /* Stop this voice before detaching its processors (the detach
+         * synchronizes with the device callback).  The stop is a queued
+         * command like any other; this path already waits on raylib's lock
+         * for the detach, so it waits for the stop to land too. */
+        if (self->is_loaded)
+        {
+            grl_audio_voice_push_state (self->voice, sound_voice_stop, 0.0f, NULL, NULL, FALSE);
+            grl_audio_queue_flush ();
+        }
         grl_audio_processor_set_clear (self->processors, self->is_loaded ? &self->sound.stream : NULL, TRUE);
         g_clear_pointer (&self->processors, grl_audio_processor_set_free);
     }
@@ -185,18 +354,17 @@ grl_sound_finalize (GObject *object)
 
     if (self->is_loaded)
     {
-        /* Use appropriate unload function based on whether this is an alias */
-        if (self->is_alias)
-            UnloadSoundAlias (self->sound);
-        else
-            UnloadSound (self->sound);
+        /* unloaded (alias or not) after every call queued before it */
+        grl_audio_voice_release (g_steal_pointer (&self->voice));
         self->is_loaded = FALSE;
     }
 
     g_clear_pointer (&self->filename, g_free);
-	g_clear_pointer (&self->pcm, g_bytes_unref);
-	/* Native alias unload must precede releasing its retained sample owner. */
-	g_clear_object (&self->alias_source);
+    g_clear_pointer (&self->pcm, g_bytes_unref);
+    /* Native alias unload must precede the root's: the alias's release was
+     * queued above, so a root finalized by this unref queues its own after
+     * it (the queue is FIFO, inline is immediate). */
+    g_clear_object (&self->alias_source);
 
     G_OBJECT_CLASS (grl_sound_parent_class)->finalize (object);
 }
@@ -372,8 +540,8 @@ GrlSound *
 grl_sound_new_from_file (const gchar  *filename,
                          GError      **error)
 {
-    GrlSound *self;
-    g_autoptr(GrlWave) wave = NULL;
+    GrlSound           *self;
+    g_autoptr(GrlWave)  wave = NULL;
 
     g_return_val_if_fail (filename != NULL, NULL);
     g_return_val_if_fail (error == NULL || *error == NULL, NULL);
@@ -389,6 +557,7 @@ grl_sound_new_from_file (const gchar  *filename,
         return NULL;
     }
 
+    /* file -> owned GrlWave -> the shared sound_from_wave() route */
     wave = grl_wave_new_from_file (filename, error);
     if (wave == NULL)
         return NULL;
@@ -429,23 +598,23 @@ grl_sound_new_from_wave (const guint8 *data,
                          guint         sample_size,
                          guint         channels)
 {
-    Wave wave;
+    Wave  wave;
     gsize frame_bytes;
 
     g_return_val_if_fail (data != NULL, NULL);
     g_return_val_if_fail (data_size > 0, NULL);
-	/* Reject invalid division/counts before the public SDK can consume them. */
-	if (sample_rate == 0 || sample_rate > G_MAXINT || channels == 0 || channels > G_MAXINT ||
-	    (sample_size != 8 && sample_size != 16 && sample_size != 32))
-		return NULL;
-	if (channels > G_MAXSIZE / (sample_size / 8))
-		return NULL;
-	frame_bytes = (gsize)channels * (sample_size / 8);
-	if (data_size % frame_bytes != 0 || data_size / frame_bytes == 0 ||
-	    data_size / frame_bytes > G_MAXUINT)
-		return NULL;
+    /* Reject invalid division/counts before the public SDK can consume them. */
+    if (sample_rate == 0 || sample_rate > G_MAXINT || channels == 0 || channels > G_MAXINT ||
+        (sample_size != 8 && sample_size != 16 && sample_size != 32))
+        return NULL;
+    if (channels > G_MAXSIZE / (sample_size / 8))
+        return NULL;
+    frame_bytes = (gsize)channels * (sample_size / 8);
+    if (data_size % frame_bytes != 0 || data_size / frame_bytes == 0 ||
+        data_size / frame_bytes > G_MAXUINT)
+        return NULL;
 
-    /* Create Wave structure */
+    /* Create Wave structure (raylib copies the samples synchronously) */
     wave.frameCount = (guint)(data_size / frame_bytes);
     wave.sampleRate = sample_rate;
     wave.sampleSize = sample_size;
@@ -481,12 +650,12 @@ grl_sound_new_from_memory (const gchar  *file_type,
     g_return_val_if_fail (data != NULL, NULL);
     g_return_val_if_fail (data_size > 0, NULL);
     g_return_val_if_fail (error == NULL || *error == NULL, NULL);
-	if (data_size > G_MAXINT)
-	{
-		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA,
-		                     "Encoded sound exceeds the SDK's signed byte-count range");
-		return NULL;
-	}
+    if (data_size > G_MAXINT)
+    {
+        g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA,
+                             "Encoded sound exceeds the SDK's signed byte-count range");
+        return NULL;
+    }
 
     /* Load wave from memory buffer */
     wave = grl_wave_new_from_memory (file_type, data, data_size, error);
@@ -621,11 +790,9 @@ grl_sound_new_alias (GrlSound *source)
         return NULL;
 
     self = g_object_new (GRL_TYPE_SOUND, NULL);
-    self->sound = alias;
-    self->is_loaded = TRUE;
-    self->is_alias = TRUE;
-	/* Flatten ownership: aliases never form a source->alias reference cycle. */
-	self->alias_source = g_object_ref (source->alias_source != NULL ? source->alias_source : source);
+    sound_adopt (self, alias, TRUE);
+    /* Flatten ownership: aliases never form a source->alias reference cycle. */
+    self->alias_source = g_object_ref (source->alias_source != NULL ? source->alias_source : source);
 
     return self;
 }
@@ -633,49 +800,53 @@ grl_sound_new_alias (GrlSound *source)
 /* Explicit independent policy: no LoadSoundAlias/opaque AudioBuffer access.
  * Source updates and lifetime are independent after this snapshot is taken. */
 GrlSound *
-grl_sound_new_voice (GrlSound *source, GError **error)
+grl_sound_new_voice (GrlSound  *source,
+                     GError   **error)
 {
-	GrlSound *owner;
-	GrlSound *self;
-	Wave wave;
-	gsize size, expected;
-	unsigned char ready;
+    GrlSound      *owner;
+    GrlSound      *self;
+    Wave           wave;
+    gsize          size;
+    gsize          expected;
+    unsigned char  ready;
 
-	g_return_val_if_fail (GRL_IS_SOUND (source), NULL);
-	g_return_val_if_fail (error == NULL || *error == NULL, NULL);
-	owner = source->alias_source != NULL ? source->alias_source : source;
-	if (!owner->is_loaded || owner->pcm == NULL)
-	{
-		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
-		                     "Independent voice requires a retained PCM snapshot (maximum 256 MiB)");
-		return NULL;
-	}
-	ready = IsAudioDeviceReady ();
-	if (!ready)
-	{
-		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_INITIALIZED, "Independent voice requires an audio device");
-		return NULL;
-	}
-	wave.data = (gpointer)g_bytes_get_data (owner->pcm, &size);
-	wave.frameCount = owner->sound.frameCount;
-	wave.sampleRate = owner->sound.stream.sampleRate;
-	wave.sampleSize = owner->sound.stream.sampleSize;
-	wave.channels = owner->sound.stream.channels;
-	if (!pcm_size (wave.frameCount, wave.sampleSize, wave.channels, &expected) || expected != size)
-	{
-		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA, "Retained PCM metadata no longer matches its bytes");
-		return NULL;
-	}
-	self = sound_from_wave (wave, owner->pcm);
-	if (self == NULL)
-		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_FAILED, "Cannot allocate an independent sound voice");
-	else if (self->pcm == NULL)
-	{
-		g_clear_object (&self);
-		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
-		                     "Converted independent voice exceeds the retained PCM contract");
-	}
-	return self;
+    g_return_val_if_fail (GRL_IS_SOUND (source), NULL);
+    g_return_val_if_fail (error == NULL || *error == NULL, NULL);
+    owner = source->alias_source != NULL ? source->alias_source : source;
+    if (!owner->is_loaded || owner->pcm == NULL)
+    {
+        g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+                             "Independent voice requires a retained PCM snapshot (maximum 256 MiB)");
+        return NULL;
+    }
+    ready = IsAudioDeviceReady ();
+    if (!ready)
+    {
+        g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_INITIALIZED,
+                             "Independent voice requires an audio device");
+        return NULL;
+    }
+    wave.data = (gpointer)g_bytes_get_data (owner->pcm, &size);
+    wave.frameCount = owner->sound.frameCount;
+    wave.sampleRate = owner->sound.stream.sampleRate;
+    wave.sampleSize = owner->sound.stream.sampleSize;
+    wave.channels = owner->sound.stream.channels;
+    if (!pcm_size (wave.frameCount, wave.sampleSize, wave.channels, &expected) || expected != size)
+    {
+        g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA,
+                             "Retained PCM metadata no longer matches its bytes");
+        return NULL;
+    }
+    self = sound_from_wave (wave, owner->pcm);
+    if (self == NULL)
+        g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_FAILED, "Cannot allocate an independent sound voice");
+    else if (self->pcm == NULL)
+    {
+        g_clear_object (&self);
+        g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+                             "Converted independent voice exceeds the retained PCM contract");
+    }
+    return self;
 }
 
 /*
@@ -693,7 +864,7 @@ grl_sound_play (GrlSound *self)
     if (!self->is_loaded)
         return;
 
-    PlaySound (self->sound);
+    grl_audio_voice_push_state (self->voice, sound_voice_play, 0.0f, NULL, NULL, TRUE);
 }
 
 /*
@@ -710,7 +881,7 @@ grl_sound_stop (GrlSound *self)
     if (!self->is_loaded)
         return;
 
-    StopSound (self->sound);
+    grl_audio_voice_push_state (self->voice, sound_voice_stop, 0.0f, NULL, NULL, FALSE);
 }
 
 /*
@@ -727,7 +898,9 @@ grl_sound_pause (GrlSound *self)
     if (!self->is_loaded)
         return;
 
-    PauseSound (self->sound);
+    /* resume() predicts playing only if it played when paused */
+    self->voice->resumable = grl_sound_is_playing (self);
+    grl_audio_voice_push_state (self->voice, sound_voice_pause, 0.0f, NULL, NULL, FALSE);
 }
 
 /*
@@ -744,7 +917,8 @@ grl_sound_resume (GrlSound *self)
     if (!self->is_loaded)
         return;
 
-    ResumeSound (self->sound);
+    grl_audio_voice_push_state (self->voice, sound_voice_resume, 0.0f, NULL, NULL,
+                                self->voice->resumable);
 }
 
 /*
@@ -759,11 +933,16 @@ gboolean
 grl_sound_is_playing (GrlSound *self)
 {
     unsigned char raw;
+    gboolean      playing;
 
     g_return_val_if_fail (GRL_IS_SOUND (self), FALSE);
 
     if (!self->is_loaded)
         return FALSE;
+
+    /* the audio thread's mirror: no wait on raylib's lock */
+    if (grl_audio_voice_peek_playing (self->voice, &playing))
+        return playing;
 
     /* Fix bool/gboolean ABI mismatch - use unsigned char intermediate */
     raw = IsSoundPlaying (self->sound);
@@ -802,64 +981,89 @@ grl_sound_update (GrlSound      *self,
                   gconstpointer  data,
                   gint           sample_count)
 {
-	gsize size;
+    gsize size;
 
-	g_return_if_fail (GRL_IS_SOUND (self));
-	g_return_if_fail (data != NULL);
-	g_return_if_fail (sample_count > 0);
-	if (!self->is_loaded)
-		return;
-	g_return_if_fail ((guint)sample_count <= self->sound.frameCount);
-	g_return_if_fail (pcm_size ((guint)sample_count, self->sound.stream.sampleSize, self->sound.stream.channels, &size));
-	g_return_if_fail (grl_sound_update_checked (self, data, size, (guint)sample_count, NULL));
+    g_return_if_fail (GRL_IS_SOUND (self));
+    g_return_if_fail (data != NULL);
+    g_return_if_fail (sample_count > 0);
+    if (!self->is_loaded)
+        return;
+    g_return_if_fail ((guint)sample_count <= self->sound.frameCount);
+    g_return_if_fail (pcm_size ((guint)sample_count, self->sound.stream.sampleSize, self->sound.stream.channels, &size));
+    g_return_if_fail (grl_sound_update_checked (self, data, size, (guint)sample_count, NULL));
 }
 
-/* Validate every external count before native writes or snapshot copying.
- * Native aliases still share storage: updates through any alias replace the
- * root's retained PCM too; independent voices retain their own snapshots. */
+/*
+ * grl_sound_update_checked:
+ * Validates every external count synchronously (errors are returned at
+ * once), then queues the native write with its own copy of the bytes, so
+ * the caller neither waits on raylib's lock nor keeps @data alive.  The
+ * root's retained PCM snapshot is replaced on the caller's thread (it is
+ * game-thread state), matching what the queued write will leave.  Native
+ * aliases still share storage: updates through any alias replace the
+ * root's snapshot too; independent voices retain their own.
+ */
 gboolean
-grl_sound_update_checked (GrlSound *self, const guint8 *data,
-                           gsize data_size, guint frame_count, GError **error)
+grl_sound_update_checked (GrlSound      *self,
+                          const guint8  *data,
+                          gsize          data_size,
+                          guint          frame_count,
+                          GError       **error)
 {
-	GrlSound *owner;
-	g_autoptr(GBytes) replacement = NULL;
-	gsize size, total, retained_size;
-	const guint8 *retained;
-	guint8 *copy;
-	unsigned char ready;
+    GrlSound           *owner;
+    g_autoptr(GBytes)   replacement = NULL;
+    gsize               size;
+    gsize               total;
+    gsize               retained_size;
+    const guint8       *retained;
+    guint8             *copy;
+    SoundUpdate        *update;
+    unsigned char       ready;
 
-	g_return_val_if_fail (GRL_IS_SOUND (self), FALSE);
-	g_return_val_if_fail (error == NULL || *error == NULL, FALSE);
-	if (!self->is_loaded || data == NULL || frame_count > G_MAXINT ||
-	    frame_count > self->sound.frameCount ||
-	    !pcm_size (frame_count, self->sound.stream.sampleSize, self->sound.stream.channels, &size) || size != data_size)
-	{
-		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT,
-		                     "Sound update requires exact playback bytes within the allocated frame count");
-		return FALSE;
-	}
-	ready = IsAudioDeviceReady ();
-	if (!ready)
-	{
-		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_INITIALIZED, "Sound update requires an audio device");
-		return FALSE;
-	}
-	owner = self->alias_source != NULL ? self->alias_source : self;
-	if (owner->pcm != NULL && pcm_size (owner->sound.frameCount, owner->sound.stream.sampleSize,
-	                                  owner->sound.stream.channels, &total) && total <= GRL_SOUND_VOICE_MAX_PCM_BYTES)
-	{
-		retained = g_bytes_get_data (owner->pcm, &retained_size);
-		if (retained_size == total && size <= total)
-		{
-			copy = g_memdup2 (retained, total);
-			memcpy (copy, data, size);
-			replacement = g_bytes_new_take (copy, total);
-		}
-	}
-	UpdateSound (self->sound, data, (gint)frame_count);
-	g_clear_pointer (&owner->pcm, g_bytes_unref);
-	owner->pcm = g_steal_pointer (&replacement);
-	return TRUE;
+    g_return_val_if_fail (GRL_IS_SOUND (self), FALSE);
+    g_return_val_if_fail (error == NULL || *error == NULL, FALSE);
+    if (!self->is_loaded || data == NULL || frame_count > G_MAXINT ||
+        frame_count > self->sound.frameCount ||
+        !pcm_size (frame_count, self->sound.stream.sampleSize, self->sound.stream.channels, &size) ||
+        size != data_size)
+    {
+        g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT,
+                             "Sound update requires exact playback bytes within the allocated frame count");
+        return FALSE;
+    }
+    ready = IsAudioDeviceReady ();
+    if (!ready)
+    {
+        g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_INITIALIZED,
+                             "Sound update requires an audio device");
+        return FALSE;
+    }
+
+    /* the root's snapshot after this write (partial writes keep the tail) */
+    owner = self->alias_source != NULL ? self->alias_source : self;
+    if (owner->pcm != NULL && pcm_size (owner->sound.frameCount, owner->sound.stream.sampleSize,
+                                        owner->sound.stream.channels, &total) &&
+        total <= GRL_SOUND_VOICE_MAX_PCM_BYTES)
+    {
+        retained = g_bytes_get_data (owner->pcm, &retained_size);
+        if (retained_size == total && size <= total)
+        {
+            copy = g_memdup2 (retained, total);
+            memcpy (copy, data, size);
+            replacement = g_bytes_new_take (copy, total);
+        }
+    }
+
+    /* the native write: raylib copies frames x channels x sample size, so
+     * does the command; UpdateSound stops the voice first */
+    update = g_malloc (G_STRUCT_OFFSET (SoundUpdate, samples) + size);
+    update->frames = (gint)frame_count;
+    memcpy (update->samples, data, size);
+    grl_audio_voice_push_state (self->voice, sound_voice_update, 0.0f, update, g_free, FALSE);
+
+    g_clear_pointer (&owner->pcm, g_bytes_unref);
+    owner->pcm = g_steal_pointer (&replacement);
+    return TRUE;
 }
 
 /*
@@ -882,7 +1086,7 @@ grl_sound_set_volume (GrlSound *self,
         self->volume = volume;
 
         if (self->is_loaded)
-            SetSoundVolume (self->sound, volume);
+            grl_audio_voice_push (self->voice, sound_voice_set_volume, volume, NULL, NULL);
 
         g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_VOLUME]);
     }
@@ -925,7 +1129,7 @@ grl_sound_set_pitch (GrlSound *self,
         self->pitch = pitch;
 
         if (self->is_loaded)
-            SetSoundPitch (self->sound, pitch);
+            grl_audio_voice_push (self->voice, sound_voice_set_pitch, pitch, NULL, NULL);
 
         g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_PITCH]);
     }
@@ -967,7 +1171,7 @@ grl_sound_set_pan (GrlSound *self,
         self->pan = pan;
 
         if (self->is_loaded)
-            SetSoundPan (self->sound, pan); /* raylib 6.0: pan is -1.0..1.0 */
+            grl_audio_voice_push (self->voice, sound_voice_set_pan, pan, NULL, NULL);
 
         g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_PAN]);
     }
@@ -1004,7 +1208,7 @@ grl_sound_play_multi (GrlSound *self)
     if (!self->is_loaded)
         return;
 
-    PlaySound (self->sound);
+    grl_audio_voice_push_state (self->voice, sound_voice_play, 0.0f, NULL, NULL, TRUE);
 }
 
 /*
@@ -1021,7 +1225,7 @@ grl_sound_stop_multi (GrlSound *self)
     if (!self->is_loaded)
         return;
 
-    StopSound (self->sound);
+    grl_audio_voice_push_state (self->voice, sound_voice_stop, 0.0f, NULL, NULL, FALSE);
 }
 
 /*
@@ -1035,17 +1239,13 @@ grl_sound_stop_multi (GrlSound *self)
 gint
 grl_sound_get_sounds_playing (GrlSound *self)
 {
-    unsigned char raw;
-
     g_return_val_if_fail (GRL_IS_SOUND (self), 0);
 
     if (!self->is_loaded)
         return 0;
 
     /* raylib doesn't track multi-sound instances, return 1 if playing */
-    /* Fix bool/gboolean ABI mismatch - use unsigned char intermediate */
-    raw = IsSoundPlaying (self->sound);
-    return raw != 0 ? 1 : 0;
+    return grl_sound_is_playing (self) ? 1 : 0;
 }
 
 /*

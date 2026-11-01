@@ -1123,4 +1123,39 @@ GRL_AVAILABLE_IN_ALL
 GType grl_fill_rule_get_type (void) G_GNUC_CONST;
 #define GRL_TYPE_FILL_RULE (grl_fill_rule_get_type ())
 
+/*
+ * =============================================================================
+ * Audio Backends
+ * =============================================================================
+ */
+
+/**
+ * GrlAudioBackend:
+ * @GRL_AUDIO_BACKEND_AUTO: the default: on Linux and the BSDs, ALSA first
+ *   (which reaches PipeWire through pipewire-alsa, or PulseAudio through
+ *   its ALSA plugin), then PulseAudio if ALSA cannot open a device;
+ *   elsewhere the platform's own backend
+ * @GRL_AUDIO_BACKEND_ALSA: ALSA only, never PulseAudio
+ * @GRL_AUDIO_BACKEND_PULSEAUDIO: miniaudio's own order, PulseAudio first
+ *   (raylib's behaviour before graylib chose the order)
+ * @GRL_AUDIO_BACKEND_NONE: no audio device: the game runs silently
+ *
+ * Which audio backend #GrlAudioDevice opens the device through.  The
+ * bundled miniaudio has no native PipeWire backend; PipeWire is reached
+ * through ALSA (or its PulseAudio server).  The environment variable
+ * `GRL_AUDIO_BACKEND` (`auto`, `alsa`, `pipewire` = `alsa`, `pulse` /
+ * `pulseaudio`, `none`) overrides the preference set in code.
+ */
+typedef enum
+{
+    GRL_AUDIO_BACKEND_AUTO = 0,
+    GRL_AUDIO_BACKEND_ALSA,
+    GRL_AUDIO_BACKEND_PULSEAUDIO,
+    GRL_AUDIO_BACKEND_NONE
+} GrlAudioBackend;
+
+GRL_AVAILABLE_IN_ALL
+GType grl_audio_backend_get_type (void) G_GNUC_CONST;
+#define GRL_TYPE_AUDIO_BACKEND (grl_audio_backend_get_type ())
+
 G_END_DECLS

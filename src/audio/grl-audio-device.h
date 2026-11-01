@@ -15,6 +15,7 @@
 
 #include <glib-object.h>
 #include "../grl-version.h"
+#include "../grl-enums.h"
 
 G_BEGIN_DECLS
 
@@ -151,5 +152,45 @@ gfloat              grl_audio_device_get_master_volume_actual (GrlAudioDevice *s
 GRL_AVAILABLE_IN_ALL
 void                grl_audio_device_set_default_buffer_size (GrlAudioDevice *self,
                                                               gint            size);
+
+/**
+ * grl_audio_device_set_preferred_backend:
+ * @backend: the backend to open the device through
+ *
+ * Sets the backend the next grl_audio_device_init_audio() (or the first
+ * grl_audio_device_get_default()) opens the device through; an open
+ * device is not reopened.  The environment variable `GRL_AUDIO_BACKEND`
+ * wins over this.
+ */
+GRL_AVAILABLE_IN_ALL
+void                grl_audio_device_set_preferred_backend (GrlAudioBackend backend);
+
+/**
+ * grl_audio_device_get_preferred_backend:
+ *
+ * Gets the backend the device will open through: what
+ * `GRL_AUDIO_BACKEND` names when set, else what
+ * grl_audio_device_set_preferred_backend() set
+ * (%GRL_AUDIO_BACKEND_AUTO by default).
+ *
+ * Returns: the effective backend preference
+ */
+GRL_AVAILABLE_IN_ALL
+GrlAudioBackend     grl_audio_device_get_preferred_backend (void);
+
+/**
+ * grl_audio_backend_parse:
+ * @name: (nullable): a backend name
+ * @backend: (out): return location for the backend
+ *
+ * Reads a backend name as `GRL_AUDIO_BACKEND` takes it: `auto`,
+ * `alsa`, `pipewire` (ALSA, through pipewire-alsa), `pulse` or
+ * `pulseaudio`, `none` (also `off`, `null`, `0`), ignoring case.
+ *
+ * Returns: %TRUE if @name names a backend (then @backend is set)
+ */
+GRL_AVAILABLE_IN_ALL
+gboolean            grl_audio_backend_parse (const gchar     *name,
+                                             GrlAudioBackend *backend);
 
 G_END_DECLS
