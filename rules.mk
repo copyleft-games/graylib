@@ -92,11 +92,11 @@ endif
 # line, because the last CUSTOM_CFLAGS= given wins. Windows (MinGW) builds
 # a static archive only and has no use for it.
 ifeq ($(TARGET_PLATFORM),windows)
-RAYLIB_OPT_FLAGS := CUSTOM_CFLAGS=-O2
-RAYLIB_PLATFORM_TAG := $(RAYLIB_PLATFORM_TAG)+O2
+RAYLIB_OPT_FLAGS := CUSTOM_CFLAGS="-O2 -ffp-contract=off"
+RAYLIB_PLATFORM_TAG := $(RAYLIB_PLATFORM_TAG)+O2+nofma
 else
-RAYLIB_OPT_FLAGS := CUSTOM_CFLAGS="-O2 -fPIC"
-RAYLIB_PLATFORM_TAG := $(RAYLIB_PLATFORM_TAG)+O2+pic
+RAYLIB_OPT_FLAGS := CUSTOM_CFLAGS="-O2 -fPIC -ffp-contract=off"
+RAYLIB_PLATFORM_TAG := $(RAYLIB_PLATFORM_TAG)+O2+pic+nofma
 endif
 
 # External SDK configuration is an actual build input, not a feature policy
@@ -180,6 +180,16 @@ else
     # OPT_CFLAGS += -flto
     # OPT_LDFLAGS += -flto
 endif
+
+# No fused multiply-add contraction, in both build modes and in the
+# bundled raylib: graylib's fast 2D path (src/drawing/grl-fast2d.c) and
+# its text layout re-state raylib's vertex formulas (x + dx * cos ...)
+# and must round them as raylib does. GCC contracts a * b + c into an FMA
+# by default where the target has one (every aarch64), and would do so
+# differently in the two copies; baseline x86-64 has no FMA, so nothing
+# changes there. libregnum builds with the same flag for replay
+# determinism across architectures.
+OPT_CFLAGS += -ffp-contract=off
 
 # Library compilation flags
 LIB_CFLAGS := $(BASE_CFLAGS) $(OPT_CFLAGS) $(PIC_CFLAGS) $(VISIBILITY_CFLAGS)
