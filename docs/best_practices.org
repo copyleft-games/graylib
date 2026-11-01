@@ -143,11 +143,13 @@ Prefer the non-allocating getters where they exist: =grl_entity_get_origin_xy()=
 *** Batch-friendly draw order
 raylib batches quads until the texture (or shader, blend mode, scissor) changes. Shapes use raylib's internal shapes texture, so alternating a rectangle and a sprite flushes the batch on every call. Group draws by texture where the visual order allows (all tiles, then all sprites, then all UI shapes).
 
+Continuing the current draw call is also what lets graylib's [[file:api/drawing.org::#fast-2d-path][fast 2D vertex path]] write quads straight into rlgl's batch: a draw that switches texture goes through raylib's immediate mode. Draws inside =rlPushMatrix()= with a translation, rotation or scale do too; for many sprites prefer positions in world coordinates under a 2D camera (its matrix is not per-vertex) over a push and translate per sprite.
+
 *** Change notifications
 Camera setters only notify a property when its value changes, so setting a follow camera to the same target every frame costs no signal emissions.
 
 *** Build flags
-Release builds use =-O2 -fno-semantic-interposition -DG_DISABLE_CAST_CHECKS= (cast macros become plain casts; =g_return_if_fail()= argument checks stay on), and the bundled raylib is built at =-O2= (raylib's own Makefile defaults to =-O1= for desktop release builds; graylib passes =CUSTOM_CFLAGS=-O2=, raylib's sources are unchanged). =DEBUG=1= builds keep full cast checks.
+Release builds use =-O2 -fno-semantic-interposition -DG_DISABLE_CAST_CHECKS= (cast macros become plain casts; =g_return_if_fail()= argument checks stay on), and the bundled raylib is built at =-O2= (raylib's own Makefile defaults to =-O1= for desktop release builds; graylib passes =CUSTOM_CFLAGS=-O2=, raylib's sources are unchanged). =DEBUG=1= builds keep full cast checks. Both modes, and the bundled raylib, are built with =-ffp-contract=off=: the fast 2D path and graylib's text layout re-state raylib's vertex formulas and must round them as raylib does, which fused multiply-adds (on by default where the target has them, e.g. every aarch64) would break; baseline x86-64 has no FMA, so nothing changes there.
 
 ** Memory Management
 :PROPERTIES:

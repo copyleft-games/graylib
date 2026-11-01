@@ -51,6 +51,33 @@ grl_draw_rectangle (0, 0, 1000, 1000, color);
 grl_draw_end_scissor_mode ();
 #+end_src
 
+** Fast 2D vertex path
+:PROPERTIES:
+:CUSTOM_ID: fast-2d-path
+:END:
+Texture draws (=grl_draw_texture()=, =_v=, =_ex=, =_rec=, =_pro=), filled rectangles (=grl_draw_rectangle()=, =_v=, =_rec=, =_pro=, =_lines_ex=), rounded rectangles (=grl_draw_rectangle_rounded()=), filled circles (=grl_draw_circle()=, =_v=) and text (=grl_draw_text()=, =grl_draw_text_ex()=) write their quads straight into rlgl's render batch instead of going through raylib's immediate mode (=rlVertex3f()= per vertex, with a transform check, a batch-limit check and copies of the current texture coordinate, normal and colour for each). Rounded rectangles and circles take their corner arcs from a table per segment count instead of calling =sinf()= / =cosf()= per segment; rotated rectangles and textures with a rotation of 0 compute no trigonometry (as raylib).
+
+#+begin_src C
+/* On by default; GRL_FAST2D=0 in the environment turns it off at startup */
+grl_draw_set_fast_path_enabled (FALSE);   /* every draw through raylib's functions */
+grl_draw_get_fast_path_enabled ();
+#+end_src
+
+Output is pixel identical to raylib's functions (=tests/test-fast2d.c= renders mixed scenes both ways and compares them, including batch overflows, the draw-call limit, a 2D camera, pushed matrices and the depth test):
+
+- A quad takes the fast path only when it continues rlgl's current draw call: same texture, quad mode, room in the batch without a flush, and an identity rlgl transform. Anything else (a texture switch, the quad that fills the batch, a draw inside =rlPushMatrix()= with a translation, rotation or scale) goes through raylib's own function, so draw calls split and the batch flushes at the same vertices as before.
+- The camera of =BeginMode2D()= / =grl_camera2d_begin()= lives in the modelview matrix, not the per-vertex transform: drawing under a 2D camera takes the fast path.
+- Vertex positions, texture coordinates and colours use raylib's formulas; z is the batch depth, which advances once per draw exactly as =rlEnd()= advances it. After a fast draw, rlgl's current colour, texture coordinate and normal are what raylib's function would have left, for immediate-mode vertices that follow.
+- Normals written into rounded-rectangle and circle vertices are (0, 0, 1); raylib writes whatever normal was set last. The batch's vertex array does not feed normals to shaders (the default shader has no normal attribute), so no pixel changes.
+
+How it works, on rlgl's public API only (raylib's sources are not modified): on first use graylib loads its own =rlRenderBatch= (raylib's default size) and makes it rlgl's active batch with =rlSetRenderBatchActive()=; everything raylib draws goes into it as before. rlgl's vertex count is private, but it equals the slots used by the batch's draw calls (public =draws[]=), and =rlBegin(RL_QUADS)= on a draw that looks like a 4-vertex triangle draw advances it by exactly 4 alignment vertices; graylib uses that to reserve each quad's slots and writes the vertices itself. The details are in =src/drawing/grl-fast2d-private.h=.
+
+Things to know:
+
+- graylib owns rlgl's active batch while a window is open. Code that activates its own batch with =rlSetRenderBatchActive()= still works: graylib notices on its next draw that its batch is no longer active and installs itself again. =GrlWindow= unloads the batch before =CloseWindow()=; code that opens and closes raylib windows directly should call =grl_fast2d_shutdown()= (internal) before =CloseWindow()=, or the batch's CPU memory is freed only when graylib notices it is gone.
+- The fast path needs a GL 2.1+/ES 2.0+ context (rlgl's batch); with OpenGL 1.1 or the software backend every draw goes through raylib.
+- libregnum's GUI backend calls the raylib-signature forms (=grl_fast2d_draw_texture_pro()=, =grl_fast2d_draw_rectangle_rec()=, =grl_fast2d_draw_rectangle_rounded()=, ... in =src/drawing/grl-fast2d-private.h=), which are internal (not exported from =libgraylib.so=, not introspected).
+
 ** Pixels
 :PROPERTIES:
 :CUSTOM_ID: pixels
