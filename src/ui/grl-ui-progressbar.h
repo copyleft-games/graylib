@@ -202,4 +202,26 @@ GRL_AVAILABLE_IN_ALL
 void                grl_ui_progressbar_set_progress     (GrlUiProgressBar *self,
                                                          gfloat            progress);
 
+/**
+ * grl_ui_progressbar_get_right_to_left:
+ * @self: A #GrlUiProgressBar
+ *
+ * Gets whether the bar fills from right to left (raygui 5 PROGRESS_SIDE).
+ *
+ * Returns: The value of #GrlUiProgressBar:right-to-left
+ */
+GRL_AVAILABLE_IN_ALL
+gboolean            grl_ui_progressbar_get_right_to_left (GrlUiProgressBar *self);
+
+/**
+ * grl_ui_progressbar_set_right_to_left:
+ * @self: A #GrlUiProgressBar
+ * @right_to_left: The new value
+ *
+ * Sets whether the bar fills from the right edge towards the left (raygui 5 PROGRESS_SIDE).
+ */
+GRL_AVAILABLE_IN_ALL
+void                grl_ui_progressbar_set_right_to_left (GrlUiProgressBar *self,
+                                                   gboolean right_to_left);
+
 G_END_DECLS

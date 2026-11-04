@@ -436,7 +436,10 @@ grl_text_to_pascal (const gchar *text)
  * grl_text_to_snake:
  * @text: source text
  *
- * Returns a snake_case copy of @text.
+ * Returns a snake_case copy of @text: upper-case letters start a new word
+ * (lower-cased, with an underscore before all but the first), and spaces
+ * become underscores ("Hello World" and "helloWorld" both give
+ * "hello_world").
  *
  * Returns: (transfer full): A newly allocated string; free with g_free().
  */

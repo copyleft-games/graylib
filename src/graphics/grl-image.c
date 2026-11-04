@@ -13,6 +13,7 @@
 #include "grl-graphics-private.h"
 #include "../math/grl-matrix.h"
 #include "../resources/grl-resource-pack.h"
+#include "grl-font.h"
 #include <raylib.h>
 #include <rpng.h>
 #include <string.h>
@@ -92,6 +93,13 @@ static GParamSpec *properties[N_PROPS];
 
 #define GRL_TO_RAYLIB_RECTANGLE(r) \
     ((Rectangle){ .x = (r)->x, .y = (r)->y, .width = (r)->width, .height = (r)->height })
+
+#define GRL_TO_RAYLIB_VECTOR2(v) \
+    ((Vector2){ .x = (v)->x, .y = (v)->y })
+
+/* Tint for the image-to-image blits: %NULL means opaque white (no tint). */
+#define GRL_IMAGE_TINT(t) \
+    ((t) != NULL ? GRL_TO_RAYLIB_COLOR (t) : (Color){ 255, 255, 255, 255 })
 
 /*
  * =============================================================================
@@ -1846,10 +1854,11 @@ grl_image_draw_rectangle_lines (GrlImage           *self,
     g_return_if_fail (rect != NULL);
     g_return_if_fail (color != NULL);
 
-    ImageDrawRectangleLines (&self->handle,
-                             GRL_TO_RAYLIB_RECTANGLE (rect),
-                             thickness,
-                             GRL_TO_RAYLIB_COLOR (color));
+    /* raylib 6.2 moved the (rec, thick) form to ImageDrawRectangleLinesEx() */
+    ImageDrawRectangleLinesEx (&self->handle,
+                               GRL_TO_RAYLIB_RECTANGLE (rect),
+                               thickness,
+                               GRL_TO_RAYLIB_COLOR (color));
 }
 
 /**
@@ -1900,7 +1909,359 @@ grl_image_draw_image (GrlImage           *self,
     else
         raylib_tint = (Color){ 255, 255, 255, 255 };
 
-    ImageDraw (&self->handle, src->handle, src_rec, dst_rec, raylib_tint);
+    /* raylib 6.2 renamed ImageDraw() to ImageDrawImagePro(); no rotation */
+    ImageDrawImagePro (&self->handle, src->handle, src_rec, dst_rec,
+                       (Vector2){ 0.0f, 0.0f }, 0.0f, raylib_tint);
+}
+
+/*
+ * raylib 6.2 image-to-image blits and primitives
+ *
+ * raylib 6.2 aligned its Image* drawing API with the screen drawing API
+ * (ImageDrawImage/Rec/Ex/Pro mirror DrawTexture/Rec/Ex/Pro). These are
+ * thin wrappers: they use raylib's own drawing, so the source is alpha
+ * blended over the destination by raylib, and #GrlImageBlendMode, the clip
+ * rectangle and the anti-alias flag of @self do not apply.
+ */
+
+/**
+ * grl_image_draw_image_at:
+ * @self: A #GrlImage.
+ * @src: Source image.
+ * @x: Destination X of the source's top-left corner.
+ * @y: Destination Y of the source's top-left corner.
+ * @tint: (nullable): Tint color, or %NULL for none.
+ *
+ * Draws all of @src onto @self at (@x, @y), unscaled (raylib 6.2
+ * ImageDrawImage(), the image counterpart of DrawTexture()).
+ */
+void
+grl_image_draw_image_at (GrlImage       *self,
+                         GrlImage       *src,
+                         gint            x,
+                         gint            y,
+                         const GrlColor *tint)
+{
+    g_return_if_fail (GRL_IS_IMAGE (self));
+    g_return_if_fail (GRL_IS_IMAGE (src));
+
+    ImageDrawImage (&self->handle, src->handle, x, y, GRL_IMAGE_TINT (tint));
+}
+
+/**
+ * grl_image_draw_image_rec:
+ * @self: A #GrlImage.
+ * @src: Source image.
+ * @src_rect: Region of @src to draw.
+ * @position: Destination of the region's top-left corner.
+ * @tint: (nullable): Tint color, or %NULL for none.
+ *
+ * Draws the @src_rect part of @src onto @self at @position, unscaled
+ * (raylib 6.2 ImageDrawImageRec(), like DrawTextureRec()). Useful for
+ * blitting one cell of a sprite sheet or atlas.
+ */
+void
+grl_image_draw_image_rec (GrlImage           *self,
+                          GrlImage           *src,
+                          const GrlRectangle *src_rect,
+                          const GrlVector2   *position,
+                          const GrlColor     *tint)
+{
+    g_return_if_fail (GRL_IS_IMAGE (self));
+    g_return_if_fail (GRL_IS_IMAGE (src));
+    g_return_if_fail (src_rect != NULL);
+    g_return_if_fail (position != NULL);
+
+    ImageDrawImageRec (&self->handle, src->handle,
+                       GRL_TO_RAYLIB_RECTANGLE (src_rect),
+                       GRL_TO_RAYLIB_VECTOR2 (position),
+                       GRL_IMAGE_TINT (tint));
+}
+
+/**
+ * grl_image_draw_image_ex:
+ * @self: A #GrlImage.
+ * @src: Source image.
+ * @position: Destination of the source's top-left corner.
+ * @rotation: Rotation in degrees, clockwise, around @position.
+ * @scale: Uniform scale factor.
+ * @tint: (nullable): Tint color, or %NULL for none.
+ *
+ * Draws @src onto @self rotated and scaled (raylib 6.2 ImageDrawImageEx(),
+ * like DrawTextureEx()).
+ */
+void
+grl_image_draw_image_ex (GrlImage         *self,
+                         GrlImage         *src,
+                         const GrlVector2 *position,
+                         gfloat            rotation,
+                         gfloat            scale,
+                         const GrlColor   *tint)
+{
+    g_return_if_fail (GRL_IS_IMAGE (self));
+    g_return_if_fail (GRL_IS_IMAGE (src));
+    g_return_if_fail (position != NULL);
+
+    ImageDrawImageEx (&self->handle, src->handle,
+                      GRL_TO_RAYLIB_VECTOR2 (position),
+                      rotation, scale, GRL_IMAGE_TINT (tint));
+}
+
+/**
+ * grl_image_draw_image_pro:
+ * @self: A #GrlImage.
+ * @src: Source image.
+ * @src_rect: (nullable): Region of @src, or %NULL for all of it.
+ * @dst_rect: Destination region (the source region is scaled to it). Its
+ *   x and y are where @origin lands, as with grl_draw_texture_pro().
+ * @origin: (nullable): Rotation origin relative to the scaled region's
+ *   top-left corner, or %NULL for (0, 0).
+ * @rotation: Rotation in degrees, clockwise, around @origin.
+ * @tint: (nullable): Tint color, or %NULL for none.
+ *
+ * Draws a region of @src scaled into @dst_rect and rotated around @origin,
+ * the image counterpart of grl_draw_texture_pro(). grl_image_draw_image()
+ * is this call with no origin and no rotation.
+ *
+ * raylib 6.2's ImageDrawImagePro() takes an origin and a rotation but
+ * ignores both, so graylib applies them itself: an origin alone shifts the
+ * destination, and a rotation draws the scaled region with
+ * ImageDrawImageEx() around its top-left corner, placed so that @origin
+ * ends up at (@dst_rect.x, @dst_rect.y).
+ */
+void
+grl_image_draw_image_pro (GrlImage           *self,
+                          GrlImage           *src,
+                          const GrlRectangle *src_rect,
+                          const GrlRectangle *dst_rect,
+                          const GrlVector2   *origin,
+                          gfloat              rotation,
+                          const GrlColor     *tint)
+{
+    Rectangle src_rec;
+    Rectangle dst_rec;
+    Vector2   org;
+    Vector2   pos;
+    Image     region;
+    gfloat    c;
+    gfloat    sn;
+
+    g_return_if_fail (GRL_IS_IMAGE (self));
+    g_return_if_fail (GRL_IS_IMAGE (src));
+    g_return_if_fail (dst_rect != NULL);
+
+    if (src_rect != NULL)
+        src_rec = GRL_TO_RAYLIB_RECTANGLE (src_rect);
+    else
+        src_rec = (Rectangle){ 0, 0, (float)src->handle.width, (float)src->handle.height };
+
+    dst_rec = GRL_TO_RAYLIB_RECTANGLE (dst_rect);
+
+    if (origin != NULL)
+        org = GRL_TO_RAYLIB_VECTOR2 (origin);
+    else
+        org = (Vector2){ 0.0f, 0.0f };
+
+    /* No rotation: the origin only moves the destination rectangle. */
+    if (rotation == 0.0f)
+    {
+        dst_rec.x -= org.x;
+        dst_rec.y -= org.y;
+        ImageDrawImagePro (&self->handle, src->handle, src_rec, dst_rec,
+                           (Vector2){ 0.0f, 0.0f }, 0.0f, GRL_IMAGE_TINT (tint));
+        return;
+    }
+
+    if (src->handle.data == NULL || src_rec.width < 1.0f || src_rec.height < 1.0f ||
+        dst_rec.width < 1.0f || dst_rec.height < 1.0f)
+        return;
+
+    /* Rotation: cut and scale the region first, ... */
+    region = ImageFromImage (src->handle, src_rec);
+    if (region.data == NULL)
+        return;
+    if (region.width != (int)dst_rec.width || region.height != (int)dst_rec.height)
+        ImageResize (&region, (int)dst_rec.width, (int)dst_rec.height);
+
+    /* ... then rotate it around its top-left corner, placed at
+     * P - R(origin) so the origin lands on P = (dst.x, dst.y). The
+     * rotation matches ImageDrawImageEx() (clockwise in y-down image
+     * space). */
+    c = cosf (rotation * DEG2RAD);
+    sn = sinf (rotation * DEG2RAD);
+    pos.x = dst_rec.x - (org.x * c - org.y * sn);
+    pos.y = dst_rec.y - (org.x * sn + org.y * c);
+
+    ImageDrawImageEx (&self->handle, region, pos, rotation, 1.0f, GRL_IMAGE_TINT (tint));
+    UnloadImage (region);
+}
+
+/**
+ * grl_image_draw_line_strip:
+ * @self: A #GrlImage.
+ * @points: (array length=point_count): Points of the strip.
+ * @point_count: Number of points (at least 2 to draw anything).
+ * @color: Line color.
+ *
+ * Draws connected one-pixel lines through @points (raylib 6.2
+ * ImageDrawLineStrip()). For thick or blended lines use
+ * grl_image_draw_polyline().
+ */
+void
+grl_image_draw_line_strip (GrlImage         *self,
+                           const GrlVector2 *points,
+                           gint              point_count,
+                           const GrlColor   *color)
+{
+    g_autofree Vector2 *raw = NULL;
+    gint                i;
+
+    g_return_if_fail (GRL_IS_IMAGE (self));
+    g_return_if_fail (points != NULL || point_count == 0);
+    g_return_if_fail (color != NULL);
+
+    if (point_count < 2)
+        return;
+
+    raw = g_new (Vector2, point_count);
+    for (i = 0; i < point_count; i++)
+        raw[i] = GRL_TO_RAYLIB_VECTOR2 (&points[i]);
+
+    ImageDrawLineStrip (&self->handle, raw, point_count, GRL_TO_RAYLIB_COLOR (color));
+}
+
+/**
+ * grl_image_draw_rectangle_pro:
+ * @self: A #GrlImage.
+ * @rect: Rectangle; its x and y are where @origin lands.
+ * @origin: (nullable): Rotation origin relative to the rectangle's top-left
+ *   corner, or %NULL for (0, 0).
+ * @rotation: Rotation in degrees, clockwise, around @origin.
+ * @color: Fill color.
+ *
+ * Draws a filled, rotated rectangle (raylib 6.2 ImageDrawRectanglePro(),
+ * like DrawRectanglePro()). Pixels are filled when their centre is inside.
+ */
+void
+grl_image_draw_rectangle_pro (GrlImage           *self,
+                              const GrlRectangle *rect,
+                              const GrlVector2   *origin,
+                              gfloat              rotation,
+                              const GrlColor     *color)
+{
+    Vector2 org;
+
+    g_return_if_fail (GRL_IS_IMAGE (self));
+    g_return_if_fail (rect != NULL);
+    g_return_if_fail (color != NULL);
+
+    if (origin != NULL)
+        org = GRL_TO_RAYLIB_VECTOR2 (origin);
+    else
+        org = (Vector2){ 0.0f, 0.0f };
+
+    ImageDrawRectanglePro (&self->handle, GRL_TO_RAYLIB_RECTANGLE (rect), org,
+                           rotation, GRL_TO_RAYLIB_COLOR (color));
+}
+
+/**
+ * grl_image_draw_rectangle_gradient_ex:
+ * @self: A #GrlImage.
+ * @rect: Rectangle to fill.
+ * @top_left: Color of the top-left corner.
+ * @bottom_left: Color of the bottom-left corner.
+ * @top_right: Color of the top-right corner.
+ * @bottom_right: Color of the bottom-right corner.
+ *
+ * Fills @rect with a bilinear gradient between four corner colors (raylib
+ * 6.2 ImageDrawRectangleGradientEx()). The argument order matches
+ * grl_draw_rectangle_gradient_ex().
+ */
+void
+grl_image_draw_rectangle_gradient_ex (GrlImage           *self,
+                                      const GrlRectangle *rect,
+                                      const GrlColor     *top_left,
+                                      const GrlColor     *bottom_left,
+                                      const GrlColor     *top_right,
+                                      const GrlColor     *bottom_right)
+{
+    g_return_if_fail (GRL_IS_IMAGE (self));
+    g_return_if_fail (rect != NULL);
+    g_return_if_fail (top_left != NULL);
+    g_return_if_fail (bottom_left != NULL);
+    g_return_if_fail (top_right != NULL);
+    g_return_if_fail (bottom_right != NULL);
+
+    /* raylib's corners run counter-clockwise from the top left */
+    ImageDrawRectangleGradientEx (&self->handle, GRL_TO_RAYLIB_RECTANGLE (rect),
+                                  GRL_TO_RAYLIB_COLOR (top_left),
+                                  GRL_TO_RAYLIB_COLOR (bottom_left),
+                                  GRL_TO_RAYLIB_COLOR (bottom_right),
+                                  GRL_TO_RAYLIB_COLOR (top_right));
+}
+
+/**
+ * grl_image_draw_circle_gradient:
+ * @self: A #GrlImage.
+ * @center: Circle center.
+ * @radius: Circle radius.
+ * @inner: Color at the center.
+ * @outer: Color at the edge.
+ *
+ * Fills a circle with a radial gradient from @inner to @outer (raylib 6.2
+ * ImageDrawCircleGradient(), like DrawCircleGradient()). Unlike
+ * grl_image_draw_gradient_radial() it ignores the blend mode and clip.
+ */
+void
+grl_image_draw_circle_gradient (GrlImage         *self,
+                                const GrlVector2 *center,
+                                gfloat            radius,
+                                const GrlColor   *inner,
+                                const GrlColor   *outer)
+{
+    g_return_if_fail (GRL_IS_IMAGE (self));
+    g_return_if_fail (center != NULL);
+    g_return_if_fail (inner != NULL);
+    g_return_if_fail (outer != NULL);
+
+    ImageDrawCircleGradient (&self->handle, GRL_TO_RAYLIB_VECTOR2 (center), radius,
+                             GRL_TO_RAYLIB_COLOR (inner), GRL_TO_RAYLIB_COLOR (outer));
+}
+
+/**
+ * grl_image_draw_triangle_gradient:
+ * @self: A #GrlImage.
+ * @v1: First vertex.
+ * @v2: Second vertex.
+ * @v3: Third vertex.
+ * @c1: Color at @v1.
+ * @c2: Color at @v2.
+ * @c3: Color at @v3.
+ *
+ * Fills a triangle with colors interpolated from its vertices (raylib 6.2
+ * ImageDrawTriangleGradient(), formerly ImageDrawTriangleEx()). Vertices
+ * should be in counter-clockwise order.
+ */
+void
+grl_image_draw_triangle_gradient (GrlImage         *self,
+                                  const GrlVector2 *v1,
+                                  const GrlVector2 *v2,
+                                  const GrlVector2 *v3,
+                                  const GrlColor   *c1,
+                                  const GrlColor   *c2,
+                                  const GrlColor   *c3)
+{
+    g_return_if_fail (GRL_IS_IMAGE (self));
+    g_return_if_fail (v1 != NULL && v2 != NULL && v3 != NULL);
+    g_return_if_fail (c1 != NULL && c2 != NULL && c3 != NULL);
+
+    ImageDrawTriangleGradient (&self->handle,
+                               GRL_TO_RAYLIB_VECTOR2 (v1),
+                               GRL_TO_RAYLIB_VECTOR2 (v2),
+                               GRL_TO_RAYLIB_VECTOR2 (v3),
+                               GRL_TO_RAYLIB_COLOR (c1),
+                               GRL_TO_RAYLIB_COLOR (c2),
+                               GRL_TO_RAYLIB_COLOR (c3));
 }
 
 /*

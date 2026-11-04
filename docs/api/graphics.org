@@ -136,9 +136,29 @@ grl_image_draw_rectangle_lines (img, rect, thickness, color);
 /* Composite another image. tint is nullable: pass NULL for "no tint" (white). */
 grl_image_draw_image (img, src, src_rect, dst_rect, NULL);
 
+/* raylib 6.2 blits, the image twins of grl_draw_texture*() */
+grl_image_draw_image_at (img, src, x, y, NULL);                          /* DrawTexture */
+grl_image_draw_image_rec (img, src, src_rect, position, NULL);           /* DrawTextureRec */
+grl_image_draw_image_ex (img, src, position, rotation, scale, NULL);     /* DrawTextureEx */
+grl_image_draw_image_pro (img, src, src_rect, dst_rect, origin, rotation, NULL); /* DrawTexturePro */
+
+/* raylib 6.2 primitives */
+grl_image_draw_line_strip (img, points, n_points, color);
+grl_image_draw_rectangle_pro (img, rect, origin, rotation, color);
+grl_image_draw_rectangle_gradient_ex (img, rect, top_left, bottom_left, top_right, bottom_right);
+grl_image_draw_circle_gradient (img, center, radius, inner, outer);
+grl_image_draw_triangle_gradient (img, v1, v2, v3, c1, c2, c3);
+
 /* Read a pixel back */
 g_autoptr(GrlColor) c = grl_image_get_pixel (img, x, y);
 #+end_src
+
+*raylib 6.2 image API.* raylib 6.2 rebuilt its image drawing to mirror the screen API: =ImageDraw()= became =ImageDrawImagePro()= (with =ImageDrawImage/Rec/Ex()= beside it), =ImageDrawRectangleLines()= now takes =x, y, width, height= and the =(rect, thick)= form moved to =ImageDrawRectangleLinesEx()=, and =ImageDrawTriangleEx()= became =ImageDrawTriangleGradient()=. graylib's existing =grl_image_draw_image()= and =grl_image_draw_rectangle_lines()= keep their signatures and behaviour on top of the new calls.
+
+- The new wrappers use raylib's own drawing: the source is alpha blended by raylib, and the image's =GrlImageBlendMode=, clip rectangle and anti-alias flag do not apply (use the primitives in the next section for those).
+- =ImageDrawImagePro()= in raylib 6.2 accepts =origin= and =rotation= but ignores both. =grl_image_draw_image_pro()= applies them itself: an origin alone shifts the destination; a rotation cuts and scales the region, then draws it with =ImageDrawImageEx()= around its top-left corner, placed so the origin lands on =(dst_rect.x, dst_rect.y)=, matching =grl_draw_texture_pro()=.
+- =grl_image_draw_rectangle_gradient_ex()= takes its corners in the same order as =grl_draw_rectangle_gradient_ex()=.
+- raylib 6.2 also declares =ImageDrawTextPro()=, but it is an empty stub in that release, so graylib does not wrap it yet.
 
 *** Additional Drawing Primitives
 :PROPERTIES:
@@ -1081,7 +1101,14 @@ if (!grl_render_texture_is_valid (target))
 /* Get dimensions */
 gint width = grl_render_texture_get_width (target);
 gint height = grl_render_texture_get_height (target);
+
+/* A floating-point color attachment for HDR (raylib 6.2 LoadRenderTextureEx) */
+g_autoptr(GrlRenderTexture) hdr =
+    grl_render_texture_new_with_format (800, 600, GRL_PIXELFORMAT_UNCOMPRESSED_R16G16B16A16);
+GrlPixelFormat format = grl_render_texture_get_format (hdr);
 #+end_src
+
+=grl_render_texture_new()= is =grl_render_texture_new_with_format()= with =GRL_PIXELFORMAT_UNCOMPRESSED_R8G8B8A8=. Any uncompressed format is accepted; compressed ones are refused. Float formats (=R16G16B16A16=, =R32G32B32A32=) keep values above 1.0 for bloom and tone mapping; single-channel formats (=R32=, =R16=) suit masks and data passes. Whether the driver can render to a format is only known once it is created: check =grl_render_texture_is_valid()=. The depth attachment is always a 24-bit renderbuffer.
 
 *** Rendering to Texture
 :PROPERTIES:

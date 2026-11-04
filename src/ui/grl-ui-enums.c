@@ -149,6 +149,7 @@ grl_ui_control_type_get_type (void)
             { GRL_UI_CONTROL_DROPDOWNBOX, "GRL_UI_CONTROL_DROPDOWNBOX", "dropdownbox" },
             { GRL_UI_CONTROL_TEXTBOX, "GRL_UI_CONTROL_TEXTBOX", "textbox" },
             { GRL_UI_CONTROL_VALUEBOX, "GRL_UI_CONTROL_VALUEBOX", "valuebox" },
+            { GRL_UI_CONTROL_TABBAR, "GRL_UI_CONTROL_TABBAR", "tabbar" },
             { GRL_UI_CONTROL_SPINNER, "GRL_UI_CONTROL_SPINNER", "spinner" },
             { GRL_UI_CONTROL_LISTVIEW, "GRL_UI_CONTROL_LISTVIEW", "listview" },
             { GRL_UI_CONTROL_COLORPICKER, "GRL_UI_CONTROL_COLORPICKER", "colorpicker" },

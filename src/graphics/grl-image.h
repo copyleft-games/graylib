@@ -379,6 +379,74 @@ void                grl_image_draw_image        (GrlImage           *self,
                                                  const GrlColor     *tint);
 
 GRL_AVAILABLE_IN_ALL
+void                grl_image_draw_image_at     (GrlImage           *self,
+                                                 GrlImage           *src,
+                                                 gint                x,
+                                                 gint                y,
+                                                 const GrlColor     *tint);
+
+GRL_AVAILABLE_IN_ALL
+void                grl_image_draw_image_rec    (GrlImage           *self,
+                                                 GrlImage           *src,
+                                                 const GrlRectangle *src_rect,
+                                                 const GrlVector2   *position,
+                                                 const GrlColor     *tint);
+
+GRL_AVAILABLE_IN_ALL
+void                grl_image_draw_image_ex     (GrlImage           *self,
+                                                 GrlImage           *src,
+                                                 const GrlVector2   *position,
+                                                 gfloat              rotation,
+                                                 gfloat              scale,
+                                                 const GrlColor     *tint);
+
+GRL_AVAILABLE_IN_ALL
+void                grl_image_draw_image_pro    (GrlImage           *self,
+                                                 GrlImage           *src,
+                                                 const GrlRectangle *src_rect,
+                                                 const GrlRectangle *dst_rect,
+                                                 const GrlVector2   *origin,
+                                                 gfloat              rotation,
+                                                 const GrlColor     *tint);
+
+GRL_AVAILABLE_IN_ALL
+void                grl_image_draw_line_strip   (GrlImage           *self,
+                                                 const GrlVector2   *points,
+                                                 gint                point_count,
+                                                 const GrlColor     *color);
+
+GRL_AVAILABLE_IN_ALL
+void                grl_image_draw_rectangle_pro (GrlImage           *self,
+                                                  const GrlRectangle *rect,
+                                                  const GrlVector2   *origin,
+                                                  gfloat              rotation,
+                                                  const GrlColor     *color);
+
+GRL_AVAILABLE_IN_ALL
+void                grl_image_draw_rectangle_gradient_ex (GrlImage           *self,
+                                                          const GrlRectangle *rect,
+                                                          const GrlColor     *top_left,
+                                                          const GrlColor     *bottom_left,
+                                                          const GrlColor     *top_right,
+                                                          const GrlColor     *bottom_right);
+
+GRL_AVAILABLE_IN_ALL
+void                grl_image_draw_circle_gradient (GrlImage         *self,
+                                                    const GrlVector2 *center,
+                                                    gfloat            radius,
+                                                    const GrlColor   *inner,
+                                                    const GrlColor   *outer);
+
+GRL_AVAILABLE_IN_ALL
+void                grl_image_draw_triangle_gradient (GrlImage         *self,
+                                                      const GrlVector2 *v1,
+                                                      const GrlVector2 *v2,
+                                                      const GrlVector2 *v3,
+                                                      const GrlColor   *c1,
+                                                      const GrlColor   *c2,
+                                                      const GrlColor   *c3);
+
+GRL_AVAILABLE_IN_ALL
 void                grl_image_draw_text         (GrlImage           *self,
                                                  const gchar        *text,
                                                  gint                x,

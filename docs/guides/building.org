@@ -272,7 +272,8 @@ When using system raylib:
 
 - pkg-config is used to find raylib
 - The bundled raylib is not built
-- Make sure raylib 6.0+ is installed
+- Make sure raylib 6.2 is installed (graylib uses API added in 6.2)
+- The embedded build pins =SUPPORT_GPU_SKINNING=0= (see =RAYLIB_FEATURE_FLAGS= in =rules.mk=); a system raylib keeps whatever it was built with
 
 ** Cross-Platform Support
 :PROPERTIES:

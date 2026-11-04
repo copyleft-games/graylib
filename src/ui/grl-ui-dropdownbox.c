@@ -20,6 +20,7 @@ struct _GrlUiDropdownBox
     gint          active;
     gint          item_count;
     gboolean      edit_mode;
+    gboolean      roll_up;
 };
 
 G_DEFINE_TYPE (GrlUiDropdownBox, grl_ui_dropdownbox, GRL_TYPE_UI_CONTROL)
@@ -30,6 +31,7 @@ enum
     PROP_ITEMS,
     PROP_ACTIVE,
     PROP_EDIT_MODE,
+    PROP_ROLL_UP,
     N_PROPS
 };
 
@@ -74,6 +76,7 @@ count_items (const gchar *items)
 static void
 grl_ui_dropdownbox_draw_impl (GrlUiControl *control)
 {
+    int               old_roll_up;
     GrlUiDropdownBox *self;
     GrlRectangle     *bounds;
     Rectangle         raygui_bounds;
@@ -110,10 +113,17 @@ grl_ui_dropdownbox_draw_impl (GrlUiControl *control)
     old_active = self->active;
     active = self->active;
 
+    /* raygui 5 keeps this in the global DROPDOWNBOX style: apply ours for
+     * this draw only */
+    old_roll_up = GuiGetStyle (DROPDOWNBOX, DROPDOWN_ROLL_UP);
+    GuiSetStyle (DROPDOWNBOX, DROPDOWN_ROLL_UP, self->roll_up ? 1 : 0);
+
     result = GuiDropdownBox (raygui_bounds,
                              self->items != NULL ? self->items : "",
                              &active,
                              self->edit_mode);
+
+    GuiSetStyle (DROPDOWNBOX, DROPDOWN_ROLL_UP, old_roll_up);
 
     if (!enabled)
         GuiSetState (STATE_NORMAL);
@@ -211,6 +221,9 @@ grl_ui_dropdownbox_get_property (GObject    *object,
     case PROP_EDIT_MODE:
         g_value_set_boolean (value, self->edit_mode);
         break;
+    case PROP_ROLL_UP:
+        g_value_set_boolean (value, self->roll_up);
+        break;
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
     }
@@ -234,6 +247,9 @@ grl_ui_dropdownbox_set_property (GObject      *object,
         break;
     case PROP_EDIT_MODE:
         grl_ui_dropdownbox_set_edit_mode (self, g_value_get_boolean (value));
+        break;
+    case PROP_ROLL_UP:
+        grl_ui_dropdownbox_set_roll_up (self, g_value_get_boolean (value));
         break;
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -294,6 +310,20 @@ grl_ui_dropdownbox_class_init (GrlUiDropdownBoxClass *klass)
         g_param_spec_boolean ("edit-mode",
                               "Edit Mode",
                               "Whether the dropdown is expanded",
+                              FALSE,
+                              G_PARAM_READWRITE |
+                              G_PARAM_STATIC_STRINGS |
+                              G_PARAM_EXPLICIT_NOTIFY);
+
+    /**
+     * GrlUiDropdownBox:roll-up:
+     *
+     * Whether the item list opens above the box instead of below it
+     */
+    properties[PROP_ROLL_UP] =
+        g_param_spec_boolean ("roll-up",
+                              "Roll up",
+                              "Whether the item list opens above the box instead of below it",
                               FALSE,
                               G_PARAM_READWRITE |
                               G_PARAM_STATIC_STRINGS |
@@ -513,4 +543,26 @@ grl_ui_dropdownbox_toggle (GrlUiDropdownBox *self)
         g_signal_emit (self, signals[SIGNAL_OPENED], 0);
     else
         g_signal_emit (self, signals[SIGNAL_CLOSED], 0);
+}
+
+gboolean
+grl_ui_dropdownbox_get_roll_up (GrlUiDropdownBox *self)
+{
+    g_return_val_if_fail (GRL_IS_UI_DROPDOWNBOX (self), FALSE);
+
+    return self->roll_up;
+}
+
+void
+grl_ui_dropdownbox_set_roll_up (GrlUiDropdownBox *self,
+                                gboolean roll_up)
+{
+    g_return_if_fail (GRL_IS_UI_DROPDOWNBOX (self));
+
+    roll_up = !!roll_up;
+    if (self->roll_up == roll_up)
+        return;
+
+    self->roll_up = roll_up;
+    g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_ROLL_UP]);
 }

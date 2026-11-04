@@ -132,6 +132,7 @@
 #include "ui/grl-ui-combobox.h"
 #include "ui/grl-ui-dropdownbox.h"
 #include "ui/grl-ui-togglegroup.h"
+#include "ui/grl-ui-tabbar.h"
 #include "ui/grl-ui-listview.h"
 #include "ui/grl-ui-colorpicker.h"
 #include "ui/grl-ui-panel.h"

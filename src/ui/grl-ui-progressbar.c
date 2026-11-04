@@ -21,6 +21,7 @@ struct _GrlUiProgressBar
     gfloat        max_value;
     gchar        *text_left;
     gchar        *text_right;
+    gboolean      right_to_left;
 };
 
 G_DEFINE_TYPE (GrlUiProgressBar, grl_ui_progressbar, GRL_TYPE_UI_CONTROL)
@@ -33,6 +34,7 @@ enum
     PROP_MAX_VALUE,
     PROP_TEXT_LEFT,
     PROP_TEXT_RIGHT,
+    PROP_RIGHT_TO_LEFT,
     N_PROPS
 };
 
@@ -45,6 +47,7 @@ static GParamSpec *properties[N_PROPS];
 static void
 grl_ui_progressbar_draw_impl (GrlUiControl *control)
 {
+    int               old_right_to_left;
     GrlUiProgressBar *self;
     GrlRectangle     *bounds;
     Rectangle         raygui_bounds;
@@ -78,12 +81,19 @@ grl_ui_progressbar_draw_impl (GrlUiControl *control)
 
     value = self->value;
 
+    /* raygui 5 keeps this in the global PROGRESSBAR style: apply ours for
+     * this draw only */
+    old_right_to_left = GuiGetStyle (PROGRESSBAR, PROGRESS_SIDE);
+    GuiSetStyle (PROGRESSBAR, PROGRESS_SIDE, self->right_to_left ? 1 : 0);
+
     GuiProgressBar (raygui_bounds,
                     self->text_left,
                     self->text_right,
                     &value,
                     self->min_value,
                     self->max_value);
+
+    GuiSetStyle (PROGRESSBAR, PROGRESS_SIDE, old_right_to_left);
 
     if (!enabled)
         GuiSetState (STATE_NORMAL);
@@ -140,6 +150,9 @@ grl_ui_progressbar_get_property (GObject    *object,
     case PROP_TEXT_RIGHT:
         g_value_set_string (value, self->text_right);
         break;
+    case PROP_RIGHT_TO_LEFT:
+        g_value_set_boolean (value, self->right_to_left);
+        break;
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
     }
@@ -169,6 +182,9 @@ grl_ui_progressbar_set_property (GObject      *object,
         break;
     case PROP_TEXT_RIGHT:
         grl_ui_progressbar_set_text_right (self, g_value_get_string (value));
+        break;
+    case PROP_RIGHT_TO_LEFT:
+        grl_ui_progressbar_set_right_to_left (self, g_value_get_boolean (value));
         break;
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -260,6 +276,20 @@ grl_ui_progressbar_class_init (GrlUiProgressBarClass *klass)
                              G_PARAM_READWRITE |
                              G_PARAM_STATIC_STRINGS |
                              G_PARAM_EXPLICIT_NOTIFY);
+
+    /**
+     * GrlUiProgressBar:right-to-left:
+     *
+     * Whether the bar fills from the right edge towards the left
+     */
+    properties[PROP_RIGHT_TO_LEFT] =
+        g_param_spec_boolean ("right-to-left",
+                              "Right to left",
+                              "Whether the bar fills from the right edge towards the left",
+                              FALSE,
+                              G_PARAM_READWRITE |
+                              G_PARAM_STATIC_STRINGS |
+                              G_PARAM_EXPLICIT_NOTIFY);
 
     g_object_class_install_properties (object_class, N_PROPS, properties);
 }
@@ -564,4 +594,26 @@ grl_ui_progressbar_set_progress (GrlUiProgressBar *self,
     value = self->min_value + (progress * range);
 
     grl_ui_progressbar_set_value (self, value);
+}
+
+gboolean
+grl_ui_progressbar_get_right_to_left (GrlUiProgressBar *self)
+{
+    g_return_val_if_fail (GRL_IS_UI_PROGRESSBAR (self), FALSE);
+
+    return self->right_to_left;
+}
+
+void
+grl_ui_progressbar_set_right_to_left (GrlUiProgressBar *self,
+                                      gboolean right_to_left)
+{
+    g_return_if_fail (GRL_IS_UI_PROGRESSBAR (self));
+
+    right_to_left = !!right_to_left;
+    if (self->right_to_left == right_to_left)
+        return;
+
+    self->right_to_left = right_to_left;
+    g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_RIGHT_TO_LEFT]);
 }

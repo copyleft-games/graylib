@@ -8,6 +8,8 @@
  */
 
 #include "config.h"
+#include <gio/gio.h>
+#include <string.h>
 #include "grl-ui-style.h"
 #include <raygui.h>
 
@@ -211,6 +213,56 @@ grl_ui_style_load_file (GrlUiStyle   *self,
     }
 
     GuiLoadStyle (filename);
+
+    return TRUE;
+}
+
+/*
+ * grl_ui_style_load_from_memory:
+ * @self: A #GrlUiStyle
+ * @data: The contents of a binary .rgs style file
+ * @error: (nullable): Return location for error, or %NULL
+ *
+ * Loads a binary raygui style from memory after checking its header.
+ *
+ * Returns: %TRUE on success, %FALSE on error
+ */
+gboolean
+grl_ui_style_load_from_memory (GrlUiStyle  *self,
+                               GBytes      *data,
+                               GError     **error)
+{
+    const guchar *bytes;
+    gsize         size;
+    gint32        property_count;
+
+    g_return_val_if_fail (GRL_IS_UI_STYLE (self), FALSE);
+    g_return_val_if_fail (data != NULL, FALSE);
+    g_return_val_if_fail (error == NULL || *error == NULL, FALSE);
+
+    bytes = g_bytes_get_data (data, &size);
+
+    /* Header: "rGS " signature, version (int16), reserved (int16),
+     * property count (int32), then 8 bytes per property (raygui 5) */
+    if (bytes == NULL || size < 12 || size > G_MAXINT ||
+        memcmp (bytes, "rGS ", 4) != 0)
+    {
+        g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA,
+                     "Not a binary raygui style (.rgs)");
+        return FALSE;
+    }
+
+    memcpy (&property_count, bytes + 8, sizeof (property_count));
+    if (property_count < 0 ||
+        (gsize)property_count > (size - 12) / 8)
+    {
+        g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA,
+                     "Truncated raygui style: %d properties in %" G_GSIZE_FORMAT " bytes",
+                     (gint)property_count, size);
+        return FALSE;
+    }
+
+    GuiLoadStyleFromMemory (bytes, (int)size);
 
     return TRUE;
 }

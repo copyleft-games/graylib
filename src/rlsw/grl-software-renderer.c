@@ -21,11 +21,13 @@
  * style for consistency.
  */
 #define RLSW_IMPLEMENTATION
-/* rlsw defaults SW_FRAMEBUFFER_OUTPUT_BGRA to true (for direct blits to native
- * window framebuffers), which makes swReadPixels() emit BGRA-ordered bytes.
- * graylib reads the framebuffer into an R8G8B8A8 GrlImage, so force RGBA output
- * to keep channels correct (a red clear must read back as red, not blue). */
-#define SW_FRAMEBUFFER_OUTPUT_BGRA 0
+/* rlsw defaults RLSW_FRAMEBUFFER_OUTPUT_BGRA to true (for direct blits to
+ * native window framebuffers), which makes swReadPixels() emit BGRA-ordered
+ * bytes. graylib reads the framebuffer into an R8G8B8A8 GrlImage, so force
+ * RGBA output to keep channels correct (a red clear must read back as red,
+ * not blue). rlsw 1.6 (raylib 6.2) renamed its options from SW_* to RLSW_*
+ * and silently ignores the old spelling, so only the new name is set. */
+#define RLSW_FRAMEBUFFER_OUTPUT_BGRA 0
 #include <external/rlsw.h>
 
 /**

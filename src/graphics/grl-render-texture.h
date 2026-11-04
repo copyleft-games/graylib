@@ -16,6 +16,7 @@
 #include <glib-object.h>
 #include "../grl-version.h"
 #include "../grl-types.h"
+#include "../grl-enums.h"
 
 G_BEGIN_DECLS
 
@@ -50,6 +51,39 @@ struct _GrlRenderTextureClass
 GRL_AVAILABLE_IN_ALL
 GrlRenderTexture *  grl_render_texture_new              (gint                width,
                                                          gint                height);
+
+/**
+ * grl_render_texture_new_with_format:
+ * @width: Width of the render texture
+ * @height: Height of the render texture
+ * @format: Pixel format of the color attachment; any uncompressed format
+ *
+ * Creates a new render texture whose color attachment has @format instead
+ * of the default 8-bit RGBA (raylib 6.2 LoadRenderTextureEx()). Use a
+ * floating-point format such as %GRL_PIXELFORMAT_UNCOMPRESSED_R16G16B16A16
+ * or %GRL_PIXELFORMAT_UNCOMPRESSED_R32G32B32A32 for HDR rendering (bloom,
+ * tone mapping), or a single-channel format for masks and data passes.
+ * Whether a format can be rendered to depends on the GL driver; check
+ * grl_render_texture_is_valid().
+ *
+ * Returns: (transfer full): A new #GrlRenderTexture
+ */
+GRL_AVAILABLE_IN_ALL
+GrlRenderTexture *  grl_render_texture_new_with_format  (gint                width,
+                                                         gint                height,
+                                                         GrlPixelFormat      format);
+
+/**
+ * grl_render_texture_get_format:
+ * @self: A #GrlRenderTexture
+ *
+ * Gets the pixel format of the color attachment.
+ *
+ * Returns: The #GrlPixelFormat of the color texture, or 0 when @self is
+ *   not valid
+ */
+GRL_AVAILABLE_IN_ALL
+GrlPixelFormat      grl_render_texture_get_format       (GrlRenderTexture   *self);
 
 /**
  * grl_render_texture_is_valid:

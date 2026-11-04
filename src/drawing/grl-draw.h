@@ -138,6 +138,12 @@ void    grl_draw_circle_lines_v         (const GrlVector2   *center,
                                          const GrlColor     *color);
 
 GRL_AVAILABLE_IN_ALL
+void    grl_draw_circle_lines_ex        (const GrlVector2   *center,
+                                         gfloat              radius,
+                                         gfloat              thick,
+                                         const GrlColor     *color);
+
+GRL_AVAILABLE_IN_ALL
 void    grl_draw_circle_sector          (const GrlVector2   *center,
                                          gfloat              radius,
                                          gfloat              start_angle,
@@ -151,6 +157,15 @@ void    grl_draw_circle_sector_lines    (const GrlVector2   *center,
                                          gfloat              start_angle,
                                          gfloat              end_angle,
                                          gint                segments,
+                                         const GrlColor     *color);
+
+GRL_AVAILABLE_IN_ALL
+void    grl_draw_circle_sector_lines_ex (const GrlVector2   *center,
+                                         gfloat              radius,
+                                         gfloat              start_angle,
+                                         gfloat              end_angle,
+                                         gint                segments,
+                                         gfloat              thick,
                                          const GrlColor     *color);
 
 GRL_AVAILABLE_IN_ALL
@@ -178,6 +193,13 @@ void    grl_draw_ellipse_lines          (gint                center_x,
                                          gfloat              radius_v,
                                          const GrlColor     *color);
 
+GRL_AVAILABLE_IN_ALL
+void    grl_draw_ellipse_lines_ex       (const GrlVector2   *center,
+                                         gfloat              radius_h,
+                                         gfloat              radius_v,
+                                         gfloat              thick,
+                                         const GrlColor     *color);
+
 /*
  * Ring drawing
  */
@@ -198,6 +220,16 @@ void    grl_draw_ring_lines             (const GrlVector2   *center,
                                          gfloat              start_angle,
                                          gfloat              end_angle,
                                          gint                segments,
+                                         const GrlColor     *color);
+
+GRL_AVAILABLE_IN_ALL
+void    grl_draw_ring_lines_ex          (const GrlVector2   *center,
+                                         gfloat              inner_radius,
+                                         gfloat              outer_radius,
+                                         gfloat              start_angle,
+                                         gfloat              end_angle,
+                                         gint                segments,
+                                         gfloat              thick,
                                          const GrlColor     *color);
 
 /*
@@ -299,6 +331,21 @@ void    grl_draw_triangle_lines         (const GrlVector2   *v1,
                                          const GrlVector2   *v2,
                                          const GrlVector2   *v3,
                                          const GrlColor     *color);
+
+GRL_AVAILABLE_IN_ALL
+void    grl_draw_triangle_lines_ex      (const GrlVector2   *v1,
+                                         const GrlVector2   *v2,
+                                         const GrlVector2   *v3,
+                                         gfloat              thick,
+                                         const GrlColor     *color);
+
+GRL_AVAILABLE_IN_ALL
+void    grl_draw_triangle_gradient      (const GrlVector2   *v1,
+                                         const GrlVector2   *v2,
+                                         const GrlVector2   *v3,
+                                         const GrlColor     *c1,
+                                         const GrlColor     *c2,
+                                         const GrlColor     *c3);
 
 GRL_AVAILABLE_IN_ALL
 void    grl_draw_triangle_fan           (const GrlVector2   *points,

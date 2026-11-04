@@ -22,6 +22,9 @@ The =grl_fs_*= module provides filesystem helper functions. They are thin wrappe
 gboolean grl_fs_file_exists        (const gchar *path);
 gboolean grl_fs_directory_exists   (const gchar *path);
 gboolean grl_fs_is_path_file       (const gchar *path);
+gboolean grl_fs_is_path_directory  (const gchar *path);
+gboolean grl_fs_is_path_absolute   (const gchar *path);
+gboolean grl_fs_is_file_hidden     (const gchar *path);
 gboolean grl_fs_is_file_extension  (const gchar *path, const gchar *ext);
 gboolean grl_fs_is_file_name_valid (const gchar *file_name);
 #+end_src
@@ -31,6 +34,9 @@ gboolean grl_fs_is_file_name_valid (const gchar *file_name);
 | =file_exists(path)=             | Whether a file exists at =path=                        |
 | =directory_exists(path)=        | Whether a directory exists at =path=                   |
 | =is_path_file(path)=            | Whether =path= refers to a file (vs a directory)       |
+| =is_path_directory(path)=       | Whether =path= is an existing directory (raylib 6.2)   |
+| =is_path_absolute(path)=        | Whether =path= is absolute; need not exist (6.2)       |
+| =is_file_hidden(path)=          | Whether the OS hides =path= (dot name on Unix) (6.2)   |
 | =is_file_extension(path, ext)=  | Whether =path= has the extension =ext= (e.g. =".png"=) |
 | =is_file_name_valid(file_name)= | Whether =file_name= is a valid filename                |
 
@@ -51,6 +57,13 @@ gboolean grl_fs_file_move   (const gchar *src_path, const gchar *dst_path);
 | =file_remove(path)=           | Remove a file |
 | =file_copy(src, dst)=         | Copy a file   |
 | =file_move(src, dst)=         | Move a file   |
+
+*Return values across raylib versions.* raylib 6.2 made its file functions return =0= on success (=FileCopy()=, =FileTextReplace()= and =ChangeDirectory()= returned a truthy value in 6.0). graylib's =gboolean= results did not change meaning: =TRUE= is still success. Two raylib 6.2 quirks are hidden by graylib:
+
+- =FileCopy()= also returns =0= when the source cannot be read or the write fails. =grl_fs_file_copy()= requires a readable regular source and checks that the destination exists with the source's length afterwards.
+- =FileMove()= always copies and removes, so it inherits that false success and can delete a source that was never copied. =grl_fs_file_move()= renames atomically when it can and otherwise uses the checked copy, then removes the source.
+- =IsPathDirectory()= is only =!IsPathFile()=, true for a path that does not exist; =grl_fs_is_path_directory()= also requires the directory to exist.
+- =GetPrevDirectoryPath("/a")= now gives ="/"= (6.0 handed short paths back unchanged). For a path naming an existing regular file the result is the parent of the file's directory.
 
 *** File Text Editing
 :PROPERTIES:

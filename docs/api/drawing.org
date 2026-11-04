@@ -128,6 +128,10 @@ grl_draw_circle_sector_lines (center_vec, radius, start_angle, end_angle, segmen
 
 /* Gradient circle */
 grl_draw_circle_gradient (center_x, center_y, radius, inner_color, outer_color);
+
+/* Thick outlines (raylib 6.2) */
+grl_draw_circle_lines_ex (center_vec, radius, thick, color);
+grl_draw_circle_sector_lines_ex (center_vec, radius, start_angle, end_angle, segments, thick, color);
 #+end_src
 
 ** Ellipses
@@ -137,6 +141,9 @@ grl_draw_circle_gradient (center_x, center_y, radius, inner_color, outer_color);
 #+begin_src C
 grl_draw_ellipse (center_x, center_y, radius_h, radius_v, color);
 grl_draw_ellipse_lines (center_x, center_y, radius_h, radius_v, color);
+
+/* Thick outline at a sub-pixel center (raylib 6.2) */
+grl_draw_ellipse_lines_ex (center_vec, radius_h, radius_v, thick, color);
 #+end_src
 
 ** Rings
@@ -146,7 +153,19 @@ grl_draw_ellipse_lines (center_x, center_y, radius_h, radius_v, color);
 #+begin_src C
 grl_draw_ring (center_vec, inner_radius, outer_radius, start_angle, end_angle, segments, color);
 grl_draw_ring_lines (center_vec, inner_radius, outer_radius, start_angle, end_angle, segments, color);
+grl_draw_ring_lines_ex (center_vec, inner_radius, outer_radius, start_angle, end_angle, segments, thick, color);
 #+end_src
+
+*** Thick outlines (raylib 6.2)
+:PROPERTIES:
+:CUSTOM_ID: thick-outlines
+:END:
+raylib 6.2 added a =*LinesEx()= outline with a =thick= parameter for every shape that only had a one-pixel outline: =grl_draw_circle_lines_ex()=, =grl_draw_circle_sector_lines_ex()=, =grl_draw_ellipse_lines_ex()=, =grl_draw_ring_lines_ex()= and =grl_draw_triangle_lines_ex()= (alongside the existing =grl_draw_rectangle_lines_ex()=, =grl_draw_rectangle_rounded_lines_ex()= and =grl_draw_poly_lines_ex()=).
+
+- The outline grows *inward* from the shape's edge: a circle of radius 12 with =thick= 3 covers radii 9 to 12, so the shape keeps its outer size whatever the thickness. A =thick= larger than the shape fills it.
+- A negative =thick= grows the outline outward instead (sector, ellipse).
+- =grl_draw_circle_lines_ex()= is drawn as a 36-segment ring, so it is cheap; for a smoother large circle use =grl_draw_ring()= with more segments.
+- These calls go straight to raylib, not through graylib's fast 2D path (see [[#fast-2d-vertex-path][Fast 2D vertex path]]); mixing them with fast-path draws is safe, both write into raylib's batch in order.
 
 ** Rectangles
 :PROPERTIES:
@@ -205,6 +224,8 @@ grl_draw_rectangle_gradient_h (x, y, width, height, left_color, right_color);
 grl_draw_rectangle_gradient_ex (rect, top_left, bottom_left, top_right, bottom_right);
 #+end_src
 
+*Fixed in graylib 0.7:* =grl_draw_rectangle_gradient_ex()= used to pass =top_right= and =bottom_right= to raylib in the wrong slots, so the right-hand corners were swapped. raylib's own order is top-left, bottom-left, bottom-right, top-right; graylib keeps its documented argument order and now maps it correctly.
+
 ** Triangles
 :PROPERTIES:
 :CUSTOM_ID: triangles
@@ -215,6 +236,10 @@ grl_draw_triangle (v1, v2, v3, color);
 
 /* Triangle outline */
 grl_draw_triangle_lines (v1, v2, v3, color);
+grl_draw_triangle_lines_ex (v1, v2, v3, thick, color);   /* raylib 6.2 */
+
+/* Per-vertex colors, interpolated across the face (raylib 6.2) */
+grl_draw_triangle_gradient (v1, v2, v3, c1, c2, c3);
 
 /* Triangle fan (first point is center) */
 GrlVector2 points[] = { center, p1, p2, p3, ... };

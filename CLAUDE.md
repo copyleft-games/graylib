@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**Graylib** is a GObject/GLib wrapper around the [raylib](https://www.raylib.com/) 6.0 game programming library. It provides:
+**Graylib** is a GObject/GLib wrapper around the [raylib](https://www.raylib.com/) 6.2 game programming library. It provides:
 
 - GObject types with automatic memory management via reference counting
 - GObject Introspection (GIR) support for language bindings (Python, Lua, Vala, JS)
@@ -19,7 +19,7 @@
 | Language | C (gnu89 standard) |
 | Compiler | GCC |
 | Build System | GNU Make |
-| Dependencies | GLib 2.56+, GObject Introspection, raylib 6.0 |
+| Dependencies | GLib 2.56+, GObject Introspection, raylib 6.2, raygui 5 |
 | Testing | GLib GTest framework |
 | Documentation | gtk-doc comments, gi-docgen |
 
@@ -203,11 +203,11 @@ Heap-allocated, reference-counted objects:
 
 **Scene:** GrlEntity, GrlSprite, GrlAnimatedTexture, GrlScene, GrlSceneManager
 
-**UI:** GrlUiControl (base), GrlUiButton, GrlUiLabel, GrlUiCheckBox, GrlUiSlider, GrlUiTextBox, GrlUiToggle, GrlUiProgressBar, GrlUiSpinner, GrlUiValueBox, GrlUiComboBox, GrlUiDropdownBox, GrlUiToggleGroup, GrlUiListView, GrlUiColorPicker, GrlUiPanel, GrlUiGroupBox, GrlUiWindowBox
+**UI:** GrlUiControl (base), GrlUiButton, GrlUiLabel, GrlUiCheckBox, GrlUiSlider, GrlUiTextBox, GrlUiToggle, GrlUiProgressBar, GrlUiSpinner, GrlUiValueBox, GrlUiComboBox, GrlUiDropdownBox, GrlUiToggleGroup, GrlUiTabBar, GrlUiListView, GrlUiColorPicker, GrlUiPanel, GrlUiGroupBox, GrlUiWindowBox
 
 **Resources:** GrlResourcePack
 
-**Software renderer:** GrlSoftwareRenderer (wraps raylib 6.0's header-only `rlsw` CPU rasterizer; headless, no GPU. Singleton — one live instance.)
+**Software renderer:** GrlSoftwareRenderer (wraps raylib's header-only `rlsw` CPU rasterizer, 1.6 in raylib 6.2 — its options are spelled `RLSW_*` since 6.2; headless, no GPU. Singleton — one live instance.)
 
 **Modules of functions (no type):** `grl_fs_*` (filesystem helpers, `src/system/grl-fs.h`), `grl_text_*` (string utilities, `src/text/grl-text-utils.h`).
 
@@ -588,6 +588,8 @@ When adding a new type:
    ```
 
    This generates proper assembly: `test %al,%al` + `movzbl %al,%eax` instead of `test %eax,%eax`.
+
+   graylib itself is compiled with `-include stdbool.h` (`rules.mk`), so raylib's `bool` is the one-byte `_Bool` in every translation unit (without it, gnu89 gets raylib's int-sized `enum bool`, and since raylib 6.2 a file including both `raylib.h` and `rlgl.h` fails with "redeclaration of enum bool"). Keep the `unsigned char` idiom anyway: it documents the width and stays correct for consumers that include raylib differently.
 
    **Affected functions**: All raylib functions returning `bool` - input functions (`IsKeyDown`, `IsMouseButtonPressed`, etc.), collision detection (`CheckCollision*`), and any other boolean-returning APIs. See `docs/api/input.org` for the full list.
 

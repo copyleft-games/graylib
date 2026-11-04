@@ -84,7 +84,7 @@ gchar * grl_text_to_camel  (const gchar *text);
 | =to_upper(text)=  | Convert to =UPPERCASE=  |
 | =to_lower(text)=  | Convert to =lowercase=  |
 | =to_pascal(text)= | Convert to =PascalCase= |
-| =to_snake(text)=  | Convert to =snake_case= |
+| =to_snake(text)=  | Convert to =snake_case= (spaces become =_= since raylib 6.2) |
 | =to_camel(text)=  | Convert to =camelCase=  |
 
 ** Example

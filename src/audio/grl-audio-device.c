@@ -191,7 +191,7 @@ grl_audio_device_init (GrlAudioDevice *self)
  * Backend order
  *
  * raylib's InitAudioDevice() lets miniaudio try its backends in its fixed
- * order, PulseAudio before ALSA on Linux.  miniaudio 0.11.24's PulseAudio
+ * order, PulseAudio before ALSA on Linux.  miniaudio 0.11.24/0.11.25's PulseAudio
  * backend dereferences a NULL sink info when libpulse reports an error
  * for the default-sink lookup in ma_device_init() (its callback ignores
  * end-of-list < 0, where libpulse passes no info), which PipeWire's pulse

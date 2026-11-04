@@ -155,6 +155,8 @@ grl_ui_progressbar_set_value (progress, 65.0f);
 grl_ui_progressbar_draw (progress);
 #+end_src
 
+Since raygui 5 the bar can fill from the right edge: =grl_ui_progressbar_set_right_to_left (progress, TRUE)= (the ="right-to-left"= property).
+
 *** GrlUiSpinner
 :PROPERTIES:
 :CUSTOM_ID: grluispinner
@@ -248,6 +250,12 @@ if (grl_ui_dropdownbox_draw (dropdown))
 }
 #+end_src
 
+Since raygui 5 the list can open upward, for a dropdown near the bottom of the screen:
+
+#+begin_src C
+grl_ui_dropdownbox_set_roll_up (dropdown, TRUE);   /* "roll-up" property */
+#+end_src
+
 *** GrlUiToggleGroup
 :PROPERTIES:
 :CUSTOM_ID: grluitogglegroup
@@ -263,6 +271,31 @@ grl_ui_togglegroup_set_active (group, 1);
 grl_ui_togglegroup_draw (group);
 gint active = grl_ui_togglegroup_get_active (group);
 #+end_src
+
+*** GrlUiTabBar
+:PROPERTIES:
+:CUSTOM_ID: grluitabbar
+:END:
+A row of tabs, one of them active, from raygui 5's =GuiTabBar()=:
+
+#+begin_src C
+g_autoptr(GrlUiTabBar) tabs =
+    grl_ui_tabbar_new_with_bounds (0, 0, 800, 24, "Scene;Assets;Console");
+
+grl_ui_tabbar_set_tab_width (tabs, 120);           /* 0: style's TAB_ITEMS_WIDTH (160) */
+grl_ui_tabbar_set_show_close_buttons (tabs, TRUE);
+grl_ui_tabbar_set_line_on_top (tabs, FALSE);       /* line under the tabs */
+
+g_signal_connect (tabs, "selection-changed", G_CALLBACK (on_tab_changed), NULL);
+g_signal_connect (tabs, "tab-close-requested", G_CALLBACK (on_tab_close), NULL);
+
+grl_ui_control_draw (GRL_UI_CONTROL (tabs));
+#+end_src
+
+- Tabs are =tab-width= pixels wide with a 4 pixel gap; the bar's line spans the control's width.
+- =tab-close-requested= fires for a close-button click and for a middle click on a tab, with the tab's index. The control does not remove the tab: set new =items= to close it.
+- raygui reports a close request without saying which tab it was for (a middle click does not change the active tab), so the control hit-tests the pointer with =grl_ui_tabbar_tab_at()=, which is public for callers that need the same mapping.
+- The tab width, close buttons and line side are global TABBAR style values in raygui; the control sets its own around each draw and restores the old ones, so several tab bars can differ.
 
 *** GrlUiListView
 :PROPERTIES:
@@ -362,6 +395,11 @@ if (!grl_ui_style_load_file (style, "dark_theme.rgs", &error))
     g_clear_error (&error);
 }
 
+/* Or load a binary .rgs from memory (GResource, resource pack, ...) */
+g_autoptr(GBytes) rgs = g_resources_lookup_data ("/org/example/game/dark.rgs", 0, NULL);
+if (!grl_ui_style_load_from_memory (style, rgs, &error))
+    g_printerr ("Bad style: %s\n", error->message);
+
 /* Or reset to default */
 grl_ui_style_load_default (style);
 
@@ -379,6 +417,10 @@ grl_ui_style_unlock (style);
 /* Set global transparency */
 grl_ui_style_set_alpha (style, 0.9f);
 #+end_src
+
+=grl_ui_style_load_from_memory()= only takes the binary format rGuiStyler exports (signature ="rGS "=); text styles still need =grl_ui_style_load_file()=. graylib checks the header and the property table against the data's size, but raygui does not bounds-check the embedded font section, so load styles only from trusted data.
+
+*raygui 5 control indices.* raygui 5 named control 11 =TABBAR=; in raygui 4 it was an unused slot. =GRL_UI_CONTROL_TABBAR= is 11, and =GRL_UI_CONTROL_SPINNER= stays as a deprecated alias of the same value: raygui's spinner is styled through =GRL_UI_CONTROL_VALUEBOX=.
 
 ** Edit Mode (Exclusive Input)
 :PROPERTIES:
@@ -499,6 +541,7 @@ typedef enum
 | ComboBox    | Dropdown select     | void                     |
 | DropdownBox | Expandable dropdown | gboolean (changed)       |
 | ToggleGroup | Exclusive toggles   | void                     |
+| TabBar      | Tabs, one active    | void (signals)           |
 | ListView    | Scrollable list     | gboolean (changed)       |
 | ColorPicker | Color selection     | void                     |
 | Panel       | Container           | void                     |
