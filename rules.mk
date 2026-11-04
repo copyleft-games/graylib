@@ -91,12 +91,26 @@ endif
 # -fPIC"). It lives here, not as a second CUSTOM_CFLAGS= on raylib's command
 # line, because the last CUSTOM_CFLAGS= given wins. Windows (MinGW) builds
 # a static archive only and has no use for it.
+#
+# RAYLIB_FEATURE_FLAGS: raylib 6.2 config.h switches graylib pins, passed
+# the same way (config.h only defines a SUPPORT_* that is not set yet).
+#   SUPPORT_GPU_SKINNING=0: 6.2 turns raylib's own GPU skinning on by
+#     default (6.0 had it off). graylib owns that path instead
+#     (grl_model_prepare_gpu_skinning(), libregnum's LrgSkinnedMesh upload
+#     bone attributes on demand); with raylib's on as well, every skinned
+#     mesh would carry two copies of its bone buffers and raylib would skip
+#     CPU skinning for any material whose shader binds bone attributes.
+# The .pep pixel-art format new in 6.2 stays off (the upstream default):
+# 6.2's loader frees the pixels it hands back (use-after-free, fixed on
+# raylib master in 226b281e after the release), and it always treats the
+# first palette colour as transparent.
+RAYLIB_FEATURE_FLAGS := -DSUPPORT_GPU_SKINNING=0
 ifeq ($(TARGET_PLATFORM),windows)
-RAYLIB_OPT_FLAGS := CUSTOM_CFLAGS="-O2 -ffp-contract=off"
-RAYLIB_PLATFORM_TAG := $(RAYLIB_PLATFORM_TAG)+O2+nofma
+RAYLIB_OPT_FLAGS := CUSTOM_CFLAGS="-O2 -ffp-contract=off $(RAYLIB_FEATURE_FLAGS)"
+RAYLIB_PLATFORM_TAG := $(RAYLIB_PLATFORM_TAG)+O2+nofma+cpuskin
 else
-RAYLIB_OPT_FLAGS := CUSTOM_CFLAGS="-O2 -fPIC -ffp-contract=off"
-RAYLIB_PLATFORM_TAG := $(RAYLIB_PLATFORM_TAG)+O2+pic+nofma
+RAYLIB_OPT_FLAGS := CUSTOM_CFLAGS="-O2 -fPIC -ffp-contract=off $(RAYLIB_FEATURE_FLAGS)"
+RAYLIB_PLATFORM_TAG := $(RAYLIB_PLATFORM_TAG)+O2+pic+nofma+cpuskin
 endif
 
 # External SDK configuration is an actual build input, not a feature policy
@@ -148,7 +162,17 @@ MATH_LIBS := -lm
 # =============================================================================
 
 # Base CFLAGS
-BASE_CFLAGS := -std=$(CSTD)
+#
+# -include stdbool.h: under gnu89 <raylib.h> and <rlgl.h> fall back to an
+# int-sized `enum bool`, but raylib itself is built as C99 and returns and
+# stores a one-byte _Bool, so callers read the upper bytes of the register
+# or struct padding (RayCollision.hit, IsKeyDown() and friends). Since raylib
+# 6.2 the two headers also no longer agree on who owns that fallback, and a
+# file including both fails with "redeclaration of enum bool". GCC accepts
+# _Bool in gnu89; defining `bool` first makes both headers take the
+# <stdbool.h> path and the prototypes and layouts match raylib's ABI.
+# libregnum builds with the same flag.
+BASE_CFLAGS := -std=$(CSTD) -include stdbool.h
 BASE_CFLAGS += $(WARN_CFLAGS)
 BASE_CFLAGS += $(FEATURE_CFLAGS)
 BASE_CFLAGS += $(GLIB_CFLAGS)

@@ -103,6 +103,74 @@ grl_fs_is_path_file (const gchar *path)
 }
 
 /**
+ * grl_fs_is_path_directory:
+ * @path: (type filename): Path to test.
+ *
+ * Checks whether @path refers to an existing directory. This is the
+ * counterpart of grl_fs_is_path_file() (raylib 6.2 IsPathDirectory()).
+ * Unlike raylib's IsPathDirectory(), which is only `!IsPathFile()`, a path
+ * that does not exist is not a directory.
+ *
+ * Returns: %TRUE if @path is a directory.
+ */
+gboolean
+grl_fs_is_path_directory (const gchar *path)
+{
+    unsigned char raw;
+
+    g_return_val_if_fail (path != NULL, FALSE);
+
+    /* raylib's IsPathDirectory() is true for missing paths too */
+    raw = DirectoryExists (path);
+    if (raw != 0)
+        raw = IsPathDirectory (path);
+    return raw != 0;
+}
+
+/**
+ * grl_fs_is_path_absolute:
+ * @path: (type filename): Path to test.
+ *
+ * Checks whether @path is absolute (starts at the filesystem root, or with
+ * a drive letter on Windows). The path does not have to exist (raylib 6.2
+ * IsPathAbsolute()).
+ *
+ * Returns: %TRUE if @path is absolute.
+ */
+gboolean
+grl_fs_is_path_absolute (const gchar *path)
+{
+    unsigned char raw;
+
+    g_return_val_if_fail (path != NULL, FALSE);
+
+    raw = IsPathAbsolute (path);
+    return raw != 0;
+}
+
+/**
+ * grl_fs_is_file_hidden:
+ * @path: (type filename): Path of a file or directory.
+ *
+ * Checks whether the file or directory at @path is hidden by the operating
+ * system: on Unix its last path component starts with a dot (other than
+ * "." and ".."; the path does not have to exist), on Windows it carries the
+ * hidden attribute (raylib 6.2 IsFileHidden()).
+ *
+ * Returns: %TRUE if @path is hidden.
+ */
+gboolean
+grl_fs_is_file_hidden (const gchar *path)
+{
+    unsigned char raw;
+
+    g_return_val_if_fail (path != NULL, FALSE);
+
+    raw = IsFileHidden (path);
+    return raw != 0;
+}
+
+/**
  * grl_fs_is_file_extension:
  * @path: (type filename): Path or file name to test.
  * @ext: File extension to match, including the dot (e.g. ".png").
@@ -203,9 +271,19 @@ grl_fs_file_copy (const gchar *src_path,
     g_return_val_if_fail (src_path != NULL, FALSE);
     g_return_val_if_fail (dst_path != NULL, FALSE);
 
-    /* raylib 6.0's FileCopy() returns the (truthy) SaveFileData() result on
-     * success and 0/-1 on failure, so success is non-zero here. */
-    raw = (FileCopy (src_path, dst_path) > 0);
+    /* raylib 6.2's FileCopy() returns 0 on success, but it also returns 0
+     * when the source cannot be read or SaveFileData() fails: the result
+     * is left at the 0 of its "destination directory exists" step. Only
+     * trust it for a readable regular source, and confirm the destination
+     * has the source's length afterwards. */
+    if (!g_file_test (src_path, G_FILE_TEST_IS_REGULAR))
+        return FALSE;
+
+    if (FileCopy (src_path, dst_path) != 0)
+        return FALSE;
+
+    raw = (FileExists (dst_path)
+           && GetFileLength (dst_path) == GetFileLength (src_path));
     return raw != 0;
 }
 
@@ -226,10 +304,10 @@ grl_fs_file_move (const gchar *src_path,
     g_return_val_if_fail (src_path != NULL, FALSE);
     g_return_val_if_fail (dst_path != NULL, FALSE);
 
-    /* raylib 6.0's FileMove() is unreliable: its internal `FileCopy(...) == 0`
-     * success test is inverted, so it leaves the source in place and reports
-     * failure even when the copy succeeded.  Perform the move directly instead:
-     * try an atomic rename first, then fall back to copy + remove. */
+    /* raylib's FileMove() always copies and removes (never renames), and
+     * in 6.2 it inherits FileCopy()'s false successes, so it can delete a
+     * source that was never copied. Perform the move directly instead: try
+     * an atomic rename first, then fall back to the checked copy + remove. */
     if (g_rename (src_path, dst_path) == 0)
         return TRUE;
 
@@ -265,9 +343,9 @@ grl_fs_file_text_replace (const gchar *path,
     g_return_val_if_fail (search != NULL, FALSE);
     g_return_val_if_fail (replacement != NULL, FALSE);
 
-    /* raylib 6.0's FileTextReplace() returns the (truthy) SaveFileText()
-     * result on success, so success is non-zero here. */
-    raw = (FileTextReplace (path, search, replacement) > 0);
+    /* raylib 6.2's FileTextReplace() returns 0 on success, -1 on failure
+     * (6.0 returned the truthy SaveFileText() result instead). */
+    raw = (FileTextReplace (path, search, replacement) == 0);
     return raw != 0;
 }
 
@@ -422,7 +500,10 @@ grl_fs_get_directory_path (const gchar *path)
  * grl_fs_get_prev_directory_path:
  * @path: (type filename): A directory path.
  *
- * Gets the parent directory of @path.
+ * Gets the parent directory of @path: "/a/b" gives "/a", "/a" gives "/".
+ * A trailing separator is ignored. If @path names an existing regular
+ * file, the result is the parent of the directory containing it (raylib
+ * treats the file's own directory as the current one).
  *
  * Returns: (transfer full) (nullable): A newly allocated parent directory
  *   path, or %NULL. Free with g_free().
@@ -504,7 +585,9 @@ grl_fs_change_directory (const gchar *path)
 
     g_return_val_if_fail (path != NULL, FALSE);
 
-    raw = ChangeDirectory (path);
+    /* raylib 6.2's ChangeDirectory() returns chdir()'s 0 on success (6.0
+     * returned a bool). */
+    raw = (ChangeDirectory (path) == 0);
     return raw != 0;
 }
 

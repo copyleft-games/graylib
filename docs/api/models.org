@@ -447,7 +447,7 @@ raylib 6.0 adds GPU vertex skinning for skeletal animation. Two GBoxed value typ
 :PROPERTIES:
 :CUSTOM_ID: gpu-skinning
 :END:
-The embedded raylib is built with =SUPPORT_GPU_SKINNING 0= (raylib's default, because some GPUs offer only 8 vertex buffers), so loaded meshes carry no bone attributes on the GPU and =UpdateModelAnimation()= always skins on the CPU. graylib adds the pieces to skin in a vertex shader without changing raylib:
+The embedded raylib is built with =SUPPORT_GPU_SKINNING 0=, so loaded meshes carry no bone attributes on the GPU and =UpdateModelAnimation()= always skins on the CPU. That was raylib's default up to 6.0; raylib 6.2 turns its own GPU skinning on by default, and graylib's build (=RAYLIB_FEATURE_FLAGS= in =rules.mk=) pins it off so there is one owner of the bone buffers: with both, every skinned mesh would carry two copies, and raylib skips CPU skinning for any material whose shader binds bone attributes. A system raylib (=RAYLIB_SHARED=1=) built with raylib 6.2's defaults has it on; graylib still works there, at the cost of the duplicate buffers. graylib adds the pieces to skin in a vertex shader without changing raylib:
 
 | Function                                 | What it does                                                                                                                         |
 |------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------|
@@ -471,6 +471,7 @@ grl_model_draw (character, pos, 1.0f, white);   /* material uses a skinning shad
 
 Notes:
 - CPU-side mesh data stays valid: =Mesh.vertices= / =normals= always hold the bind pose (raylib's collision and bounding box functions read those), and =animVertices= / =animNormals= hold the last CPU-skinned pose, or the bind pose after =grl_model_prepare_gpu_skinning()=.
+- Since raylib 6.2 the loaders no longer allocate =animVertices= / =animNormals=: raylib creates them on the first CPU skin (=grl_model_animation_update()= / =grl_model_animation_blend()=). Until then they are =NULL=, and bones-only updates (=grl_model_animation_update_bones()=) never allocate them.
 - Mixing paths on one model is safe: CPU skinning marks the buffers posed and the next =prepare= restores the bind pose.
 - A model drawn with a non-skinning shader after =prepare= shows its bind pose; keep such models on the CPU path.
 - The extra buffers are freed with the model.

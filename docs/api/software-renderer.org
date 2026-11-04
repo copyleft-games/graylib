@@ -2,7 +2,7 @@
 :PROPERTIES:
 :CUSTOM_ID: software-renderer-rlsw
 :END:
-=GrlSoftwareRenderer= is a final GObject wrapping raylib 6.0's standalone, header-only software rasterizer (=rlsw=). It rasterizes immediate-mode, OpenGL-1.1-style geometry entirely on the CPU into an internal framebuffer --- with *no GPU, no GL context, and no window required*.
+=GrlSoftwareRenderer= is a final GObject wrapping raylib's standalone, header-only software rasterizer (=rlsw=, version 1.6 in raylib 6.2). It rasterizes immediate-mode, OpenGL-1.1-style geometry entirely on the CPU into an internal framebuffer --- with *no GPU, no GL context, and no window required*.
 
 This makes it usable in genuinely headless environments (CI, asset bakers, servers) where =GrlTexture= / =GrlRenderTexture= cannot run, since those need a live GL context. Rendered output is read back into a =GrlImage= for capture.
 

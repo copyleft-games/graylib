@@ -37,6 +37,15 @@ GRL_AVAILABLE_IN_ALL
 gboolean        grl_fs_is_path_file             (const gchar    *path);
 
 GRL_AVAILABLE_IN_ALL
+gboolean        grl_fs_is_path_directory        (const gchar    *path);
+
+GRL_AVAILABLE_IN_ALL
+gboolean        grl_fs_is_path_absolute         (const gchar    *path);
+
+GRL_AVAILABLE_IN_ALL
+gboolean        grl_fs_is_file_hidden           (const gchar    *path);
+
+GRL_AVAILABLE_IN_ALL
 gboolean        grl_fs_is_file_extension        (const gchar    *path,
                                                  const gchar    *ext);
 

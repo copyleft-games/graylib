@@ -457,11 +457,11 @@ test_text_to_snake (void)
     g_assert_nonnull (pascal_in);
     g_assert_cmpstr (pascal_in, ==, "hello_world");
 
-    /* Spaces are not word boundaries: "hello world" has no upper-case, so
-     * it is copied through unchanged (space preserved, no underscore). */
+    /* Spaces are word boundaries since raylib 6.2 and become underscores
+     * (6.0 copied "hello world" through unchanged). */
     spaces = grl_text_to_snake ("hello world");
     g_assert_nonnull (spaces);
-    g_assert_cmpstr (spaces, ==, "hello world");
+    g_assert_cmpstr (spaces, ==, "hello_world");
 
     plain = grl_text_to_snake ("hello");
     g_assert_nonnull (plain);

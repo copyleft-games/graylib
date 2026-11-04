@@ -341,7 +341,7 @@ grl_model_animation_get_frame_pose (GrlModelAnimation *self,
     if (frame < 0 || frame >= priv->animation.keyframeCount)
         return NULL;
 
-    if (bone < 0 || bone >= priv->animation.boneCount)
+    if (bone < 0 || (guint)bone >= priv->animation.boneCount)
         return NULL;
 
     /* keyframePoses is a ModelAnimPose* (Transform**): [frame][bone] */

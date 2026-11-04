@@ -385,6 +385,32 @@ grl_draw_circle_lines_v (const GrlVector2 *center,
 }
 
 /**
+ * grl_draw_circle_lines_ex:
+ * @center: Center position.
+ * @radius: Circle radius (outer edge of the outline).
+ * @thick: Outline thickness in pixels.
+ * @color: Outline color.
+ *
+ * Draws a circle outline of the given thickness (raylib 6.2
+ * DrawCircleLinesEx()). The outline grows inward from @radius, spanning
+ * @radius - @thick to @radius, like the other *_lines_ex() outlines.
+ */
+void
+grl_draw_circle_lines_ex (const GrlVector2 *center,
+                          gfloat            radius,
+                          gfloat            thick,
+                          const GrlColor   *color)
+{
+    g_return_if_fail (center != NULL);
+    g_return_if_fail (color != NULL);
+
+    DrawCircleLinesEx (GRL_TO_RAYLIB_VECTOR2 (center),
+                       radius,
+                       thick,
+                       GRL_TO_RAYLIB_COLOR (color));
+}
+
+/**
  * grl_draw_circle_sector:
  * @center: Center position.
  * @radius: Circle radius.
@@ -442,6 +468,41 @@ grl_draw_circle_sector_lines (const GrlVector2 *center,
                            end_angle,
                            segments,
                            GRL_TO_RAYLIB_COLOR (color));
+}
+
+/**
+ * grl_draw_circle_sector_lines_ex:
+ * @center: Center position.
+ * @radius: Sector radius.
+ * @start_angle: Start angle in degrees.
+ * @end_angle: End angle in degrees.
+ * @segments: Number of segments (raylib picks a count when it is too low).
+ * @thick: Outline thickness in pixels.
+ * @color: Outline color.
+ *
+ * Draws a circle sector outline of the given thickness (raylib 6.2
+ * DrawCircleSectorLinesEx()). The outline grows inward from the shape's
+ * edge; a negative @thick grows it outward instead.
+ */
+void
+grl_draw_circle_sector_lines_ex (const GrlVector2 *center,
+                                 gfloat            radius,
+                                 gfloat            start_angle,
+                                 gfloat            end_angle,
+                                 gint              segments,
+                                 gfloat            thick,
+                                 const GrlColor   *color)
+{
+    g_return_if_fail (center != NULL);
+    g_return_if_fail (color != NULL);
+
+    DrawCircleSectorLinesEx (GRL_TO_RAYLIB_VECTOR2 (center),
+                             radius,
+                             start_angle,
+                             end_angle,
+                             segments,
+                             thick,
+                             GRL_TO_RAYLIB_COLOR (color));
 }
 
 /**
@@ -519,6 +580,36 @@ grl_draw_ellipse_lines (gint            center_x,
     DrawEllipseLines (center_x, center_y, radius_h, radius_v, GRL_TO_RAYLIB_COLOR (color));
 }
 
+/**
+ * grl_draw_ellipse_lines_ex:
+ * @center: Center position.
+ * @radius_h: Horizontal radius.
+ * @radius_v: Vertical radius.
+ * @thick: Outline thickness in pixels.
+ * @color: Outline color.
+ *
+ * Draws an ellipse outline of the given thickness at a sub-pixel center
+ * (raylib 6.2 DrawEllipseLinesEx()). The outline grows inward from the
+ * radii (a filled ellipse when @thick reaches them); a negative @thick
+ * grows it outward instead.
+ */
+void
+grl_draw_ellipse_lines_ex (const GrlVector2 *center,
+                           gfloat            radius_h,
+                           gfloat            radius_v,
+                           gfloat            thick,
+                           const GrlColor   *color)
+{
+    g_return_if_fail (center != NULL);
+    g_return_if_fail (color != NULL);
+
+    DrawEllipseLinesEx (GRL_TO_RAYLIB_VECTOR2 (center),
+                        radius_h,
+                        radius_v,
+                        thick,
+                        GRL_TO_RAYLIB_COLOR (color));
+}
+
 /*
  * Ring drawing
  */
@@ -587,6 +678,43 @@ grl_draw_ring_lines (const GrlVector2 *center,
                    end_angle,
                    segments,
                    GRL_TO_RAYLIB_COLOR (color));
+}
+
+/**
+ * grl_draw_ring_lines_ex:
+ * @center: Center position.
+ * @inner_radius: Inner radius.
+ * @outer_radius: Outer radius.
+ * @start_angle: Start angle in degrees.
+ * @end_angle: End angle in degrees.
+ * @segments: Number of segments.
+ * @thick: Outline thickness in pixels.
+ * @color: Outline color.
+ *
+ * Draws a ring outline of the given thickness (raylib 6.2
+ * DrawRingLinesEx()). Each edge of the outline grows into the ring.
+ */
+void
+grl_draw_ring_lines_ex (const GrlVector2 *center,
+                        gfloat            inner_radius,
+                        gfloat            outer_radius,
+                        gfloat            start_angle,
+                        gfloat            end_angle,
+                        gint              segments,
+                        gfloat            thick,
+                        const GrlColor   *color)
+{
+    g_return_if_fail (center != NULL);
+    g_return_if_fail (color != NULL);
+
+    DrawRingLinesEx (GRL_TO_RAYLIB_VECTOR2 (center),
+                     inner_radius,
+                     outer_radius,
+                     start_angle,
+                     end_angle,
+                     segments,
+                     thick,
+                     GRL_TO_RAYLIB_COLOR (color));
 }
 
 /*
@@ -889,11 +1017,13 @@ grl_draw_rectangle_gradient_ex (const GrlRectangle *rect,
     g_return_if_fail (top_right != NULL);
     g_return_if_fail (bottom_right != NULL);
 
+    /* raylib's corners run counter-clockwise from the top left:
+     * top-left, bottom-left, bottom-right, top-right */
     DrawRectangleGradientEx (GRL_TO_RAYLIB_RECTANGLE (rect),
                              GRL_TO_RAYLIB_COLOR (top_left),
                              GRL_TO_RAYLIB_COLOR (bottom_left),
-                             GRL_TO_RAYLIB_COLOR (top_right),
-                             GRL_TO_RAYLIB_COLOR (bottom_right));
+                             GRL_TO_RAYLIB_COLOR (bottom_right),
+                             GRL_TO_RAYLIB_COLOR (top_right));
 }
 
 /*
@@ -950,6 +1080,73 @@ grl_draw_triangle_lines (const GrlVector2 *v1,
                        GRL_TO_RAYLIB_VECTOR2 (v2),
                        GRL_TO_RAYLIB_VECTOR2 (v3),
                        GRL_TO_RAYLIB_COLOR (color));
+}
+
+/**
+ * grl_draw_triangle_lines_ex:
+ * @v1: First vertex.
+ * @v2: Second vertex.
+ * @v3: Third vertex.
+ * @thick: Outline thickness in pixels.
+ * @color: Outline color.
+ *
+ * Draws a triangle outline of the given thickness (raylib 6.2
+ * DrawTriangleLinesEx()). The outline grows inward from the edges.
+ * Vertices should be in counter-clockwise order.
+ */
+void
+grl_draw_triangle_lines_ex (const GrlVector2 *v1,
+                            const GrlVector2 *v2,
+                            const GrlVector2 *v3,
+                            gfloat            thick,
+                            const GrlColor   *color)
+{
+    g_return_if_fail (v1 != NULL);
+    g_return_if_fail (v2 != NULL);
+    g_return_if_fail (v3 != NULL);
+    g_return_if_fail (color != NULL);
+
+    DrawTriangleLinesEx (GRL_TO_RAYLIB_VECTOR2 (v1),
+                         GRL_TO_RAYLIB_VECTOR2 (v2),
+                         GRL_TO_RAYLIB_VECTOR2 (v3),
+                         thick,
+                         GRL_TO_RAYLIB_COLOR (color));
+}
+
+/**
+ * grl_draw_triangle_gradient:
+ * @v1: First vertex.
+ * @v2: Second vertex.
+ * @v3: Third vertex.
+ * @c1: Color at @v1.
+ * @c2: Color at @v2.
+ * @c3: Color at @v3.
+ *
+ * Draws a filled triangle with a color per vertex, interpolated across the
+ * face (raylib 6.2 DrawTriangleGradient()). Vertices should be in
+ * counter-clockwise order.
+ */
+void
+grl_draw_triangle_gradient (const GrlVector2 *v1,
+                            const GrlVector2 *v2,
+                            const GrlVector2 *v3,
+                            const GrlColor   *c1,
+                            const GrlColor   *c2,
+                            const GrlColor   *c3)
+{
+    g_return_if_fail (v1 != NULL);
+    g_return_if_fail (v2 != NULL);
+    g_return_if_fail (v3 != NULL);
+    g_return_if_fail (c1 != NULL);
+    g_return_if_fail (c2 != NULL);
+    g_return_if_fail (c3 != NULL);
+
+    DrawTriangleGradient (GRL_TO_RAYLIB_VECTOR2 (v1),
+                          GRL_TO_RAYLIB_VECTOR2 (v2),
+                          GRL_TO_RAYLIB_VECTOR2 (v3),
+                          GRL_TO_RAYLIB_COLOR (c1),
+                          GRL_TO_RAYLIB_COLOR (c2),
+                          GRL_TO_RAYLIB_COLOR (c3));
 }
 
 /**

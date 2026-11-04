@@ -126,12 +126,14 @@ grl_model_finalize (GObject *object)
         }
         g_clear_pointer (&priv->skin_vbos, g_free);
 
-        /* raylib 6.0's UnloadModel() frees meshes, material maps and the
+        /* raylib 6.0's UnloadModel() freed meshes, material maps and the
          * skeleton but not the runtime animation state that LoadGLTF /
          * LoadIQM / LoadM3D allocate for skinned models (currentPose and
-         * boneMatrices). Free them here and clear the pointers, so callers
-         * that already freed them through grl_model_get_handle() and set
-         * them to NULL stay safe. */
+         * boneMatrices); raylib 6.2's does. Free them here and clear the
+         * pointers, so UnloadModel() sees NULL whichever raylib this is
+         * (no leak on 6.0, no double free on 6.2), and callers that
+         * already freed them through grl_model_get_handle() and set them
+         * to NULL stay safe. */
         RL_FREE (priv->model.currentPose);
         RL_FREE (priv->model.boneMatrices);
         priv->model.currentPose = NULL;
@@ -442,7 +444,7 @@ grl_model_get_bone (GrlModel *self,
     if (!priv->valid || priv->model.skeleton.bones == NULL)
         return NULL;
 
-    if (index < 0 || index >= priv->model.skeleton.boneCount)
+    if (index < 0 || (guint)index >= priv->model.skeleton.boneCount)
         return NULL;
 
     bone = priv->model.skeleton.bones[index];
@@ -477,7 +479,7 @@ grl_model_get_bind_pose_transform (GrlModel *self,
     if (!priv->valid || priv->model.skeleton.bindPose == NULL)
         return NULL;
 
-    if (bone < 0 || bone >= priv->model.skeleton.boneCount)
+    if (bone < 0 || (guint)bone >= priv->model.skeleton.boneCount)
         return NULL;
 
     t = priv->model.skeleton.bindPose[bone];

@@ -14,7 +14,7 @@
 :PROPERTIES:
 :CUSTOM_ID: features
 :END:
-- Full wrapper around raylib 6.0 functionality
+- Full wrapper around raylib 6.2 functionality
 - Both static and shared library builds
 - Debug build support for gdb
 - Comprehensive documentation
@@ -113,7 +113,7 @@ Note: raylib (bundled in deps/) is licensed under the Zlib license.
 :END:
 - GLib 2.56+
 - GObject Introspection
-- raylib 6.0 (included as submodule)
+- raylib 6.2 (included as submodule)
 
 *** Fedora
 :PROPERTIES:

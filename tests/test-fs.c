@@ -489,9 +489,10 @@ test_fs_get_prev_directory_path (void)
     g_assert_nonnull (deeper);
     g_assert_cmpstr (deeper, ==, "/a/b");
 
-    /* A path of length <= 3 is returned unchanged (root-ish). */
+    /* A top-level directory's parent is the root (raylib 6.2; 6.0 handed
+     * paths of length <= 3 back unchanged). */
     g_assert_nonnull (shortp);
-    g_assert_cmpstr (shortp, ==, "/a");
+    g_assert_cmpstr (shortp, ==, "/");
 }
 
 static void

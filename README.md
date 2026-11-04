@@ -265,7 +265,7 @@ export PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig:$PKG_CONFIG_PATH
 - GNU Make
 - GLib 2.56+
 - GObject Introspection
-- raylib 6.0 (included as submodule)
+- raylib 6.2 (included as submodule)
 
 ## License
 

@@ -249,20 +249,25 @@ test_model_skinning_gpu_helpers (void)
     mesh = &raw->meshes[0];
     g_assert_nonnull (raw->boneMatrices);
     g_assert_nonnull (mesh->boneIndices);
-    g_assert_nonnull (mesh->animVertices);
     g_assert_false (grl_model_has_gpu_skinning (model));
 
-    /* Bones only: the joint is up, the vertices stay in bind pose. */
+    /* raylib 6.2 allocates the CPU skinning buffers lazily, on the first
+     * CPU skin: a bones-only update leaves them unallocated (or, if a
+     * loader filled them, in bind pose). */
     grl_model_animation_update_bones (anims[0], model, 30.0f);
     g_assert_cmpfloat_with_epsilon (raw->boneMatrices[0].m13, 1.0, 1e-4);
-    g_assert_cmpfloat_with_epsilon (mesh->animVertices[7], 1.0, 1e-6);
+    if (mesh->animVertices != NULL)
+        g_assert_cmpfloat_with_epsilon (mesh->animVertices[7], 1.0, 1e-6);
 
     grl_model_animation_blend_bones (model, anims[0], 0.0f, anims[0], 30.0f, 0.5f);
     g_assert_cmpfloat_with_epsilon (raw->boneMatrices[0].m13, 0.5, 1e-3);
-    g_assert_cmpfloat_with_epsilon (mesh->animVertices[7], 1.0, 1e-6);
+    if (mesh->animVertices != NULL)
+        g_assert_cmpfloat_with_epsilon (mesh->animVertices[7], 1.0, 1e-6);
 
-    /* CPU skinning moves the vertices (vertex 2 is at y 1 in bind pose). */
+    /* CPU skinning allocates the buffers and moves the vertices (vertex 2
+     * is at y 1 in bind pose). */
     grl_model_animation_update (anims[0], model, 30);
+    g_assert_nonnull (mesh->animVertices);
     g_assert_cmpfloat_with_epsilon (mesh->animVertices[7], 2.0, 1e-4);
 
     /* Preparing for GPU skinning (the desktop build is OpenGL 3.3)

@@ -186,17 +186,39 @@ GrlRenderTexture *
 grl_render_texture_new (gint width,
                         gint height)
 {
+    return grl_render_texture_new_with_format (width, height,
+                                               GRL_PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+}
+
+/*
+ * grl_render_texture_new_with_format:
+ * @width: Width of the render texture
+ * @height: Height of the render texture
+ * @format: Pixel format of the color attachment
+ *
+ * Creates a new render texture with a color attachment of @format.
+ *
+ * Returns: (transfer full): A new #GrlRenderTexture
+ */
+GrlRenderTexture *
+grl_render_texture_new_with_format (gint           width,
+                                    gint           height,
+                                    GrlPixelFormat format)
+{
     GrlRenderTexture *self;
     GrlRenderTexturePrivate *priv;
     RenderTexture2D rt;
 
     g_return_val_if_fail (width > 0, NULL);
     g_return_val_if_fail (height > 0, NULL);
+    /* raylib refuses compressed formats for a framebuffer */
+    g_return_val_if_fail (format >= GRL_PIXELFORMAT_UNCOMPRESSED_GRAYSCALE &&
+                          format < GRL_PIXELFORMAT_COMPRESSED_DXT1_RGB, NULL);
 
     self = g_object_new (GRL_TYPE_RENDER_TEXTURE, NULL);
     priv = grl_render_texture_get_instance_private (self);
 
-    rt = LoadRenderTexture (width, height);
+    rt = LoadRenderTextureEx (width, height, (int)format);
 
     if (IsRenderTextureValid (rt))
     {
@@ -207,10 +229,32 @@ grl_render_texture_new (gint width,
     }
     else
     {
-        g_warning ("Failed to create render texture of size %dx%d", width, height);
+        g_warning ("Failed to create render texture of size %dx%d (format %d)",
+                   width, height, (gint)format);
     }
 
     return self;
+}
+
+/*
+ * grl_render_texture_get_format:
+ * @self: A #GrlRenderTexture
+ *
+ * Gets the pixel format of the color attachment.
+ *
+ * Returns: The pixel format, or 0 when not valid
+ */
+GrlPixelFormat
+grl_render_texture_get_format (GrlRenderTexture *self)
+{
+    GrlRenderTexturePrivate *priv;
+
+    g_return_val_if_fail (GRL_IS_RENDER_TEXTURE (self), (GrlPixelFormat)0);
+
+    priv = grl_render_texture_get_instance_private (self);
+    if (!priv->valid)
+        return (GrlPixelFormat)0;
+    return (GrlPixelFormat)priv->render_texture.texture.format;
 }
 
 /*
