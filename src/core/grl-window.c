@@ -12,6 +12,7 @@
 #include "grl-input-private.h"	/* grl_input_drain_injections (grl_window_poll_events) */
 #include "grl-frame-sync.h"	/* bounded frames in flight on the present path */
 #include "../drawing/grl-fast2d-private.h"	/* grl_fast2d_shutdown (grl_window_dispose) */
+#include "../graphics/grl-graphics-private.h"	/* grl_image_new_from_raw_handle */
 #include <raylib.h>
 #include <rlgl.h>		/* rlDrawRenderBatchActive (grl_window_swap_buffers) */
 #include <math.h>
@@ -2200,4 +2201,48 @@ grl_window_get_clipboard_text (GrlWindow *self)
 
     text = GetClipboardText ();
     return text ? g_strdup (text) : NULL;
+}
+
+/* glfwGetPlatform(): the GLFW backend in use (GLFW 3.4+, bundled with
+ * raylib); declared here so graylib needs no GLFW headers */
+extern int glfwGetPlatform (void);
+
+#define GRL_GLFW_PLATFORM_WIN32 (0x00060001)
+#define GRL_GLFW_PLATFORM_X11   (0x00060004)
+
+/**
+ * grl_window_get_clipboard_image:
+ * @self: A #GrlWindow.
+ *
+ * Gets the image on the system clipboard (raylib GetClipboardImage(),
+ * whose X11 path raylib 6.2 fixed and stopped leaking). Supported on X11
+ * (an image/png selection) and Windows (a bitmap). raylib's GLFW backend
+ * has no Wayland or macOS implementation, and its X11 code would use a
+ * missing X display under Wayland, so graylib returns %NULL there without
+ * calling it.
+ *
+ * Returns: (transfer full) (nullable): A new #GrlImage, or %NULL when the
+ *   clipboard holds no image or the platform cannot read one
+ */
+GrlImage *
+grl_window_get_clipboard_image (GrlWindow *self)
+{
+    Image         image;
+    unsigned char ready;
+    int           platform;
+
+    g_return_val_if_fail (GRL_IS_WINDOW (self), NULL);
+
+    ready = IsWindowReady ();
+    if (ready == 0)
+        return NULL;
+
+    platform = glfwGetPlatform ();
+    if (platform != GRL_GLFW_PLATFORM_X11 && platform != GRL_GLFW_PLATFORM_WIN32)
+        return NULL;
+
+    image = GetClipboardImage ();
+    if (image.data == NULL)
+        return NULL;
+    return grl_image_new_from_raw_handle (&image);
 }

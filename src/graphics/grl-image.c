@@ -14,6 +14,7 @@
 #include "../math/grl-matrix.h"
 #include "../resources/grl-resource-pack.h"
 #include "grl-font.h"
+#include "grl-pep-private.h"
 #include <raylib.h>
 #include <rpng.h>
 #include <string.h>
@@ -699,7 +700,8 @@ grl_image_init (GrlImage *self)
  *
  * Loads an image from a file into CPU memory.
  * Supported formats: PNG, BMP, TGA, JPG, GIF, QOI, PSD, DDS, HDR, KTX,
- * ASTC, PKM, PVR.
+ * ASTC, PKM, PVR, and PEP (raylib 6.2's pixel-art palette format, decoded
+ * losslessly by graylib).
  *
  * Returns: (transfer full): A new #GrlImage, or an invalid image if loading failed.
  */
@@ -709,6 +711,18 @@ grl_image_new_from_file (const gchar *filename)
     Image handle;
 
     g_return_val_if_fail (filename != NULL, NULL);
+
+    /* .pep: graylib's own decoder (raylib 6.2's frees its pixels) */
+    if (grl_pep_is_file_type (filename))
+    {
+        g_autofree gchar *contents = NULL;
+        gsize             length = 0;
+
+        memset (&handle, 0, sizeof handle);
+        if (g_file_get_contents (filename, &contents, &length, NULL))
+            grl_pep_decode ((const guint8 *)contents, length, &handle);
+        return grl_image_new_from_handle (handle);
+    }
 
     handle = LoadImage (filename);
     return grl_image_new_from_handle (handle);
@@ -733,6 +747,12 @@ grl_image_new_from_memory (const gchar  *file_type,
 
     g_return_val_if_fail (file_type != NULL, NULL);
     g_return_val_if_fail (data != NULL, NULL);
+
+    if (grl_pep_is_file_type (file_type))
+    {
+        grl_pep_decode (data, data_size, &handle);
+        return grl_image_new_from_handle (handle);
+    }
 
     handle = LoadImageFromMemory (file_type, data, (int)data_size);
     return grl_image_new_from_handle (handle);
@@ -1282,7 +1302,8 @@ grl_image_scaled_nearest (GrlImage *self,
  * @self: A #GrlImage.
  * @filename: Output file path.
  *
- * Exports the image to a file. Format is determined by extension.
+ * Exports the image to a file. Format is determined by extension. A
+ * ".pep" file needs an image of at most 4096x4096 pixels and 256 colours.
  *
  * Returns: %TRUE on success.
  */
@@ -1290,10 +1311,23 @@ gboolean
 grl_image_export (GrlImage    *self,
                   const gchar *filename)
 {
+    unsigned char raw;
+
     g_return_val_if_fail (GRL_IS_IMAGE (self), FALSE);
     g_return_val_if_fail (filename != NULL, FALSE);
 
-    return ExportImage (self->handle, filename);
+    if (grl_pep_is_file_type (filename))
+    {
+        g_autofree guint8 *data = NULL;
+        gsize              size = 0;
+
+        data = grl_pep_encode (&self->handle, &size);
+        return data != NULL &&
+               g_file_set_contents (filename, (const gchar *)data, (gssize)size, NULL);
+    }
+
+    raw = ExportImage (self->handle, filename);
+    return raw != 0;
 }
 
 /**
@@ -1319,6 +1353,9 @@ grl_image_export_to_memory (GrlImage    *self,
     g_return_val_if_fail (GRL_IS_IMAGE (self), NULL);
     g_return_val_if_fail (file_type != NULL, NULL);
     g_return_val_if_fail (out_size != NULL, NULL);
+
+    if (grl_pep_is_file_type (file_type))
+        return grl_pep_encode (&self->handle, out_size);
 
     data = ExportImageToMemory (self->handle, file_type, &size);
     if (data != NULL)
@@ -1572,7 +1609,9 @@ grl_image_color_grayscale (GrlImage *self)
  * @self: A #GrlImage.
  * @contrast: Contrast adjustment (-100 to 100).
  *
- * Adjusts image contrast.
+ * Adjusts image contrast. raylib 6.2 takes whole steps
+ * (ImageColorContrast() has an int parameter since 6.2), so @contrast is
+ * rounded to the nearest integer and clamped to -100..100.
  */
 void
 grl_image_color_contrast (GrlImage *self,
@@ -1580,7 +1619,8 @@ grl_image_color_contrast (GrlImage *self,
 {
     g_return_if_fail (GRL_IS_IMAGE (self));
 
-    ImageColorContrast (&self->handle, contrast);
+    contrast = CLAMP (contrast, -100.0f, 100.0f);
+    ImageColorContrast (&self->handle, (int)lroundf (contrast));
 }
 
 /**
@@ -2007,6 +2047,60 @@ grl_image_draw_image_ex (GrlImage         *self,
                       rotation, scale, GRL_IMAGE_TINT (tint));
 }
 
+/* draw_image_pro_raw:
+ * The body of grl_image_draw_image_pro() on raylib images: an origin alone
+ * shifts the destination; a rotation cuts and scales the region, then
+ * draws it with ImageDrawImageEx() around its top-left corner, placed so
+ * that @org lands on (dst_rec.x, dst_rec.y). raylib 6.2's
+ * ImageDrawImagePro() ignores origin and rotation. */
+static void
+draw_image_pro_raw (Image     *dst,
+                    Image      src,
+                    Rectangle  src_rec,
+                    Rectangle  dst_rec,
+                    Vector2    org,
+                    gfloat     rotation,
+                    Color      tint)
+{
+    Vector2 pos;
+    Image   region;
+    gfloat  c;
+    gfloat  sn;
+
+    /* No rotation: the origin only moves the destination rectangle. */
+    if (rotation == 0.0f)
+    {
+        dst_rec.x -= org.x;
+        dst_rec.y -= org.y;
+        ImageDrawImagePro (dst, src, src_rec, dst_rec,
+                           (Vector2){ 0.0f, 0.0f }, 0.0f, tint);
+        return;
+    }
+
+    if (src.data == NULL || src_rec.width < 1.0f || src_rec.height < 1.0f ||
+        dst_rec.width < 1.0f || dst_rec.height < 1.0f)
+        return;
+
+    /* Rotation: cut and scale the region first, ... */
+    region = ImageFromImage (src, src_rec);
+    if (region.data == NULL)
+        return;
+    if (region.width != (int)dst_rec.width || region.height != (int)dst_rec.height)
+        ImageResize (&region, (int)dst_rec.width, (int)dst_rec.height);
+
+    /* ... then rotate it around its top-left corner, placed at
+     * P - R(origin) so the origin lands on P = (dst.x, dst.y). The
+     * rotation matches ImageDrawImageEx() (clockwise in y-down image
+     * space). */
+    c = cosf (rotation * DEG2RAD);
+    sn = sinf (rotation * DEG2RAD);
+    pos.x = dst_rec.x - (org.x * c - org.y * sn);
+    pos.y = dst_rec.y - (org.x * sn + org.y * c);
+
+    ImageDrawImageEx (dst, region, pos, rotation, 1.0f, tint);
+    UnloadImage (region);
+}
+
 /**
  * grl_image_draw_image_pro:
  * @self: A #GrlImage.
@@ -2039,12 +2133,7 @@ grl_image_draw_image_pro (GrlImage           *self,
                           const GrlColor     *tint)
 {
     Rectangle src_rec;
-    Rectangle dst_rec;
     Vector2   org;
-    Vector2   pos;
-    Image     region;
-    gfloat    c;
-    gfloat    sn;
 
     g_return_if_fail (GRL_IS_IMAGE (self));
     g_return_if_fail (GRL_IS_IMAGE (src));
@@ -2055,45 +2144,179 @@ grl_image_draw_image_pro (GrlImage           *self,
     else
         src_rec = (Rectangle){ 0, 0, (float)src->handle.width, (float)src->handle.height };
 
-    dst_rec = GRL_TO_RAYLIB_RECTANGLE (dst_rect);
+    if (origin != NULL)
+        org = GRL_TO_RAYLIB_VECTOR2 (origin);
+    else
+        org = (Vector2){ 0.0f, 0.0f };
+
+    draw_image_pro_raw (&self->handle, src->handle, src_rec,
+                        GRL_TO_RAYLIB_RECTANGLE (dst_rect), org, rotation,
+                        GRL_IMAGE_TINT (tint));
+}
+
+/* rasterize_text:
+ * Text drawn from @font's CPU glyph images at the font's base size, then
+ * scaled to @font_size: ImageTextEx()'s glyph placement (1.5-line-height
+ * line breaks, advanceX or the glyph width plus @spacing) without its two
+ * window dependencies: MeasureTextEx() returns nothing for a font with no
+ * GPU texture, and scaling compares against GetFontDefault(), which needs
+ * a GL context. */
+static Image
+rasterize_text (const Font  *font,
+                const gchar *text,
+                gfloat       font_size,
+                gfloat       spacing,
+                Color        tint)
+{
+    Image  out;
+    gint   len;
+    gint   i;
+    gint   x;
+    gint   y;
+    gint   width;
+    gint   height;
+    gint   line_step;
+    gint   pass;
+
+    memset (&out, 0, sizeof out);
+    len = (gint)strlen (text);
+    line_step = font->baseSize + font->baseSize / 2;
+    width = 0;
+    height = font->baseSize;
+
+    /* pass 0 measures, pass 1 draws */
+    for (pass = 0; pass < 2; pass++)
+    {
+        x = 0;
+        y = 0;
+        for (i = 0; i < len;)
+        {
+            gint bytes = 0;
+            gint codepoint = GetCodepointNext (&text[i], &bytes);
+            gint index = GetGlyphIndex (*font, codepoint);
+
+            if (codepoint == '\n')
+            {
+                x = 0;
+                y += line_step;
+                if (pass == 0)
+                    height = y + font->baseSize;
+            }
+            else
+            {
+                if (pass == 1 && codepoint != ' ' && codepoint != '\t' &&
+                    font->glyphs[index].image.data != NULL)
+                {
+                    Rectangle src = { 0.0f, 0.0f,
+                                      (float)font->glyphs[index].image.width,
+                                      (float)font->glyphs[index].image.height };
+                    Rectangle dst = { (float)(x + font->glyphs[index].offsetX),
+                                      (float)(y + font->glyphs[index].offsetY),
+                                      font->recs[index].width, font->recs[index].height };
+
+                    ImageDrawImagePro (&out, font->glyphs[index].image, src, dst,
+                                       (Vector2){ 0.0f, 0.0f }, 0.0f, tint);
+                }
+                if (pass == 0)
+                {
+                    gint right = x + font->glyphs[index].offsetX + (gint)font->recs[index].width;
+
+                    width = MAX (width, right);
+                }
+                if (font->glyphs[index].advanceX == 0)
+                    x += (gint)(font->recs[index].width + spacing);
+                else
+                    x += font->glyphs[index].advanceX + (gint)spacing;
+                if (pass == 0)
+                    width = MAX (width, x - (gint)spacing);
+            }
+            i += MAX (bytes, 1);
+        }
+
+        if (pass == 0)
+        {
+            if (width <= 0 || height <= 0)
+                return out;
+            out = GenImageColor (width, height, (Color){ 0, 0, 0, 0 });
+            if (out.data == NULL)
+                return out;
+        }
+    }
+
+    /* scale from the base size to the requested size */
+    if (font->baseSize > 0 && font_size != (gfloat)font->baseSize)
+    {
+        gfloat scale = font_size / (gfloat)font->baseSize;
+
+        ImageResize (&out, MAX ((gint)(out.width * scale), 1), MAX ((gint)(out.height * scale), 1));
+    }
+    return out;
+}
+
+/**
+ * grl_image_draw_text_pro:
+ * @self: A #GrlImage.
+ * @font: Font to draw with.
+ * @text: UTF-8 text (newlines start new lines).
+ * @position: Where @origin lands in @self.
+ * @origin: (nullable): Rotation origin relative to the text's top-left
+ *   corner, or %NULL for (0, 0).
+ * @rotation: Rotation in degrees, clockwise, around @origin.
+ * @font_size: Font size in pixels.
+ * @spacing: Extra spacing between glyphs, in pixels.
+ * @tint: Text color.
+ *
+ * Draws rotated text with @font into @self, the image counterpart of
+ * grl_draw_text_pro(). raylib 6.2 declares ImageDrawTextPro() but ships it
+ * as an empty stub, so graylib rasterizes the text itself (ImageTextEx()'s
+ * layout: base-size glyphs scaled to @font_size, 1.5-line-height line
+ * breaks) and places it like grl_image_draw_image_pro(). The glyphs come
+ * from the font's CPU glyph images, so this works headless for fonts
+ * loaded from files or memory; raylib's default font needs a window (use
+ * grl_image_draw_text_bitmap() headless). Rotated text is resampled
+ * nearest-neighbour.
+ */
+void
+grl_image_draw_text_pro (GrlImage         *self,
+                         GrlFont          *font,
+                         const gchar      *text,
+                         const GrlVector2 *position,
+                         const GrlVector2 *origin,
+                         gfloat            rotation,
+                         gfloat            font_size,
+                         gfloat            spacing,
+                         const GrlColor   *tint)
+{
+    Font      *handle;
+    Image      rendered;
+    Vector2    org;
+    Rectangle  rec;
+
+    g_return_if_fail (GRL_IS_IMAGE (self));
+    g_return_if_fail (GRL_IS_FONT (font));
+    g_return_if_fail (text != NULL);
+    g_return_if_fail (position != NULL);
+    g_return_if_fail (tint != NULL);
+
+    handle = (Font *)grl_font_get_handle (font);
+    if (handle == NULL || handle->glyphs == NULL || text[0] == '\0' || font_size <= 0.0f)
+        return;
+
+    /* Rasterize on the CPU from the font's glyph images */
+    rendered = rasterize_text (handle, text, font_size, spacing, GRL_TO_RAYLIB_COLOR (tint));
+    if (rendered.data == NULL)
+        return;
 
     if (origin != NULL)
         org = GRL_TO_RAYLIB_VECTOR2 (origin);
     else
         org = (Vector2){ 0.0f, 0.0f };
 
-    /* No rotation: the origin only moves the destination rectangle. */
-    if (rotation == 0.0f)
-    {
-        dst_rec.x -= org.x;
-        dst_rec.y -= org.y;
-        ImageDrawImagePro (&self->handle, src->handle, src_rec, dst_rec,
-                           (Vector2){ 0.0f, 0.0f }, 0.0f, GRL_IMAGE_TINT (tint));
-        return;
-    }
-
-    if (src->handle.data == NULL || src_rec.width < 1.0f || src_rec.height < 1.0f ||
-        dst_rec.width < 1.0f || dst_rec.height < 1.0f)
-        return;
-
-    /* Rotation: cut and scale the region first, ... */
-    region = ImageFromImage (src->handle, src_rec);
-    if (region.data == NULL)
-        return;
-    if (region.width != (int)dst_rec.width || region.height != (int)dst_rec.height)
-        ImageResize (&region, (int)dst_rec.width, (int)dst_rec.height);
-
-    /* ... then rotate it around its top-left corner, placed at
-     * P - R(origin) so the origin lands on P = (dst.x, dst.y). The
-     * rotation matches ImageDrawImageEx() (clockwise in y-down image
-     * space). */
-    c = cosf (rotation * DEG2RAD);
-    sn = sinf (rotation * DEG2RAD);
-    pos.x = dst_rec.x - (org.x * c - org.y * sn);
-    pos.y = dst_rec.y - (org.x * sn + org.y * c);
-
-    ImageDrawImageEx (&self->handle, region, pos, rotation, 1.0f, GRL_IMAGE_TINT (tint));
-    UnloadImage (region);
+    rec = (Rectangle){ 0.0f, 0.0f, (float)rendered.width, (float)rendered.height };
+    draw_image_pro_raw (&self->handle, rendered, rec,
+                        (Rectangle){ position->x, position->y, rec.width, rec.height },
+                        org, rotation, (Color){ 255, 255, 255, 255 });
+    UnloadImage (rendered);
 }
 
 /**

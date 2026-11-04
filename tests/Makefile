@@ -75,6 +75,14 @@ TEST_SOURCES += test-audio-owned.c
 # Executable-owned public SDK adapters, never a device or private SDK layout.
 $(TESTOUTDIR)/test-audio-owned: TEST_LDFLAGS += -Wl,--export-dynamic
 
+# test-raylib62 loads a TTF from raygui's styles and reads internals (the
+# raylib Font handle, raygui's icon table) hidden in the shared library:
+# link it against the static one.
+$(TESTOUTDIR)/test-raylib62$(EXE_EXT): TEST_CFLAGS += -DPROJROOT_STR='"$(PROJROOT)"'
+$(TESTOUTDIR)/test-raylib62$(EXE_EXT): TEST_LDFLAGS := $(LIBOUTDIR)/$(LIB_STATIC) \
+	$(GLIB_LIBS) $(RAYLIB_LIBDIR)/libraylib.a $(PLATFORM_LIBS)
+$(TESTOUTDIR)/test-raylib62$(EXE_EXT): $(LIBOUTDIR)/$(LIB_STATIC)
+
 # The fast 2D path test reads an internal counter (hidden in the shared
 # library): link it against the static one.
 $(TESTOUTDIR)/test-fast2d$(EXE_EXT): TEST_LDFLAGS := $(LIBOUTDIR)/$(LIB_STATIC) \

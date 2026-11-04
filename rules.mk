@@ -100,10 +100,11 @@ endif
 #     bone attributes on demand); with raylib's on as well, every skinned
 #     mesh would carry two copies of its bone buffers and raylib would skip
 #     CPU skinning for any material whose shader binds bone attributes.
-# The .pep pixel-art format new in 6.2 stays off (the upstream default):
+# raylib's own .pep support (new in 6.2) stays off (the upstream default):
 # 6.2's loader frees the pixels it hands back (use-after-free, fixed on
 # raylib master in 226b281e after the release), and it always treats the
-# first palette colour as transparent.
+# first palette colour as transparent. GrlImage reads and writes .pep with
+# graylib's own copy of external/pep.h instead (src/graphics/grl-pep.c).
 RAYLIB_FEATURE_FLAGS := -DSUPPORT_GPU_SKINNING=0
 ifeq ($(TARGET_PLATFORM),windows)
 RAYLIB_OPT_FLAGS := CUSTOM_CFLAGS="-O2 -ffp-contract=off $(RAYLIB_FEATURE_FLAGS)"

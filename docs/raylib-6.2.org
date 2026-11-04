@@ -1,0 +1,151 @@
+#+title: raylib 6.2 and raygui 5 in graylib
+#+description: Every API-relevant change of raylib 6.2 (15 October 2026) and raygui 5, and what graylib does with it
+#+authors: Zach Podbielniak
+#+categories: graylib raylib migration
+#+created: 2026-11-04T00:00:00-05:00
+#+updated: 2026-11-04T00:00:00-05:00
+#+version: 0.7.1
+
+* Overview
+:PROPERTIES:
+:CUSTOM_ID: overview
+:END:
+graylib 0.7 moved from raylib 6.0 to raylib 6.2, from raygui 4.0 (master of April 2026) to raygui master (5.1-dev, the raygui raylib 6.2 ships in its examples), and to the current rpng and rres masters. raudio had no upstream change. This page walks the raylib 6.2 =CHANGELOG= and raygui 5's change list entry by entry and records, for each one that touches what graylib can see, the graylib API that exposes it, the fix graylib needed, or why nothing applies. Pure bug fixes inside raylib are inherited by every graylib wrapper that calls the fixed function and are listed by module rather than one by one.
+
+Status words used below:
+
+- *Wrapped*: a graylib function or property exposes the feature.
+- *Fixed*: graylib changed to keep working (or to work correctly) with the new behaviour.
+- *graylib implementation*: raylib 6.2's version is missing or broken, so graylib implements the feature itself.
+- *Inherited*: a raylib fix that graylib gets by calling the function; nothing to wrap.
+- *Not applicable*: platforms, backends, build systems or languages graylib does not use.
+
+* rcore
+:PROPERTIES:
+:CUSTOM_ID: rcore
+:END:
+| Change                                                         | Status                 | graylib                                                                                                                        |
+|----------------------------------------------------------------+------------------------+--------------------------------------------------------------------------------------------------------------------------------|
+| ADDED =IsPathDirectory()=                                       | Wrapped                | =grl_fs_is_path_directory()=; also requires the path to exist (raylib's is only =!IsPathFile()=)                              |
+| ADDED =IsPathAbsolute()=                                        | Wrapped                | =grl_fs_is_path_absolute()=                                                                                                   |
+| ADDED =IsFileHidden()=                                          | Wrapped                | =grl_fs_is_file_hidden()=; libregnum's editor uses it to hide files                                                           |
+| REVIEWED =File*()= return values (0 on success)                 | Fixed                  | =grl_fs_file_copy/text_replace/change_directory= results; =file_copy= also rejects 6.2's false success for a missing source |
+| REVIEWED =FileMove()= / =FileCopy()= security                   | Fixed                  | =grl_fs_file_move()= renames, else checked copy + remove                                                                       |
+| REVIEWED =GetPrevDirectoryPath()= side cases                    | Inherited              | ="/a"= now gives ="/"=; test and docs updated                                                                                  |
+| REVIEWED =ComputeSHA1/SHA256()=, const parameters               | Not applicable         | graylib does not wrap the hash functions (GLib's =GChecksum= covers them)                                                     |
+| REVIEWED =GetFPS()=, =GetCurrentMonitor()=, =SetMousePosition()= | Inherited              | through =grl_window_*= / =grl_input_*=                                                                                         |
+| REVIEWED =OpenURL()=, =TakeScreenshot()=, automation events     | Not applicable         | not wrapped by graylib                                                                                                         |
+| [GLFW] =GetClipboardImage()= X11 connection and leak            | Wrapped                | =grl_window_get_clipboard_image()=, guarded to X11/Windows (the GLFW Wayland path would run X11 code without a display)       |
+| [GLFW] window, focus, borderless and mouse-position fixes       | Inherited              |                                                                                                                                |
+| [Win32] MSAA, =IsKeyPressedRepeat()=, clipboard, =SetMousePosition()= | Not applicable   | for raylib's native Win32 backend; graylib builds the GLFW backend, where these already work (=grl_input_is_key_pressed_repeat()=, ...) |
+| [SDL], [DRM], [Web], [Android], [Emscripten], [RGFW]            | Not applicable         | graylib builds the desktop GLFW backend                                                                                        |
+
+* rlgl and rlsw
+:PROPERTIES:
+:CUSTOM_ID: rlgl-rlsw
+:END:
+| Change                                                     | Status         | graylib                                                                                          |
+|------------------------------------------------------------+----------------+--------------------------------------------------------------------------------------------------|
+| [rlsw] ADDED double buffering                              | Wrapped        | built with =RLSW_DOUBLE_BUFFERING=; =grl_software_renderer_swap_buffers()=, =_read_front_to_image()= |
+| [rlsw] ADDED =GL_SHADING_LANGUAGE_VERSION= in =swGetString()= | Wrapped     | =grl_software_renderer_get_info()=                                                               |
+| [rlsw] option prefix renamed to =RLSW_=                      | Fixed          | =RLSW_FRAMEBUFFER_OUTPUT_BGRA= (the old =SW_= spelling was silently ignored: red read back blue)  |
+| [rlsw] NPOT, scissor, blending, format, ESP32/Pico changes | Inherited      |                                                                                                  |
+| [rlgl] pixel size, matrix stack, default names, ES2, highp | Inherited      |                                                                                                  |
+| =rlgl.h= / =raylib.h= =bool= fallback no longer shared        | Fixed          | graylib builds with =-include stdbool.h= (also matches raylib's one-byte =_Bool= everywhere)    |
+
+* rshapes
+:PROPERTIES:
+:CUSTOM_ID: rshapes
+:END:
+| Change                                                       | Status         | graylib                                                                                                        |
+|--------------------------------------------------------------+----------------+----------------------------------------------------------------------------------------------------------------|
+| ADDED =Draw*LinesEx()=                                        | Wrapped        | =grl_draw_circle_lines_ex()=, =_circle_sector_lines_ex()=, =_ellipse_lines_ex()=, =_ring_lines_ex()=, =_triangle_lines_ex()= |
+| RENAMED =GetSplinePointBezierQuad()=                          | Not applicable | graylib has no spline point API (it draws splines with =grl_draw_spline_*()=)                                  |
+| REVIEWED rounded rectangles, =DrawRectangleLinesEx()=, outlines | Inherited    | graylib's fast 2D path re-implements some of these; its pixel comparison against raylib (=test-fast2d=) passes on 6.2 |
+| REVIEWED =CheckCollisionLines()= NULL check                   | Inherited      |                                                                                                                |
+
+* rtextures
+:PROPERTIES:
+:CUSTOM_ID: rtextures
+:END:
+| Change                                                  | Status                 | graylib                                                                                                              |
+|---------------------------------------------------------+------------------------+----------------------------------------------------------------------------------------------------------------------|
+| ADDED =.pep= image format                                | graylib implementation | =GrlImage= load/export (file and memory); raylib's loader is off (use-after-free, forced transparency)               |
+| ADDED =LoadRenderTextureEx()=                            | Wrapped                | =grl_render_texture_new_with_format()=, =grl_render_texture_get_format()=                                            |
+| ADDED =ImageDrawLineStrip()=                             | Wrapped                | =grl_image_draw_line_strip()=                                                                                        |
+| ADDED =DrawTriangleGradient()=                           | Wrapped                | =grl_draw_triangle_gradient()=                                                                                       |
+| ADDED =DrawCircleLinesEx()=                              | Wrapped                | =grl_draw_circle_lines_ex()=; libregnum's =LrgCircle2D:line-thickness=                                               |
+| ADDED =ImageDrawCircleGradient()=                        | Wrapped                | =grl_image_draw_circle_gradient()=                                                                                   |
+| ADDED =ImageDrawImageEx()=                               | Wrapped                | =grl_image_draw_image_ex()=                                                                                          |
+| ADDED =ImageDrawRectanglePro()=                          | Wrapped                | =grl_image_draw_rectangle_pro()=                                                                                     |
+| ADDED =ImageDrawRectangleGradientEx()=                   | Wrapped                | =grl_image_draw_rectangle_gradient_ex()=                                                                             |
+| RENAMED =ImageDrawTriangleEx()= -> =ImageDrawTriangleGradient()= | Wrapped        | =grl_image_draw_triangle_gradient()=                                                                                 |
+| REDESIGNED =ImageDraw()= -> =ImageDrawImage/Rec/Pro()=     | Wrapped, Fixed         | =grl_image_draw_image()= unchanged; new =_draw_image_at/_rec/_pro()=; =_pro= applies origin and rotation, which 6.2 ignores |
+| REDESIGNED =ImageDrawRectangleLines()=                   | Fixed                  | =grl_image_draw_rectangle_lines()= keeps its (rect, thick) form on =ImageDrawRectangleLinesEx()=                     |
+| (declared) =ImageDrawTextPro()=                          | graylib implementation | =grl_image_draw_text_pro()=; 6.2 ships an empty stub                                                                 |
+| REVIEWED =ImageColorContrast()= takes an int             | Fixed                  | =grl_image_color_contrast()= rounds and clamps                                                                       |
+| REVIEWED =GetPixelColor()=, =ImageFromImage()=, =ImageDrawLine()=, =ImageDrawCircle()=, ... | Inherited |                                                                                     |
+| (graylib) =DrawRectangleGradientEx()= corner order       | Fixed                  | =grl_draw_rectangle_gradient_ex()= had swapped its right-hand corners                                               |
+
+* rtext
+:PROPERTIES:
+:CUSTOM_ID: rtext
+:END:
+| Change                                              | Status    | graylib                                         |
+|-----------------------------------------------------+-----------+-------------------------------------------------|
+| REVIEWED =TextToSnake()= spaces                      | Inherited | =grl_text_to_snake()= docs and test updated     |
+| REVIEWED =TextSubtext/Insert/Split/Join/ToPascal...()= | Inherited | through =grl_text_*()=                          |
+| REVIEWED font loading (BDF, =LoadFontEx()= warnings)  | Inherited | through =grl_font_new_*()=                      |
+
+* rmodels
+:PROPERTIES:
+:CUSTOM_ID: rmodels
+:END:
+| Change                                                 | Status         | graylib                                                                                                     |
+|--------------------------------------------------------+----------------+-------------------------------------------------------------------------------------------------------------|
+| Smarter GPU/CPU skinning, GPU skinning on by default   | Fixed          | pinned =SUPPORT_GPU_SKINNING=0=: graylib (=grl_model_prepare_gpu_skinning()=) and libregnum own GPU skinning; CPU buffers are now lazy (test updated) |
+| =boneCount= is unsigned                                 | Fixed          | comparisons in graylib and libregnum                                                                        |
+| glTF joints under non-joint nodes (#5876)              | Inherited      | libregnum's =lrg_gltf_info_fix_animation_roots()= becomes a no-op against 6.2                               |
+| glTF interpolation, end-of-clip pose, inverse bind poses | Inherited    |                                                                                                             |
+| =UnloadModel()= leak fix                                | Fixed          | =GrlModel= frees and clears =currentPose=/=boneMatrices= first, so 6.2 does not free them twice             |
+| REDESIGNED =DrawCapsule()= parameter order             | Not applicable | graylib has no capsule wrapper                                                                              |
+| =GetRayCollisionSphere()= behind the ray, OBJ, normals  | Inherited      |                                                                                                             |
+
+* raudio, raymath, external
+:PROPERTIES:
+:CUSTOM_ID: raudio-raymath-external
+:END:
+| Change                                       | Status         | graylib                                                                                  |
+|----------------------------------------------+----------------+------------------------------------------------------------------------------------------|
+| =UpdateSound()= parameter is a frame count    | Inherited      | graylib already passed frames                                                            |
+| raudio leak and crash fixes                  | Inherited      |                                                                                          |
+| miniaudio 0.11.25                            | Fixed (kept)   | its PulseAudio backend still dereferences a NULL sink info; the ALSA-first workaround stays |
+| raymath C++ operator                         | Not applicable | C++ only                                                                                 |
+| raymath =MatrixCompose/Decompose=, quaternion fixes | Inherited | graylib's math types use their own code                                                  |
+| GLFW 3.5.1, qoa, tinyobj, vox fixes          | Inherited      |                                                                                          |
+| =rprand_get_value_raw()=                      | Not applicable | internal to raylib's random generator, not raylib API                                    |
+| build, bindings, examples, rlparser, rexm    | Not applicable |                                                                                          |
+
+* raygui 5
+:PROPERTIES:
+:CUSTOM_ID: raygui-5
+:END:
+| Change                                                        | Status         | graylib                                                                                       |
+|---------------------------------------------------------------+----------------+-----------------------------------------------------------------------------------------------|
+| =GuiTabBar()= / =GuiTabBarEx()=, TABBAR control and properties | Wrapped        | =GrlUiTabBar= (=tab-width=, =show-close-buttons=, =line-on-top=, close requests), =GRL_UI_CONTROL_TABBAR= |
+| =GuiLoadStyleFromMemory()=                                     | Wrapped        | =grl_ui_style_load_from_memory()=, header and property table checked                          |
+| =GuiLoadIconsFromMemory()= (and =GuiLoadIcons()=)              | graylib implementation | =grl_ui_style_load_icons()=, =_load_icons_from_memory()=: validated, copied into raygui's table (raygui's leaks and has no bounds checks) |
+| =RESULT_*= return values                                       | Fixed (audited) | every graylib control's result handling is compatible                                        |
+| =PROGRESS_SIDE=                                                | Wrapped        | =GrlUiProgressBar:right-to-left=                                                              |
+| =DROPDOWN_ROLL_UP=                                             | Wrapped        | =GrlUiDropdownBox:roll-up=                                                                    |
+| =DROPDOWN_MAX_HEIGHT=                                          | Not applicable | declared but not implemented by raygui                                                        |
+| =TEXT_WRAP_MODE=                                               | Wrapped        | =GRL_UI_DEFAULT_TEXT_WRAP_MODE= (already in graylib)                                          |
+| =GuiMessageBox()= / =GuiTextInputBox()= new signatures         | Not applicable | graylib never wrapped the modal dialogs                                                       |
+| =GuiListViewEx()= takes =char **=                               | Not applicable | =GrlUiListView= uses =GuiListView()=                                                          |
+| New icon names (=ICON_FILETYPE_*=)                              | Not applicable | graylib addresses icons by number (="#250#"=)                                                 |
+
+* Tests
+:PROPERTIES:
+:CUSTOM_ID: tests
+:END:
+=tests/test-raylib62.c= covers the wrapped and graylib-implemented entries above: path predicates and file results, image blits (including rotation), gradients and line strips, =.pep= round trips and rejections, rotated image text, contrast rounding, the TABBAR control and the new style flags, binary styles and icon sets from memory (valid and malformed), rlsw double buffering and its identification strings and, with a display, the new outline and gradient draws read back from a render texture, float render targets and the clipboard image. The rest of the suite covers the fixed entries (=test-fs=, =test-text=, =test-model-skinning=, =test-software-renderer=, =test-fast2d=).

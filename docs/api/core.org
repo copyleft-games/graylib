@@ -295,7 +295,12 @@ while (!grl_window_should_close (window))
 #+begin_src C
 grl_window_set_clipboard_text (window, "Hello!");
 g_autofree gchar *text = grl_window_get_clipboard_text (window);
+
+/* An image on the clipboard (X11 image/png, Windows bitmap), or NULL */
+g_autoptr(GrlImage) pasted = grl_window_get_clipboard_image (window);
 #+end_src
+
+=grl_window_get_clipboard_image()= wraps raylib's =GetClipboardImage()=, whose GLFW/X11 path raylib 6.2 fixed (it opened a new X connection per call) and stopped leaking. raylib's GLFW backend reads images only on X11 and Windows; graylib's raylib is built with both the X11 and the Wayland GLFW backends, and on a Wayland session raylib's X11 code would run without an X display, so graylib checks =glfwGetPlatform()= and returns =NULL= there (and on macOS) without calling raylib.
 
 *** Signals
 :PROPERTIES:

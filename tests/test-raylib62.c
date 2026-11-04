@@ -29,6 +29,16 @@
 #include "src/math/grl-color.h"
 #include "src/math/grl-vector2.h"
 #include "src/math/grl-rectangle.h"
+#include "src/graphics/grl-font.h"
+#include "src/rlsw/grl-software-renderer.h"
+#include <unistd.h>
+#include <raylib.h>
+
+/* raygui's icon table (raygui.h needs C99, so declare the one call) */
+extern unsigned int *GuiGetIcons (void);
+
+/* A TTF shipped with raygui's styles, for text rasterization tests */
+#define TEST_FONT PROJROOT_STR "/deps/raygui/styles/amber/hello-world.ttf"
 
 /* Skip if no display available (CI/headless). */
 #define SKIP_IF_NO_DISPLAY() \
@@ -344,6 +354,287 @@ test_ui_style_from_memory_rejects (void)
 }
 
 /*
+ * .pep (graylib's own codec; raylib 6.2's loader is off)
+ */
+
+static void
+test_image_pep_roundtrip (void)
+{
+    g_autoptr(GrlColor) white = grl_color_new (255, 255, 255, 255);
+    g_autoptr(GrlColor) red = grl_color_new (255, 0, 0, 255);
+    g_autoptr(GrlColor) clear = grl_color_new (0, 0, 255, 128);
+    g_autoptr(GrlImage) img = grl_image_new_color (16, 8, white);
+    g_autoptr(GrlImage) back = NULL;
+    g_autoptr(GrlImage) mem = NULL;
+    g_autoptr(GrlRectangle) rect = grl_rectangle_new (4, 2, 4, 4);
+    g_autoptr(GrlRectangle) corner = grl_rectangle_new (14, 6, 2, 2);
+    g_autofree gchar *path = NULL;
+    g_autofree guint8 *bytes = NULL;
+    gsize size = 0;
+    gint x;
+    gint y;
+
+    grl_image_draw_rectangle (img, rect, red);
+    grl_image_draw_rectangle (img, corner, clear);
+    path = g_build_filename (g_get_tmp_dir (), "graylib-test-raylib62.pep", NULL);
+
+    g_assert_true (grl_image_export (img, path));
+    back = grl_image_new_from_file (path);
+    g_remove (path);
+    g_assert_nonnull (back);
+    g_assert_cmpint (grl_image_get_width (back), ==, 16);
+    g_assert_cmpint (grl_image_get_height (back), ==, 8);
+
+    /* lossless: the first palette colour stays opaque white, alpha is not
+     * premultiplied (raylib 6.2's loader changes both) */
+    for (y = 0; y < 8; y++)
+        for (x = 0; x < 16; x++)
+        {
+            g_autoptr(GrlColor) a = grl_image_get_pixel (img, x, y);
+            g_autoptr(GrlColor) b = grl_image_get_pixel (back, x, y);
+
+            g_assert_true (a->r == b->r && a->g == b->g && a->b == b->b && a->a == b->a);
+        }
+
+    /* memory round trip, case-insensitive type */
+    bytes = grl_image_export_to_memory (img, ".PEP", &size);
+    g_assert_nonnull (bytes);
+    g_assert_cmpuint (size, >, 0);
+    mem = grl_image_new_from_memory (".pep", bytes, size);
+    g_assert_true (grl_image_is_valid (mem));
+    assert_pixel (mem, 5, 3, 255, 0, 0, 0);
+}
+
+static void
+test_image_pep_rejects (void)
+{
+    g_autoptr(GrlColor) black = grl_color_new (0, 0, 0, 255);
+    g_autoptr(GrlImage) img = grl_image_new_color (32, 32, black);
+    g_autoptr(GrlImage) bad = NULL;
+    static const guint8 junk[] = { 1, 2, 3 };
+    guint8 *bytes;
+    gsize size = 99;
+    gint i;
+
+    /* 257 distinct colours cannot be stored without loss */
+    for (i = 0; i < 257; i++)
+    {
+        g_autoptr(GrlColor) c = grl_color_new ((guint8)i, (guint8)(i >> 8), 7, 255);
+
+        grl_image_draw_pixel (img, i % 32, i / 32, c);
+    }
+    g_test_expect_message (NULL, G_LOG_LEVEL_WARNING, "*more than 256 colours*");
+    bytes = grl_image_export_to_memory (img, ".pep", &size);
+    g_test_assert_expected_messages ();
+    g_assert_null (bytes);
+    g_assert_cmpuint (size, ==, 0);
+
+    /* truncated data loads as an invalid image */
+    bad = grl_image_new_from_memory (".pep", junk, sizeof junk);
+    g_assert_false (grl_image_is_valid (bad));
+}
+
+/*
+ * Rotated text into images (6.2's ImageDrawTextPro() is a stub)
+ */
+
+static gint
+count_lit (GrlImage *img,
+           gint      x0,
+           gint      y0,
+           gint      x1,
+           gint      y1)
+{
+    gint x;
+    gint y;
+    gint n = 0;
+
+    for (y = y0; y < y1; y++)
+        for (x = x0; x < x1; x++)
+        {
+            g_autoptr(GrlColor) c = grl_image_get_pixel (img, x, y);
+
+            if (c->r > 128)
+                n++;
+        }
+    return n;
+}
+
+static void
+test_image_text_pro (void)
+{
+    g_autoptr(GrlFont) font = NULL;
+    g_autoptr(GrlColor) black = grl_color_new (0, 0, 0, 255);
+    g_autoptr(GrlColor) white = grl_color_new (255, 255, 255, 255);
+    g_autoptr(GrlImage) img = grl_image_new_color (120, 120, black);
+    g_autoptr(GrlImage) rot = grl_image_new_color (120, 120, black);
+    g_autoptr(GrlVector2) pos = grl_vector2_new (60.0f, 60.0f);
+    Font *handle;
+
+    font = grl_font_new_from_file_ex (TEST_FONT, 32, NULL, 0);
+    handle = font != NULL ? (Font *)grl_font_get_handle (font) : NULL;
+    if (handle == NULL || handle->glyphs == NULL)
+    {
+        g_test_skip ("test font not loadable here");
+        return;
+    }
+
+    /* unrotated: the text runs right and down from (60, 60) */
+    grl_image_draw_text_pro (img, font, "HH", pos, NULL, 0.0f, 24.0f, 1.0f, white);
+    g_assert_cmpint (count_lit (img, 60, 60, 120, 120), >, 20);
+    g_assert_cmpint (count_lit (img, 0, 0, 60, 60), ==, 0);
+
+    /* 180 degrees about its top-left corner: up and left of (60, 60) */
+    grl_image_draw_text_pro (rot, font, "HH", pos, NULL, 180.0f, 24.0f, 1.0f, white);
+    g_assert_cmpint (count_lit (rot, 0, 0, 60, 60), >, 20);
+    g_assert_cmpint (count_lit (rot, 61, 61, 120, 120), ==, 0);
+}
+
+/*
+ * rlsw double buffering
+ */
+
+static void
+test_software_renderer_double_buffer (void)
+{
+    g_autoptr(GrlSoftwareRenderer) sw = grl_software_renderer_new (16, 16);
+    g_autoptr(GrlImage) back = NULL;
+    g_autoptr(GrlImage) front = NULL;
+
+    if (sw == NULL)
+    {
+        g_test_skip ("software renderer unavailable");
+        return;
+    }
+
+    grl_software_renderer_clear_color (sw, 1.0f, 0.0f, 0.0f, 1.0f);
+    grl_software_renderer_clear (sw, GRL_SW_BUFFER_COLOR);
+    grl_software_renderer_swap_buffers (sw);
+    grl_software_renderer_clear_color (sw, 0.0f, 0.0f, 1.0f, 1.0f);
+    grl_software_renderer_clear (sw, GRL_SW_BUFFER_COLOR);
+
+    /* the draw buffer holds the new frame, the front the presented one */
+    back = grl_software_renderer_read_to_image (sw, 0, 0, 16, 16);
+    front = grl_software_renderer_read_front_to_image (sw, 0, 0, 16, 16);
+    assert_pixel (back, 8, 8, 0, 0, 255, 0);
+    assert_pixel (front, 8, 8, 255, 0, 0, 0);
+
+    /* identification strings, shading language version new in rlsw 1.6 */
+    {
+        const gchar *vendor = NULL;
+        const gchar *glsl = NULL;
+
+        grl_software_renderer_get_info (sw, &vendor, NULL, NULL, &glsl);
+        g_assert_cmpstr (vendor, ==, "RLSW");
+        g_assert_nonnull (glsl);
+        g_assert_cmpstr (glsl, !=, "");
+    }
+
+    /* reading the front left the draw buffer alone */
+    g_clear_object (&back);
+    back = grl_software_renderer_read_to_image (sw, 0, 0, 16, 16);
+    assert_pixel (back, 8, 8, 0, 0, 255, 0);
+}
+
+/*
+ * raygui 5 icon sets
+ */
+
+static GBytes *
+make_rgi (gint16 count,
+          gint16 size,
+          gsize  truncate)
+{
+    GByteArray *out = g_byte_array_new ();
+    gint16      zero = 0;
+    gint16      version = 500;
+    gint        i;
+    gint        w;
+
+    g_byte_array_append (out, (const guint8 *)"rGI ", 4);
+    g_byte_array_append (out, (const guint8 *)&version, 2);
+    g_byte_array_append (out, (const guint8 *)&zero, 2);
+    g_byte_array_append (out, (const guint8 *)&count, 2);
+    g_byte_array_append (out, (const guint8 *)&size, 2);
+    for (i = 0; i < count; i++)
+    {
+        gchar name[32];
+
+        memset (name, 0, sizeof name);
+        g_snprintf (name, sizeof name, "icon_%d", i);
+        g_byte_array_append (out, (const guint8 *)name, sizeof name);
+    }
+    for (i = 0; i < count; i++)
+        for (w = 0; w < size * size / 32; w++)
+        {
+            guint32 bits = (guint32)(0xA5A50000u | (guint32)i);
+
+            g_byte_array_append (out, (const guint8 *)&bits, 4);
+        }
+    if (truncate > 0)
+        g_byte_array_set_size (out, out->len - (guint)truncate);
+    return g_byte_array_free_to_bytes (out);
+}
+
+static void
+test_ui_icons_from_memory (void)
+{
+    GrlUiStyle *style = grl_ui_style_get_default ();
+    g_autoptr(GBytes) good = make_rgi (2, 16, 0);
+    g_autoptr(GBytes) big = make_rgi (1, 32, 0);
+    g_autoptr(GBytes) none = make_rgi (0, 16, 0);
+    g_autoptr(GBytes) cut = make_rgi (2, 16, 4);
+    g_auto(GStrv) names = NULL;
+    g_autoptr(GError) error = NULL;
+    unsigned int *icons;
+
+    g_assert_true (grl_ui_style_load_icons_from_memory (style, good, &names, &error));
+    g_assert_no_error (error);
+    g_assert_cmpuint (g_strv_length (names), ==, 2);
+    g_assert_cmpstr (names[1], ==, "icon_1");
+    icons = GuiGetIcons ();
+    g_assert_cmphex (icons[0], ==, 0xA5A50000u);
+    g_assert_cmphex (icons[8], ==, 0xA5A50001u);
+
+    /* raygui draws 16px icons: other sizes, empty and truncated sets fail */
+    g_assert_false (grl_ui_style_load_icons_from_memory (style, big, NULL, &error));
+    g_assert_error (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED);
+    g_clear_error (&error);
+    g_assert_false (grl_ui_style_load_icons_from_memory (style, none, NULL, &error));
+    g_assert_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA);
+    g_clear_error (&error);
+    g_assert_false (grl_ui_style_load_icons_from_memory (style, cut, NULL, &error));
+    g_assert_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA);
+    g_clear_error (&error);
+    g_assert_false (grl_ui_style_load_icons (style, "/nonexistent/x.rgi", NULL, &error));
+    g_assert_nonnull (error);
+}
+
+/*
+ * Image contrast (int since raylib 6.2)
+ */
+
+static void
+test_image_contrast_rounding (void)
+{
+    g_autoptr(GrlColor) gray = grl_color_new (100, 100, 100, 255);
+    g_autoptr(GrlImage) a = grl_image_new_color (2, 2, gray);
+    g_autoptr(GrlImage) b = grl_image_new_color (2, 2, gray);
+    g_autoptr(GrlColor) pa = NULL;
+    g_autoptr(GrlColor) pb = NULL;
+
+    /* 0.4 rounds to 0: unchanged; 40.4 and 40 give the same result */
+    grl_image_color_contrast (a, 0.4f);
+    assert_pixel (a, 0, 0, 100, 100, 100, 0);
+    grl_image_color_contrast (a, 40.4f);
+    grl_image_color_contrast (b, 40.0f);
+    pa = grl_image_get_pixel (a, 1, 1);
+    pb = grl_image_get_pixel (b, 1, 1);
+    g_assert_cmpuint (pa->r, ==, pb->r);
+    g_assert_cmpuint (pa->r, <, 100);
+}
+
+/*
  * Drawing (needs a GL context)
  */
 
@@ -421,6 +712,30 @@ test_draw_new_shapes (void)
     g_assert_true (grl_render_texture_is_valid (hdr));
     g_assert_cmpint (grl_render_texture_get_format (hdr), ==,
                      GRL_PIXELFORMAT_UNCOMPRESSED_R32G32B32A32);
+
+    /* .pep textures go through graylib's decoder */
+    {
+        g_autoptr(GrlImage) pep = grl_image_new_color (4, 4, red);
+        g_autoptr(GrlTexture) tex = NULL;
+        g_autofree guint8 *bytes = NULL;
+        gsize size = 0;
+
+        bytes = grl_image_export_to_memory (pep, ".pep", &size);
+        g_assert_nonnull (bytes);
+        tex = grl_texture_new_from_memory (".pep", bytes, size);
+        g_assert_true (grl_texture_is_valid (tex));
+        g_assert_cmpint (grl_texture_get_width (tex), ==, 4);
+    }
+
+    /* clipboard image: nothing on a fresh display's clipboard. The alarm
+     * turns a stuck X selection wait into a failure instead of a hang. */
+    alarm (20);
+    {
+        g_autoptr(GrlImage) clip = grl_window_get_clipboard_image (window);
+
+        g_assert_true (clip == NULL || grl_image_is_valid (clip));
+    }
+    alarm (0);
 }
 
 int
@@ -437,6 +752,12 @@ main (int   argc,
     g_test_add_func ("/raylib62/ui/tabbar-properties", test_ui_tabbar_properties);
     g_test_add_func ("/raylib62/ui/new-style-properties", test_ui_new_style_properties);
     g_test_add_func ("/raylib62/ui/style-from-memory-rejects", test_ui_style_from_memory_rejects);
+    g_test_add_func ("/raylib62/image/pep-roundtrip", test_image_pep_roundtrip);
+    g_test_add_func ("/raylib62/image/pep-rejects", test_image_pep_rejects);
+    g_test_add_func ("/raylib62/image/text-pro", test_image_text_pro);
+    g_test_add_func ("/raylib62/image/contrast-rounding", test_image_contrast_rounding);
+    g_test_add_func ("/raylib62/software-renderer/double-buffer", test_software_renderer_double_buffer);
+    g_test_add_func ("/raylib62/ui/icons-from-memory", test_ui_icons_from_memory);
     g_test_add_func ("/raylib62/draw/new-shapes", test_draw_new_shapes);
 
     return g_test_run ();

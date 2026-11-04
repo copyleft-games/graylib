@@ -878,4 +878,57 @@ GrlImage *            grl_software_renderer_read_to_image (GrlSoftwareRenderer *
                                                            gint                 width,
                                                            gint                 height);
 
+/**
+ * grl_software_renderer_swap_buffers:
+ * @self: a #GrlSoftwareRenderer
+ *
+ * Presents the frame just drawn; drawing continues on the other colour
+ * buffer, which still holds the previously presented frame (rlsw 1.6
+ * double buffering, raylib 6.2).
+ */
+GRL_AVAILABLE_IN_ALL
+void                  grl_software_renderer_swap_buffers (GrlSoftwareRenderer *self);
+
+/**
+ * grl_software_renderer_read_front_to_image:
+ * @self: a #GrlSoftwareRenderer
+ * @x: left edge of the region
+ * @y: bottom edge of the region (bottom-left origin)
+ * @width: region width (> 0)
+ * @height: region height (> 0)
+ *
+ * Reads the last presented frame (see
+ * grl_software_renderer_swap_buffers()) into a new #GrlImage.
+ *
+ * Returns: (transfer full) (nullable): a new #GrlImage, or %NULL on error
+ */
+GRL_AVAILABLE_IN_ALL
+GrlImage *            grl_software_renderer_read_front_to_image (GrlSoftwareRenderer *self,
+                                                                 gint                 x,
+                                                                 gint                 y,
+                                                                 gint                 width,
+                                                                 gint                 height);
+
+/**
+ * grl_software_renderer_get_info:
+ * @self: a #GrlSoftwareRenderer
+ * @vendor: (out) (optional) (transfer none) (nullable): vendor ("RLSW")
+ * @renderer: (out) (optional) (transfer none) (nullable): renderer name
+ * @version: (out) (optional) (transfer none) (nullable): the rlsw version
+ *   ("1.6" in raylib 6.2)
+ * @shading_language_version: (out) (optional) (transfer none) (nullable):
+ *   answered since rlsw 1.6 (raylib 6.2) with "Not supported", since rlsw
+ *   has no shaders; it lets code that queries GL_SHADING_LANGUAGE_VERSION
+ *   tell rlsw apart
+ *
+ * Gets rlsw's identification strings (swGetString()). The strings are
+ * static and owned by rlsw.
+ */
+GRL_AVAILABLE_IN_ALL
+void                  grl_software_renderer_get_info   (GrlSoftwareRenderer  *self,
+                                                        const gchar         **vendor,
+                                                        const gchar         **renderer,
+                                                        const gchar         **version,
+                                                        const gchar         **shading_language_version);
+
 G_END_DECLS

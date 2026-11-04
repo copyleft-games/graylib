@@ -10,7 +10,9 @@
 #include "config.h"
 #include "grl-texture.h"
 #include "grl-graphics-private.h"
+#include "grl-pep-private.h"
 #include <gio/gio.h>
+#include <string.h>
 #include <raylib.h>
 
 /**
@@ -229,6 +231,7 @@ grl_texture_init (GrlTexture *self)
  * @filename: Path to image file to load
  *
  * Creates a new texture by loading an image file directly to GPU memory.
+ * .pep files are decoded by graylib (raylib 6.2's loader is not used).
  *
  * Returns: (transfer full): A new #GrlTexture
  */
@@ -238,6 +241,22 @@ grl_texture_new_from_file (const gchar *filename)
     Texture2D tex;
 
     g_return_val_if_fail (filename != NULL, NULL);
+
+    if (grl_pep_is_file_type (filename))
+    {
+        g_autofree gchar *contents = NULL;
+        gsize             length = 0;
+        Image             img;
+
+        memset (&tex, 0, sizeof tex);
+        if (g_file_get_contents (filename, &contents, &length, NULL) &&
+            grl_pep_decode ((const guint8 *)contents, length, &img))
+        {
+            tex = LoadTextureFromImage (img);
+            UnloadImage (img);
+        }
+        return grl_texture_new_internal (tex, TRUE);
+    }
 
     tex = LoadTexture (filename);
 
@@ -288,8 +307,12 @@ grl_texture_new_from_memory (const gchar  *file_type,
     g_return_val_if_fail (data != NULL, NULL);
     g_return_val_if_fail (data_size > 0, NULL);
 
-    /* Load image from memory, then upload to GPU, then free the image */
-    img = LoadImageFromMemory (file_type, (const unsigned char *)data, (int)data_size);
+    /* Load image from memory, then upload to GPU, then free the image
+     * (.pep through graylib's decoder) */
+    if (grl_pep_is_file_type (file_type))
+        grl_pep_decode (data, data_size, &img);
+    else
+        img = LoadImageFromMemory (file_type, (const unsigned char *)data, (int)data_size);
     tex = LoadTextureFromImage (img);
     UnloadImage (img);
 
