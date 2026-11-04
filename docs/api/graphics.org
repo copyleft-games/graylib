@@ -158,7 +158,7 @@ g_autoptr(GrlColor) c = grl_image_get_pixel (img, x, y);
 - The new wrappers use raylib's own drawing: the source is alpha blended by raylib, and the image's =GrlImageBlendMode=, clip rectangle and anti-alias flag do not apply (use the primitives in the next section for those).
 - =ImageDrawImagePro()= in raylib 6.2 accepts =origin= and =rotation= but ignores both. =grl_image_draw_image_pro()= applies them itself: an origin alone shifts the destination; a rotation cuts and scales the region, then draws it with =ImageDrawImageEx()= around its top-left corner, placed so the origin lands on =(dst_rect.x, dst_rect.y)=, matching =grl_draw_texture_pro()=.
 - =grl_image_draw_rectangle_gradient_ex()= takes its corners in the same order as =grl_draw_rectangle_gradient_ex()=.
-- raylib 6.2 also declares =ImageDrawTextPro()=, but it is an empty stub in that release, so graylib does not wrap it yet.
+- raylib 6.2 also declares =ImageDrawTextPro()=, but it is an empty stub in that release. =grl_image_draw_text_pro()= implements it in graylib (see [[#drawing-text-on-images][Drawing Text on Images]]).
 
 *** Additional Drawing Primitives
 :PROPERTIES:
@@ -412,7 +412,33 @@ grl_image_draw_text_bitmap (img, "Hello", x, y, 20, color);
 
 /* Measure text laid out by grl_image_draw_text_bitmap() (x = width, y = height) */
 g_autoptr(GrlVector2) size = grl_image_measure_text_bitmap ("Hello", 20);
+
+/* A loaded font, rotated about an origin (raylib 6.2's ImageDrawTextPro, done by graylib) */
+grl_image_draw_text_pro (img, font, "Score", position, origin, 15.0f, 24.0f, 1.0f, color);
 #+end_src
+
+=grl_image_draw_text_pro()= is the image counterpart of =grl_draw_text_pro()=. raylib 6.2 ships =ImageDrawTextPro()= as an empty stub, and its =ImageTextEx()= cannot be used headless (it measures with =MeasureTextEx()=, which returns nothing for a font without a GPU texture, and compares against =GetFontDefault()=, which needs a window). graylib rasterizes the text from the font's CPU glyph images with =ImageTextEx()='s layout (glyphs at the font's base size, scaled to =font_size=; line breaks of 1.5 line heights), then places it like =grl_image_draw_image_pro()=. It works headless with fonts loaded from files or memory. Rotation resamples nearest-neighbour; raylib's default font still needs a window (use =grl_image_draw_text_bitmap()= headless).
+
+*** PEP images
+:PROPERTIES:
+:CUSTOM_ID: pep-images
+:END:
+raylib 6.2 added =.pep=, a compact palette format for pixel art. graylib reads and writes it with its own build of raylib's =external/pep.h= (=src/graphics/grl-pep.c=, symbols renamed so it cannot clash with a raylib built with =SUPPORT_FILEFORMAT_PEP=), because raylib 6.2's own loader frees the pixels it returns and forces the first palette colour transparent and alpha premultiplied:
+
+#+begin_src C
+grl_image_export (img, "sprite.pep");
+g_autoptr(GrlImage) back = grl_image_new_from_file ("sprite.pep");
+guint8 *bytes = grl_image_export_to_memory (img, ".pep", &size);
+g_autoptr(GrlImage) mem = grl_image_new_from_memory (".pep", bytes, size);
+#+end_src
+
+- Lossless: colours (alpha included) round-trip exactly; no colour is made transparent.
+- An image must be at most 4096x4096 and have at most 256 distinct colours; export fails with a warning otherwise (pep's encoder would silently map extra colours to the first one).
+- Any uncompressed source format is accepted (converted to RGBA8 first); decoded images are =R8G8B8A8=.
+- The extension check is case-insensitive.
+- =grl_texture_new_from_file()= and =grl_texture_new_from_memory()= decode =.pep= the same way before uploading.
+
+*Contrast:* =grl_image_color_contrast()= still takes a float, but raylib 6.2's =ImageColorContrast()= takes an int, so the value is rounded to the nearest whole step and clamped to -100..100.
 
 #+begin_quote
 *Headless note:* =grl_image_draw_text()= previously crashed when called without a window because raylib's default-font loader lays out its glyph atlas against a GL texture that does not exist yet. graylib now detects the headless case and renders with an embedded bitmap font, so image text drawing works in asset bakers, tests and CLI tools.

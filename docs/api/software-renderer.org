@@ -208,6 +208,31 @@ GrlImage * grl_software_renderer_read_to_image (GrlSoftwareRenderer *self,
 |-----------------------------+-----------------------------------------------------------------------------------|
 | =read_to_image(x, y, w, h)= | Read back an RGBA region into a new =GrlImage= (transfer full, nullable on error) |
 
+*** Double buffering (rlsw 1.6)
+:PROPERTIES:
+:CUSTOM_ID: double-buffering
+:END:
+raylib 6.2's rlsw added an optional second colour buffer (=RLSW_DOUBLE_BUFFERING=, off upstream). graylib compiles rlsw with it on, so a finished frame can be kept and read while the next one is drawn, e.g. by a thread or a slow encoder:
+
+#+begin_src C
+/* draw frame N ... */
+grl_software_renderer_swap_buffers (sw);                 /* present frame N */
+grl_software_renderer_clear (sw, GRL_SW_BUFFER_COLOR);   /* draw buffer still holds frame N-1 */
+/* draw frame N+1 ... */
+g_autoptr(GrlImage) shown = grl_software_renderer_read_front_to_image (sw, 0, 0, w, h); /* frame N */
+#+end_src
+
+| Function                          | Description                                                                         |
+|-----------------------------------+-------------------------------------------------------------------------------------|
+| =swap_buffers()=                  | Present the frame just drawn; drawing continues on the other colour buffer          |
+| =read_front_to_image(x, y, w, h)= | Read the last presented frame; the frame being drawn is untouched                  |
+
+- The swap exchanges buffer pointers only; the depth buffer is shared.
+- rlsw has no call to read its back buffer, so =read_front_to_image()= swaps, reads and swaps back (both are pointer swaps).
+- The second buffer costs one extra colour buffer of the framebuffer's size.
+
+=grl_software_renderer_get_info (sw, &vendor, &renderer, &version, &glsl)= returns rlsw's =swGetString()= strings (each out argument optional): ="RLSW"=, ="RLSW OpenGL Software Renderer"=, the rlsw version (="1.6"= in raylib 6.2) and, new in rlsw 1.6, ="Not supported"= for the shading language version (rlsw has no shaders).
+
 ** Example: Headless Triangle Capture
 :PROPERTIES:
 :CUSTOM_ID: example-headless-triangle-capture

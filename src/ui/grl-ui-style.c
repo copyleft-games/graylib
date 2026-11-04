@@ -267,6 +267,142 @@ grl_ui_style_load_from_memory (GrlUiStyle  *self,
     return TRUE;
 }
 
+/* .rgi layout (raygui 5): "rGI ", version (int16), reserved (int16),
+ * icon count (int16), icon size (int16), then a 32-byte name id per icon,
+ * then size*size bits per icon as 32-bit words */
+#define GRL_UI_RGI_HEADER      (12)
+#define GRL_UI_RGI_NAME_LENGTH (32)
+#define GRL_UI_RGI_MAX_ICONS   (512)
+#define GRL_UI_RGI_ICON_SIZE   (16)
+#define GRL_UI_RGI_ICON_WORDS  (GRL_UI_RGI_ICON_SIZE * GRL_UI_RGI_ICON_SIZE / 32)
+
+/*
+ * grl_ui_style_load_icons_from_memory:
+ * @self: A #GrlUiStyle
+ * @data: .rgi bytes
+ * @names: (out) (optional): name ids
+ * @error: (nullable): error location
+ *
+ * Validates an icon set and copies it into raygui's icon table.
+ *
+ * Returns: %TRUE on success
+ */
+gboolean
+grl_ui_style_load_icons_from_memory (GrlUiStyle  *self,
+                                     GBytes      *data,
+                                     GStrv       *names,
+                                     GError     **error)
+{
+    const guchar *bytes;
+    gsize         size;
+    gint16        count;
+    gint16        icon_size;
+    gsize         needed;
+    unsigned int *icons;
+    gint          i;
+
+    g_return_val_if_fail (GRL_IS_UI_STYLE (self), FALSE);
+    g_return_val_if_fail (data != NULL, FALSE);
+    g_return_val_if_fail (error == NULL || *error == NULL, FALSE);
+
+    if (names != NULL)
+        *names = NULL;
+    bytes = g_bytes_get_data (data, &size);
+
+    /* header */
+    if (bytes == NULL || size < GRL_UI_RGI_HEADER || memcmp (bytes, "rGI ", 4) != 0)
+    {
+        g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA,
+                     "Not a raygui icon set (.rgi)");
+        return FALSE;
+    }
+    memcpy (&count, bytes + 8, sizeof count);
+    memcpy (&icon_size, bytes + 10, sizeof icon_size);
+
+    /* raygui draws icons at its compile-time size and has 512 slots */
+    if (icon_size != GRL_UI_RGI_ICON_SIZE)
+    {
+        g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+                     "raygui icon set uses %dpx icons, raygui draws %dpx",
+                     (gint)icon_size, GRL_UI_RGI_ICON_SIZE);
+        return FALSE;
+    }
+    if (count <= 0 || count > GRL_UI_RGI_MAX_ICONS)
+    {
+        g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA,
+                     "raygui icon set has %d icons (1 to %d)",
+                     (gint)count, GRL_UI_RGI_MAX_ICONS);
+        return FALSE;
+    }
+    needed = GRL_UI_RGI_HEADER +
+             (gsize)count * GRL_UI_RGI_NAME_LENGTH +
+             (gsize)count * GRL_UI_RGI_ICON_WORDS * sizeof (guint32);
+    if (size < needed)
+    {
+        g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA,
+                     "Truncated raygui icon set: %" G_GSIZE_FORMAT " of %" G_GSIZE_FORMAT " bytes",
+                     size, needed);
+        return FALSE;
+    }
+
+    /* copy the bits into raygui's (static, 512-slot) icon table */
+    icons = GuiGetIcons ();
+    if (icons == NULL)
+    {
+        g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "raygui has no icon table");
+        return FALSE;
+    }
+    memcpy (icons,
+            bytes + GRL_UI_RGI_HEADER + (gsize)count * GRL_UI_RGI_NAME_LENGTH,
+            (gsize)count * GRL_UI_RGI_ICON_WORDS * sizeof (guint32));
+
+    /* name ids: 32 bytes each, not necessarily NUL-terminated */
+    if (names != NULL)
+    {
+        *names = g_new0 (gchar *, count + 1);
+        for (i = 0; i < count; i++)
+            (*names)[i] = g_strndup ((const gchar *)bytes + GRL_UI_RGI_HEADER +
+                                     (gsize)i * GRL_UI_RGI_NAME_LENGTH,
+                                     GRL_UI_RGI_NAME_LENGTH);
+    }
+
+    return TRUE;
+}
+
+/*
+ * grl_ui_style_load_icons:
+ * @self: A #GrlUiStyle
+ * @filename: (type filename): .rgi path
+ * @names: (out) (optional): name ids
+ * @error: (nullable): error location
+ *
+ * Loads an icon set file.
+ *
+ * Returns: %TRUE on success
+ */
+gboolean
+grl_ui_style_load_icons (GrlUiStyle   *self,
+                         const gchar  *filename,
+                         GStrv        *names,
+                         GError      **error)
+{
+    g_autoptr(GBytes) data = NULL;
+    gchar            *contents = NULL;
+    gsize             length = 0;
+
+    g_return_val_if_fail (GRL_IS_UI_STYLE (self), FALSE);
+    g_return_val_if_fail (filename != NULL, FALSE);
+    g_return_val_if_fail (error == NULL || *error == NULL, FALSE);
+
+    if (names != NULL)
+        *names = NULL;
+    if (!g_file_get_contents (filename, &contents, &length, error))
+        return FALSE;
+
+    data = g_bytes_new_take (contents, length);
+    return grl_ui_style_load_icons_from_memory (self, data, names, error);
+}
+
 /*
  * grl_ui_style_load_default:
  * @self: A #GrlUiStyle

@@ -80,6 +80,50 @@ gboolean            grl_ui_style_load_from_memory   (GrlUiStyle     *self,
                                                      GError        **error);
 
 /**
+ * grl_ui_style_load_icons_from_memory:
+ * @self: A #GrlUiStyle
+ * @data: The contents of a raygui icon set (.rgi, as rGuiIcons exports it)
+ * @names: (out) (optional) (transfer full) (array zero-terminated=1):
+ *   Return location for the icons' name ids, or %NULL
+ * @error: (nullable): Return location for error, or %NULL
+ *
+ * Replaces raygui's icons (used by icon text such as "#5#Open" and by the
+ * controls' built-in glyphs) with the icon set in @data, the operation of
+ * raygui 5's GuiLoadIconsFromMemory(). The set must use raygui's icon size
+ * (16x16) and hold at most 512 icons; icons past the set keep their old
+ * images. graylib parses and bounds-checks the data itself and copies the
+ * bits into raygui's icon table, where raygui's own loader reads without
+ * bounds checks and leaks the previous set.
+ *
+ * Returns: %TRUE on success, %FALSE with @error set when @data is not a
+ *   usable .rgi icon set
+ */
+GRL_AVAILABLE_IN_ALL
+gboolean            grl_ui_style_load_icons_from_memory (GrlUiStyle  *self,
+                                                         GBytes      *data,
+                                                         GStrv       *names,
+                                                         GError     **error);
+
+/**
+ * grl_ui_style_load_icons:
+ * @self: A #GrlUiStyle
+ * @filename: (type filename): Path to a .rgi icon set
+ * @names: (out) (optional) (transfer full) (array zero-terminated=1):
+ *   Return location for the icons' name ids, or %NULL
+ * @error: (nullable): Return location for error, or %NULL
+ *
+ * Loads a raygui icon set file (raygui GuiLoadIcons()); see
+ * grl_ui_style_load_icons_from_memory().
+ *
+ * Returns: %TRUE on success, %FALSE with @error set
+ */
+GRL_AVAILABLE_IN_ALL
+gboolean            grl_ui_style_load_icons         (GrlUiStyle     *self,
+                                                     const gchar    *filename,
+                                                     GStrv          *names,
+                                                     GError        **error);
+
+/**
  * grl_ui_style_load_default:
  * @self: A #GrlUiStyle
  *

@@ -28,6 +28,11 @@
  * not blue). rlsw 1.6 (raylib 6.2) renamed its options from SW_* to RLSW_*
  * and silently ignores the old spelling, so only the new name is set. */
 #define RLSW_FRAMEBUFFER_OUTPUT_BGRA 0
+/* rlsw 1.6 double buffering (off upstream): a second colour buffer that
+ * swSwapColorBuffers() exchanges by pointer, so a finished frame can be
+ * kept (and read) while the next one is drawn. Costs one extra colour
+ * buffer of the framebuffer's size. */
+#define RLSW_DOUBLE_BUFFERING 1
 #include <external/rlsw.h>
 
 /**
@@ -1220,4 +1225,93 @@ grl_software_renderer_read_to_image (GrlSoftwareRenderer *self,
                   *(void **)handle);
 
     return image;
+}
+
+/*
+ * grl_software_renderer_swap_buffers:
+ * @self: a #GrlSoftwareRenderer
+ *
+ * Presents the frame just drawn: the colour buffer drawn into becomes the
+ * front buffer and drawing continues on the other one (rlsw 1.6
+ * swSwapColorBuffers(), raylib 6.2). The new draw buffer still holds the
+ * frame presented before, so clear it before drawing a full frame. The
+ * depth buffer is shared and not swapped.
+ *
+ * grl_software_renderer_read_to_image() keeps reading the buffer being
+ * drawn; grl_software_renderer_read_front_to_image() reads the presented
+ * frame.
+ */
+void
+grl_software_renderer_swap_buffers (GrlSoftwareRenderer *self)
+{
+    g_return_if_fail (GRL_IS_SOFTWARE_RENDERER (self));
+
+    swSwapColorBuffers ();
+}
+
+/*
+ * grl_software_renderer_read_front_to_image:
+ * @self: a #GrlSoftwareRenderer
+ * @x: left edge of the region, in framebuffer pixels
+ * @y: bottom edge of the region (rlsw's origin is bottom-left)
+ * @width: region width (> 0)
+ * @height: region height (> 0)
+ *
+ * Reads the last frame presented with grl_software_renderer_swap_buffers()
+ * into a new R8G8B8A8 #GrlImage, without disturbing the frame being
+ * drawn. Before the first swap the front buffer is cleared to black.
+ *
+ * Returns: (transfer full) (nullable): a new #GrlImage, or %NULL on error
+ */
+GrlImage *
+grl_software_renderer_read_front_to_image (GrlSoftwareRenderer *self,
+                                           gint                 x,
+                                           gint                 y,
+                                           gint                 width,
+                                           gint                 height)
+{
+    GrlImage *image;
+
+    g_return_val_if_fail (GRL_IS_SOFTWARE_RENDERER (self), NULL);
+    g_return_val_if_fail (width > 0, NULL);
+    g_return_val_if_fail (height > 0, NULL);
+
+    /* rlsw only reads its draw buffer: bring the front buffer there for
+     * the read, then put both back (the swap only exchanges pointers) */
+    swSwapColorBuffers ();
+    image = grl_software_renderer_read_to_image (self, x, y, width, height);
+    swSwapColorBuffers ();
+
+    return image;
+}
+
+/*
+ * grl_software_renderer_get_info:
+ * @self: a #GrlSoftwareRenderer
+ * @vendor: (out) (optional) (transfer none): vendor string
+ * @renderer: (out) (optional) (transfer none): renderer string
+ * @version: (out) (optional) (transfer none): GL version string
+ * @shading_language_version: (out) (optional) (transfer none): shading
+ *   language version string
+ *
+ * Gets rlsw's identification strings (swGetString()).
+ */
+void
+grl_software_renderer_get_info (GrlSoftwareRenderer  *self,
+                                const gchar         **vendor,
+                                const gchar         **renderer,
+                                const gchar         **version,
+                                const gchar         **shading_language_version)
+{
+    g_return_if_fail (GRL_IS_SOFTWARE_RENDERER (self));
+
+    if (vendor != NULL)
+        *vendor = swGetString (SW_VENDOR);
+    if (renderer != NULL)
+        *renderer = swGetString (SW_RENDERER);
+    if (version != NULL)
+        *version = swGetString (SW_VERSION);
+    /* answered since rlsw 1.6 (raylib 6.2) */
+    if (shading_language_version != NULL)
+        *shading_language_version = swGetString (SW_SHADING_LANGUAGE_VERSION);
 }

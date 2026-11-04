@@ -145,6 +145,7 @@ SOURCES := \
 	src/graphics/grl-model.c \
 	src/graphics/grl-model-animation.c \
 	src/graphics/grl-png.c \
+	src/graphics/grl-pep.c \
 	src/drawing/grl-draw-shapes.c \
 	src/drawing/grl-draw-textures.c \
 	src/drawing/grl-draw-text.c \
@@ -867,6 +868,11 @@ RPNG_SRC := $(CURDIR)/deps/rpng/src
 RPNG_CFLAGS := $(subst -std=gnu89,-std=gnu99,$(LIB_CFLAGS)) -isystem $(RPNG_SRC)
 
 $(OBJDIR)/src/graphics/grl-png.o: src/graphics/grl-png.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(RPNG_CFLAGS) -c -o $@ $<
+
+# grl-pep.c compiles raylib's external/pep.h (C99) with renamed symbols
+$(OBJDIR)/src/graphics/grl-pep.o: src/graphics/grl-pep.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(RPNG_CFLAGS) -c -o $@ $<
 

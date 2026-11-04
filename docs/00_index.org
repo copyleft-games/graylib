@@ -3,3 +3,4 @@
 - [[file:index.org][Library documentation and API guides]]
 - [[file:gir-contract.org][Full introspection and ownership contract]]
 - [[file:audio-ownership-contract.org][Pinned SDK WAV cleanup, independent voices and explicit legacy alias gate]]
+- [[file:raylib-6.2.org][raylib 6.2 and raygui 5: every change and what graylib does with it]]

@@ -399,4 +399,7 @@ void                grl_window_set_clipboard_text (GrlWindow        *self,
 GRL_AVAILABLE_IN_ALL
 gchar *             grl_window_get_clipboard_text (GrlWindow        *self);
 
+GRL_AVAILABLE_IN_ALL
+GrlImage *          grl_window_get_clipboard_image (GrlWindow       *self);
+
 G_END_DECLS

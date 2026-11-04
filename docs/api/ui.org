@@ -420,6 +420,16 @@ grl_ui_style_set_alpha (style, 0.9f);
 
 =grl_ui_style_load_from_memory()= only takes the binary format rGuiStyler exports (signature ="rGS "=); text styles still need =grl_ui_style_load_file()=. graylib checks the header and the property table against the data's size, but raygui does not bounds-check the embedded font section, so load styles only from trusted data.
 
+*Icon sets.* =grl_ui_style_load_icons()= and =grl_ui_style_load_icons_from_memory()= replace raygui's icons (those used by icon text such as ="#5#Open"= and by controls' built-in glyphs) with an =.rgi= set from rGuiIcons, raygui 5's =GuiLoadIcons()= / =GuiLoadIconsFromMemory()=, and optionally return the icons' name ids:
+
+#+begin_src C
+g_auto(GStrv) names = NULL;
+if (!grl_ui_style_load_icons (style, "icons/game.rgi", &names, &error))
+    g_printerr ("%s\n", error->message);
+#+end_src
+
+The set must use raygui's 16x16 icon size and hold 1 to 512 icons; icons past the set keep their images. raygui's own loader reads the file without bounds checks, overflows its name table past 512 icons and leaks the previous set, so graylib parses and checks the data and copies the bits into raygui's icon table itself.
+
 *raygui 5 control indices.* raygui 5 named control 11 =TABBAR=; in raygui 4 it was an unused slot. =GRL_UI_CONTROL_TABBAR= is 11, and =GRL_UI_CONTROL_SPINNER= stays as a deprecated alias of the same value: raygui's spinner is styled through =GRL_UI_CONTROL_VALUEBOX=.
 
 ** Edit Mode (Exclusive Input)

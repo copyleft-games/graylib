@@ -447,6 +447,17 @@ void                grl_image_draw_triangle_gradient (GrlImage         *self,
                                                       const GrlColor   *c3);
 
 GRL_AVAILABLE_IN_ALL
+void                grl_image_draw_text_pro     (GrlImage           *self,
+                                                 GrlFont            *font,
+                                                 const gchar        *text,
+                                                 const GrlVector2   *position,
+                                                 const GrlVector2   *origin,
+                                                 gfloat              rotation,
+                                                 gfloat              font_size,
+                                                 gfloat              spacing,
+                                                 const GrlColor     *tint);
+
+GRL_AVAILABLE_IN_ALL
 void                grl_image_draw_text         (GrlImage           *self,
                                                  const gchar        *text,
                                                  gint                x,
