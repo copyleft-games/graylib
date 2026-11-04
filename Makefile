@@ -92,6 +92,7 @@ PUBLIC_HEADERS := \
 	src/ui/grl-ui-combobox.h \
 	src/ui/grl-ui-dropdownbox.h \
 	src/ui/grl-ui-togglegroup.h \
+	src/ui/grl-ui-tabbar.h \
 	src/ui/grl-ui-listview.h \
 	src/ui/grl-ui-colorpicker.h \
 	src/ui/grl-ui-panel.h \
@@ -180,6 +181,7 @@ SOURCES := \
 	src/ui/grl-ui-combobox.c \
 	src/ui/grl-ui-dropdownbox.c \
 	src/ui/grl-ui-togglegroup.c \
+	src/ui/grl-ui-tabbar.c \
 	src/ui/grl-ui-listview.c \
 	src/ui/grl-ui-colorpicker.c \
 	src/ui/grl-ui-panel.c \
@@ -546,6 +548,7 @@ endif
 	$(INSTALL_DATA) src/ui/grl-ui-combobox.h $(DESTDIR)$(INCLUDEDIR)/graylib/ui/
 	$(INSTALL_DATA) src/ui/grl-ui-dropdownbox.h $(DESTDIR)$(INCLUDEDIR)/graylib/ui/
 	$(INSTALL_DATA) src/ui/grl-ui-togglegroup.h $(DESTDIR)$(INCLUDEDIR)/graylib/ui/
+	$(INSTALL_DATA) src/ui/grl-ui-tabbar.h $(DESTDIR)$(INCLUDEDIR)/graylib/ui/
 	$(INSTALL_DATA) src/ui/grl-ui-listview.h $(DESTDIR)$(INCLUDEDIR)/graylib/ui/
 	$(INSTALL_DATA) src/ui/grl-ui-colorpicker.h $(DESTDIR)$(INCLUDEDIR)/graylib/ui/
 	$(INSTALL_DATA) src/ui/grl-ui-panel.h $(DESTDIR)$(INCLUDEDIR)/graylib/ui/
@@ -947,6 +950,10 @@ $(OBJDIR)/src/ui/grl-ui-dropdownbox.o: src/ui/grl-ui-dropdownbox.c
 	$(CC) $(UI_CFLAGS) -c -o $@ $<
 
 $(OBJDIR)/src/ui/grl-ui-togglegroup.o: src/ui/grl-ui-togglegroup.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(UI_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/ui/grl-ui-tabbar.o: src/ui/grl-ui-tabbar.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(UI_CFLAGS) -c -o $@ $<
 

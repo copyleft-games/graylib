@@ -57,6 +57,29 @@ gboolean            grl_ui_style_load_file          (GrlUiStyle     *self,
                                                      GError        **error);
 
 /**
+ * grl_ui_style_load_from_memory:
+ * @self: A #GrlUiStyle
+ * @data: The contents of a binary .rgs style file
+ * @error: (nullable): Return location for error, or %NULL
+ *
+ * Loads a binary raygui style (.rgs, as rGuiStyler exports it) from
+ * memory, e.g. from a #GResource or a #GrlResourcePack, with raygui 5's
+ * GuiLoadStyleFromMemory(). Text .rgs files are only supported by
+ * grl_ui_style_load_file().
+ *
+ * graylib checks the header and the property table against the size of
+ * @data; raygui does not bounds-check the embedded font section, so only
+ * load styles from trusted sources.
+ *
+ * Returns: %TRUE on success, %FALSE with @error set when @data is not a
+ *   binary .rgs style
+ */
+GRL_AVAILABLE_IN_ALL
+gboolean            grl_ui_style_load_from_memory   (GrlUiStyle     *self,
+                                                     GBytes         *data,
+                                                     GError        **error);
+
+/**
  * grl_ui_style_load_default:
  * @self: A #GrlUiStyle
  *

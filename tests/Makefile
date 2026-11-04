@@ -62,6 +62,7 @@ TEST_SOURCES := \
 	test-bone-info.c \
 	test-transform.c \
 	test-fs.c \
+	test-raylib62.c \
 	test-text.c \
 	test-software-renderer.c \
 	test-sound-pan.c \

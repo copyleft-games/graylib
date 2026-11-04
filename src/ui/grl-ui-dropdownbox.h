@@ -163,4 +163,26 @@ gchar *             grl_ui_dropdownbox_get_active_text  (GrlUiDropdownBox *self)
 GRL_AVAILABLE_IN_ALL
 void                grl_ui_dropdownbox_toggle           (GrlUiDropdownBox *self);
 
+/**
+ * grl_ui_dropdownbox_get_roll_up:
+ * @self: A #GrlUiDropdownBox
+ *
+ * Gets whether the item list opens upward (raygui 5 DROPDOWN_ROLL_UP).
+ *
+ * Returns: The value of #GrlUiDropdownBox:roll-up
+ */
+GRL_AVAILABLE_IN_ALL
+gboolean            grl_ui_dropdownbox_get_roll_up (GrlUiDropdownBox *self);
+
+/**
+ * grl_ui_dropdownbox_set_roll_up:
+ * @self: A #GrlUiDropdownBox
+ * @roll_up: The new value
+ *
+ * Sets whether the item list opens above the box, for dropdowns near the bottom of the screen (raygui 5 DROPDOWN_ROLL_UP).
+ */
+GRL_AVAILABLE_IN_ALL
+void                grl_ui_dropdownbox_set_roll_up (GrlUiDropdownBox *self,
+                                                   gboolean roll_up);
+
 G_END_DECLS

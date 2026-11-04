@@ -109,7 +109,10 @@ GType grl_ui_text_wrap_mode_get_type (void) G_GNUC_CONST;
  * @GRL_UI_CONTROL_DROPDOWNBOX: Dropdown box control
  * @GRL_UI_CONTROL_TEXTBOX: Text box control
  * @GRL_UI_CONTROL_VALUEBOX: Value box control
- * @GRL_UI_CONTROL_SPINNER: Spinner control
+ * @GRL_UI_CONTROL_TABBAR: Tab bar control (raygui 5, #GrlUiTabBar)
+ * @GRL_UI_CONTROL_SPINNER: Deprecated alias of %GRL_UI_CONTROL_TABBAR:
+ *   index 11 was an unused slot in raygui 4 and is the tab bar in raygui 5.
+ *   raygui's spinner is styled through %GRL_UI_CONTROL_VALUEBOX.
  * @GRL_UI_CONTROL_LISTVIEW: List view control
  * @GRL_UI_CONTROL_COLORPICKER: Color picker control
  * @GRL_UI_CONTROL_SCROLLBAR: Scroll bar control
@@ -130,8 +133,9 @@ typedef enum
     GRL_UI_CONTROL_DROPDOWNBOX,
     GRL_UI_CONTROL_TEXTBOX,
     GRL_UI_CONTROL_VALUEBOX,
-    GRL_UI_CONTROL_SPINNER,
-    GRL_UI_CONTROL_LISTVIEW,
+    GRL_UI_CONTROL_TABBAR = 11,
+    GRL_UI_CONTROL_SPINNER = 11,
+    GRL_UI_CONTROL_LISTVIEW = 12,
     GRL_UI_CONTROL_COLORPICKER,
     GRL_UI_CONTROL_SCROLLBAR,
     GRL_UI_CONTROL_STATUSBAR
