@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: graylib raylib migration
 #+created: 2026-11-04T00:00:00-05:00
-#+updated: 2026-11-04T00:00:00-05:00
+#+updated: 2026-11-04T23:00:00-05:00
 #+version: 0.7.1
 
 * Overview
@@ -11,6 +11,8 @@
 :CUSTOM_ID: overview
 :END:
 graylib 0.7 moved from raylib 6.0 to raylib 6.2, from raygui 4.0 (master of April 2026) to raygui master (5.1-dev, the raygui raylib 6.2 ships in its examples), and to the current rpng and rres masters. raudio had no upstream change. This page walks the raylib 6.2 =CHANGELOG= and raygui 5's change list entry by entry and records, for each one that touches what graylib can see, the graylib API that exposes it, the fix graylib needed, or why nothing applies. Pure bug fixes inside raylib are inherited by every graylib wrapper that calls the fixed function and are listed by module rather than one by one.
+
+The audit was checked mechanically too: every function named in the raylib 6.2 section of =deps/raylib/CHANGELOG= (95 names) was searched for in graylib's =src/= and libregnum's =src/=, and each hit was compared against the upstream fix. That found one copy of fixed upstream code, libregnum's =MatrixDecompose()= mirror (see [[#raudio-raymath-external][raymath]]). Everything else is either a wrapper that inherits the fix or not wrapped.
 
 Status words used below:
 
@@ -32,8 +34,8 @@ Status words used below:
 | REVIEWED =File*()= return values (0 on success)                 | Fixed                  | =grl_fs_file_copy/text_replace/change_directory= results; =file_copy= also rejects 6.2's false success for a missing source |
 | REVIEWED =FileMove()= / =FileCopy()= security                   | Fixed                  | =grl_fs_file_move()= renames, else checked copy + remove                                                                       |
 | REVIEWED =GetPrevDirectoryPath()= side cases                    | Inherited              | ="/a"= now gives ="/"=; test and docs updated                                                                                  |
-| REVIEWED =ComputeSHA1/SHA256()=, const parameters               | Not applicable         | graylib does not wrap the hash functions (GLib's =GChecksum= covers them)                                                     |
-| REVIEWED =GetFPS()=, =GetCurrentMonitor()=, =SetMousePosition()= | Inherited              | through =grl_window_*= / =grl_input_*=                                                                                         |
+| REVIEWED =ComputeSHA1/SHA256()=, const parameters, SHA-256 padding fix (#6144) | Not applicable | graylib does not wrap the hash functions (GLib's =GChecksum= covers them)                                                     |
+| REVIEWED =GetFPS()=, =GetCurrentMonitor()=, =SetMousePosition()=, gamepad index bounds checks (#5937) | Inherited | through =grl_window_*= / =grl_input_*=                                                                                         |
 | REVIEWED =OpenURL()=, =TakeScreenshot()=, automation events     | Not applicable         | not wrapped by graylib                                                                                                         |
 | [GLFW] =GetClipboardImage()= X11 connection and leak            | Wrapped                | =grl_window_get_clipboard_image()=, guarded to X11/Windows (the GLFW Wayland path would run X11 code without a display)       |
 | [GLFW] window, focus, borderless and mouse-position fixes       | Inherited              |                                                                                                                                |
@@ -84,7 +86,7 @@ Status words used below:
 | REDESIGNED =ImageDrawRectangleLines()=                   | Fixed                  | =grl_image_draw_rectangle_lines()= keeps its (rect, thick) form on =ImageDrawRectangleLinesEx()=                     |
 | (declared) =ImageDrawTextPro()=                          | graylib implementation | =grl_image_draw_text_pro()=; 6.2 ships an empty stub                                                                 |
 | REVIEWED =ImageColorContrast()= takes an int             | Fixed                  | =grl_image_color_contrast()= rounds and clamps                                                                       |
-| REVIEWED =GetPixelColor()=, =ImageFromImage()=, =ImageDrawLine()=, =ImageDrawCircle()=, ... | Inherited |                                                                                     |
+| REVIEWED =GetPixelColor()=, =ImageFromImage()=, =ImageDrawLine()=, =ImageDrawCircle()=, =ImageKernelConvolution()= edges, =GetPixelDataSize()= >2GB, ... | Inherited |                                                                                     |
 | (graylib) =DrawRectangleGradientEx()= corner order       | Fixed                  | =grl_draw_rectangle_gradient_ex()= had swapped its right-hand corners                                               |
 
 * rtext
@@ -121,7 +123,7 @@ Status words used below:
 | raudio leak and crash fixes                  | Inherited      |                                                                                          |
 | miniaudio 0.11.25                            | Fixed (kept)   | its PulseAudio backend still dereferences a NULL sink info; the ALSA-first workaround stays |
 | raymath C++ operator                         | Not applicable | C++ only                                                                                 |
-| raymath =MatrixCompose/Decompose=, quaternion fixes | Inherited | graylib's math types use their own code                                                  |
+| raymath =MatrixCompose/Decompose=, quaternion fixes | Fixed (libregnum) | graylib's math types use their own code. libregnum's glTF code carried a copy of 6.0's =MatrixDecompose()=, which read the basis rows instead of columns (#6225); libregnum 0.7.2 reads columns like 6.2, so =lrg_gltf_info_get_joint_root_transform()= is right for parents with non-uniform scale |
 | GLFW 3.5.1, qoa, tinyobj, vox fixes          | Inherited      |                                                                                          |
 | =rprand_get_value_raw()=                      | Not applicable | internal to raylib's random generator, not raylib API                                    |
 | build, bindings, examples, rlparser, rexm    | Not applicable |                                                                                          |
