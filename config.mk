@@ -11,7 +11,7 @@
 # =============================================================================
 
 VERSION_MAJOR := 0
-VERSION_MINOR := 7
+VERSION_MINOR := 8
 VERSION_MICRO := 1
 VERSION := $(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_MICRO)
 
