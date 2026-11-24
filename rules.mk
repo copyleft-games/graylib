@@ -105,13 +105,17 @@ endif
 # raylib master in 226b281e after the release), and it always treats the
 # first palette colour as transparent. GrlImage reads and writes .pep with
 # graylib's own copy of external/pep.h instead (src/graphics/grl-pep.c).
-RAYLIB_FEATURE_FLAGS := -DSUPPORT_GPU_SKINNING=0
+#   SUPPORT_FILEFORMAT_JPG=1: raylib ships JPEG decoding (stb_image) but
+#     leaves it off; glTF models carry JPEG textures (Meshy's GLBs embed
+#     their colour map as image/jpeg), which then failed with "Data format
+#     not supported" and drew untextured.
+RAYLIB_FEATURE_FLAGS := -DSUPPORT_GPU_SKINNING=0 -DSUPPORT_FILEFORMAT_JPG=1
 ifeq ($(TARGET_PLATFORM),windows)
 RAYLIB_OPT_FLAGS := CUSTOM_CFLAGS="-O2 -ffp-contract=off $(RAYLIB_FEATURE_FLAGS)"
-RAYLIB_PLATFORM_TAG := $(RAYLIB_PLATFORM_TAG)+O2+nofma+cpuskin
+RAYLIB_PLATFORM_TAG := $(RAYLIB_PLATFORM_TAG)+O2+nofma+cpuskin+jpg
 else
 RAYLIB_OPT_FLAGS := CUSTOM_CFLAGS="-O2 -fPIC -ffp-contract=off $(RAYLIB_FEATURE_FLAGS)"
-RAYLIB_PLATFORM_TAG := $(RAYLIB_PLATFORM_TAG)+O2+pic+nofma+cpuskin
+RAYLIB_PLATFORM_TAG := $(RAYLIB_PLATFORM_TAG)+O2+pic+nofma+cpuskin+jpg
 endif
 
 # External SDK configuration is an actual build input, not a feature policy
