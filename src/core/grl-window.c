@@ -328,7 +328,9 @@ grl_window_set_property (GObject      *object,
 
 /* TRUE after one successful glfwInit(). CloseWindow() calls
    glfwTerminate(), so the next window initializes GLFW again. */
+#ifndef GRL_PLATFORM_ANDROID
 static gboolean grl_window_saw_glfw = FALSE;
+#endif
 
 static void
 grl_window_constructed (GObject *object)
@@ -344,7 +346,10 @@ grl_window_constructed (GObject *object)
        variable is missing") it proceeds into GL setup with no context and
        crashes (rlglInit -> rlLoadTexture dereferences a NULL GLAD pointer).
        glfwInit() reports that failure cleanly; it is idempotent and reference
-       counted, so InitWindow()'s own glfwInit() call below is then a no-op. */
+       counted, so InitWindow()'s own glfwInit() call below is then a no-op.
+       Android has no GLFW (raylib's PLATFORM_ANDROID waits for the
+       activity's window itself), so there is nothing to pre-flight. */
+#ifndef GRL_PLATFORM_ANDROID
     {
         extern int glfwInit (void);
         GLogLevelFlags old_always = (GLogLevelFlags) 0;
@@ -381,6 +386,7 @@ grl_window_constructed (GObject *object)
         }
         grl_window_saw_glfw = TRUE;
     }
+#endif
 
     /* Initialize the raylib window */
     InitWindow (priv->initial_width,
@@ -2203,9 +2209,11 @@ grl_window_get_clipboard_text (GrlWindow *self)
     return text ? g_strdup (text) : NULL;
 }
 
+#ifndef GRL_PLATFORM_ANDROID
 /* glfwGetPlatform(): the GLFW backend in use (GLFW 3.4+, bundled with
  * raylib); declared here so graylib needs no GLFW headers */
 extern int glfwGetPlatform (void);
+#endif
 
 #define GRL_GLFW_PLATFORM_WIN32 (0x00060001)
 #define GRL_GLFW_PLATFORM_X11   (0x00060004)
@@ -2237,6 +2245,12 @@ grl_window_get_clipboard_image (GrlWindow *self)
     if (ready == 0)
         return NULL;
 
+#ifdef GRL_PLATFORM_ANDROID
+    /* raylib's Android clipboard is text only */
+    (void) image;
+    (void) platform;
+    return NULL;
+#else
     platform = glfwGetPlatform ();
     if (platform != GRL_GLFW_PLATFORM_X11 && platform != GRL_GLFW_PLATFORM_WIN32)
         return NULL;
@@ -2245,4 +2259,5 @@ grl_window_get_clipboard_image (GrlWindow *self)
     if (image.data == NULL)
         return NULL;
     return grl_image_new_from_raw_handle (&image);
+#endif
 }

@@ -153,7 +153,11 @@ endif
 # These are the system libraries required by raylib on each platform.
 # Exported as PLATFORM_LIBS for use by tests/examples Makefiles.
 
-ifeq ($(TARGET_PLATFORM),windows)
+ifeq ($(RAYLIB_PLATFORM),PLATFORM_ANDROID)
+    # Android (raylib's PLATFORM_ANDROID, built by the NDK's clang): GLES 3
+    # through EGL, the NativeActivity glue's libandroid and logcat's liblog
+    PLATFORM_LIBS := -lEGL -lGLESv3 -landroid -llog -lm -ldl
+else ifeq ($(TARGET_PLATFORM),windows)
     # Windows libraries (MinGW)
     PLATFORM_LIBS := -lopengl32 -lgdi32 -lwinmm -lshell32
 else ifeq ($(TARGET_PLATFORM),linux)
@@ -168,6 +172,20 @@ else ifeq ($(TARGET_PLATFORM),macos)
 else
     # Fallback
     PLATFORM_LIBS := -lGL -lm
+endif
+
+# Source-level platform marker: Android has no GLFW, so the GLFW hooks
+# (window pre-flight, input event modifiers, clipboard images) are left out.
+# Only set for Android, so the desktop build's flags are unchanged.
+#
+# Android builds with the NDK's clang (no gcc there), which reports the
+# identical typedef redefinitions graylib's headers use (grl-types.h forward
+# declarations, then G_DECLARE_*_TYPE) as a C11 extension in gnu89 mode.
+# gcc accepts them silently as GNU C, and they are not bugs, so clang is
+# told to accept them too; every other warning stays on.  (The same call
+# libregnum's android-arm64 profile makes; decided 2026-11-24.)
+ifeq ($(RAYLIB_PLATFORM),PLATFORM_ANDROID)
+    GRAYLIB_PLATFORM_CFLAGS := -DGRL_PLATFORM_ANDROID=1 -Wno-typedef-redefinition
 endif
 
 # Add platform libs to raylib when using embedded build
@@ -243,6 +261,9 @@ LIB_CFLAGS += -DGRAYLIB_COMPILATION
 # Include paths for library source
 LIB_CFLAGS += -I$(CURDIR)
 LIB_CFLAGS += -I$(CURDIR)/src
+ifneq ($(GRAYLIB_PLATFORM_CFLAGS),)
+LIB_CFLAGS += $(GRAYLIB_PLATFORM_CFLAGS)
+endif
 
 # Executable compilation flags (tests, examples)
 EXE_CFLAGS := $(BASE_CFLAGS) $(OPT_CFLAGS)
