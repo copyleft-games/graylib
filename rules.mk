@@ -29,7 +29,7 @@ else
     # Use embedded raylib from deps/
     # Use -isystem to suppress warnings from raylib headers (raymath.h has C99 code)
     RAYLIB_CFLAGS := -isystem $(RAYLIB_SRC)
-    RAYLIB_LIBS := $(RAYLIB_SRC)/libraylib.a
+    RAYLIB_LIBS := $(RAYLIB_LIB)
     RAYLIB_VERSION := 6.0
 endif
 
@@ -116,6 +116,22 @@ RAYLIB_PLATFORM_TAG := $(RAYLIB_PLATFORM_TAG)+O2+nofma+cpuskin+jpg
 else
 RAYLIB_OPT_FLAGS := CUSTOM_CFLAGS="-O2 -fPIC -ffp-contract=off $(RAYLIB_FEATURE_FLAGS)"
 RAYLIB_PLATFORM_TAG := $(RAYLIB_PLATFORM_TAG)+O2+pic+nofma+cpuskin+jpg
+endif
+
+# Out-of-tree raylib (RAYLIB_BUILD_DIR in config.mk): raylib's Makefile
+# finds its sources and puts libraylib.a relative to its own directory
+# (RAYLIB_SRC_PATH ?= ../src), so the copy names both explicitly.  Each of
+# these is added only when it applies, leaving the default build's command
+# line exactly as it was.
+ifneq ($(RAYLIB_BUILD_DIR),$(RAYLIB_SRC))
+RAYLIB_OPT_FLAGS += RAYLIB_SRC_PATH=$(RAYLIB_BUILD_DIR) RAYLIB_RELEASE_PATH=$(RAYLIB_BUILD_DIR)
+endif
+ifneq ($(RAYLIB_PLATFORM),PLATFORM_DESKTOP)
+RAYLIB_PLATFORM_TAG := $(RAYLIB_PLATFORM_TAG)+$(RAYLIB_PLATFORM)
+endif
+ifneq ($(strip $(RAYLIB_EXTRA_FLAGS)),)
+RAYLIB_OPT_FLAGS += $(RAYLIB_EXTRA_FLAGS)
+RAYLIB_PLATFORM_TAG := $(RAYLIB_PLATFORM_TAG)+x$(shell printf '%s' '$(RAYLIB_EXTRA_FLAGS)' | sha256sum | cut -c1-12)
 endif
 
 # External SDK configuration is an actual build input, not a feature policy
@@ -282,7 +298,9 @@ endif
 # Build Output Directories
 # =============================================================================
 
-BUILDDIR := $(CURDIR)/build
+# Overridable so an embedder can keep one build per configuration (libregnum
+# passes BUILDDIR=<its build dir>/deps/graylib for each cross target)
+BUILDDIR ?= $(CURDIR)/build
 OBJDIR := $(BUILDDIR)/obj
 LIBOUTDIR := $(BUILDDIR)/lib
 BINDIR_BUILD := $(BUILDDIR)/bin

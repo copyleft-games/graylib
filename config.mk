@@ -76,6 +76,26 @@ RAYLIB_SHARED ?= 0
 # Path to raylib source (used when RAYLIB_SHARED=0)
 RAYLIB_SRC ?= $(CURDIR)/deps/raylib/src
 
+# Where the embedded raylib is compiled.  The default is the raylib
+# submodule itself (raylib's Makefile writes its objects, libraylib.a and
+# the generated Wayland protocol headers next to its sources).  Any other
+# directory gets an rsync'd copy of raylib's src/ and is built there, so
+# several configurations can live side by side: libregnum's cross targets
+# build theirs under their own build directory (BUILDDIR=..., see below)
+# while the native build keeps the in-tree one.
+RAYLIB_BUILD_DIR ?= $(RAYLIB_SRC)
+RAYLIB_LIB := $(RAYLIB_BUILD_DIR)/libraylib.a
+
+# raylib's PLATFORM for the embedded build (PLATFORM_DESKTOP, or
+# PLATFORM_ANDROID for an Android target)
+RAYLIB_PLATFORM ?= PLATFORM_DESKTOP
+
+# Extra variables for raylib's own make, e.g. a cross toolchain
+# (CC=aarch64-linux-gnu-gcc AR=...) or the Android NDK's
+# (ANDROID_NDK=... ANDROID_API_VERSION=29 GRAPHICS=GRAPHICS_API_OPENGL_ES3).
+# They change the rebuild tag, so a different set rebuilds raylib.
+RAYLIB_EXTRA_FLAGS ?=
+
 # GLFW window-system backends of the embedded raylib on Linux:
 #   auto = X11, plus Wayland when its development files are installed
 #   1    = X11 and Wayland (fails without the Wayland packages)

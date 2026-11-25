@@ -114,6 +114,12 @@ Build options are configured in =config.mk=. You can override them on the comman
 | =DEBUG=          | 0       | Enable debug build                   |
 | =WINDOWS=        | 0       | Cross-compile for 64-bit Windows     |
 | =CROSS=          | (empty) | Cross-compilation toolchain prefix   |
+| =BUILDDIR=       | =build= | Output directory (objects, libraries, GIR) |
+| =RAYLIB_BUILD_DIR= | =deps/raylib/src= | Where the embedded raylib is compiled |
+| =RAYLIB_PLATFORM= | =PLATFORM_DESKTOP= | raylib's =PLATFORM= for the embedded build |
+| =RAYLIB_EXTRA_FLAGS= | (empty) | Extra variables for raylib's own make |
+
+=BUILDDIR=, =RAYLIB_BUILD_DIR=, =RAYLIB_PLATFORM= and =RAYLIB_EXTRA_FLAGS= exist so an embedder can keep several configurations side by side; see [[#out-of-tree-builds][Out-of-tree builds]].
 
 ** Build Targets
 :PROPERTIES:
@@ -274,6 +280,24 @@ When using system raylib:
 - The bundled raylib is not built
 - Make sure raylib 6.2 is installed (graylib uses API added in 6.2)
 - The embedded build pins =SUPPORT_GPU_SKINNING=0= (see =RAYLIB_FEATURE_FLAGS= in =rules.mk=); a system raylib keeps whatever it was built with
+
+** Out-of-tree builds
+:PROPERTIES:
+:CUSTOM_ID: out-of-tree-builds
+:END:
+By default graylib builds into =build/= and the embedded raylib inside its own submodule (raylib's Makefile writes its objects, =libraylib.a= and the generated Wayland protocol headers next to its sources). Two variables move both, so several configurations can coexist; libregnum uses them to give every cross target its own copy (=build/<type>-<target>/deps/= in libregnum):
+
+#+begin_src sh
+make BUILDDIR=/tmp/gl-arm64 RAYLIB_BUILD_DIR=/tmp/raylib-arm64 \
+     CC=aarch64-linux-gnu-gcc RAYLIB_EXTRA_FLAGS='CC=aarch64-linux-gnu-gcc AR=aarch64-linux-gnu-ar'
+#+end_src
+
+- =BUILDDIR= replaces =build/= for objects, libraries, GIR and the rebuild markers.
+- =RAYLIB_BUILD_DIR=, when it is not the submodule's =src/=, receives an =rsync= copy of raylib's sources (objects, archives and generated protocol headers excluded) on every build, and raylib is rebuilt whenever that copy changed, its archive is missing or the rebuild tag differs. An unchanged tree is a no-op, so nothing downstream relinks. An =rsync= failure fails the build. =make raylib-clean= deletes the copy.
+- =RAYLIB_PLATFORM= is passed as raylib's =PLATFORM= (=PLATFORM_ANDROID= for Android).
+- =RAYLIB_EXTRA_FLAGS= is appended to raylib's make command line (a cross toolchain, the Android NDK's =ANDROID_NDK=/=ANDROID_API_VERSION=, =GRAPHICS=...). A non-desktop platform and the extra flags both become part of the rebuild tag in =$(BUILDDIR)/.raylib-platform=.
+
+With none of them set, every command is exactly the in-tree one. Requires =rsync= for the out-of-tree case.
 
 ** Cross-Platform Support
 :PROPERTIES:
