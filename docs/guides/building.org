@@ -398,6 +398,22 @@ make WINDOWS=1 test
 - Running Windows executables requires Wine or a Windows machine
 - Python bindings are not available for cross-compiled builds
 
+*** Android
+:PROPERTIES:
+:CUSTOM_ID: android
+:END:
+graylib builds for Android on arm64-v8a with the NDK's clang, as libregnum's =android-arm64= target does (=make ANDROID=1= there; its build container has the NDK and a static GLib stack):
+
+#+begin_src sh
+make BUILDDIR=/tmp/gl-android RAYLIB_BUILD_DIR=/tmp/raylib-android \
+     CC=$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android29-clang \
+     AR=$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar BUILD_GIR=0 \
+     RAYLIB_PLATFORM=PLATFORM_ANDROID \
+     RAYLIB_EXTRA_FLAGS="ANDROID_NDK=$NDK ANDROID_ARCH=arm64 ANDROID_API_VERSION=29 GRAPHICS=GRAPHICS_API_OPENGL_ES3"
+#+end_src
+
+=RAYLIB_PLATFORM=PLATFORM_ANDROID= builds raylib's Android layer (=rcore_android.c=, the NativeActivity glue) and makes graylib link EGL, GLES 3, libandroid and liblog. Compiled with =-DGRL_PLATFORM_ANDROID=, graylib leaves out what needs GLFW: the window's GLFW pre-flight, the input event-modifier callbacks (=grl_input_event_mods_init()= returns =FALSE=; input is polled) and clipboard images (=grl_window_get_clipboard_image()= returns =NULL=; text works). clang reports graylib's identical typedef redefinitions as a C11 extension in gnu89; the Android flags add =-Wno-typedef-redefinition= (gcc accepts them as GNU C), and every other warning stays on.
+
 *** macOS
 :PROPERTIES:
 :CUSTOM_ID: macos
