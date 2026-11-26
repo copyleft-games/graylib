@@ -276,10 +276,15 @@ _lib: lib-static lib-shared
 # dirty with an untracked file, which propagated up the submodule chain.
 RAYLIB_PLATFORM_MARKER := $(BUILDDIR)/.raylib-platform
 
-# Check if raylib needs to be built
+# Check if raylib needs to be built.  In-tree (the default) it is built
+# once and rebuilt only on a platform/flag change.  Out of tree
+# (RAYLIB_BUILD_DIR, config.mk) the copy of raylib's src/ is refreshed with
+# rsync on every build and raylib is rebuilt whenever rsync changed a file,
+# so a raylib bump reaches every configuration.
 raylib-check:
 ifeq ($(RAYLIB_SHARED),0)
-	@if [ ! -f "$(RAYLIB_SRC)/libraylib.a" ]; then \
+ifeq ($(RAYLIB_BUILD_DIR),$(RAYLIB_SRC))
+	@if [ ! -f "$(RAYLIB_LIB)" ]; then \
 		echo "Building raylib from deps/raylib..."; \
 		$(MAKE) WINDOWS=$(WINDOWS) CROSS=$(CROSS) raylib; \
 	elif [ ! -f "$(RAYLIB_PLATFORM_MARKER)" ] || [ "$$(cat $(RAYLIB_PLATFORM_MARKER))" != "$(RAYLIB_PLATFORM_TAG)" ]; then \
@@ -287,6 +292,21 @@ ifeq ($(RAYLIB_SHARED),0)
 		$(MAKE) raylib-clean; \
 		$(MAKE) WINDOWS=$(WINDOWS) CROSS=$(CROSS) raylib; \
 	fi
+else
+	@if [ -f "$(RAYLIB_PLATFORM_MARKER)" ] && [ "$$(cat $(RAYLIB_PLATFORM_MARKER))" != "$(RAYLIB_PLATFORM_TAG)" ]; then \
+		echo "Raylib platform mismatch (need $(RAYLIB_PLATFORM_TAG)), rebuilding..."; \
+		$(MAKE) raylib-clean; \
+	fi
+	@$(MKDIR_P) $(RAYLIB_BUILD_DIR)
+	@changes="$$(rsync -a -i --omit-dir-times --delete \
+		--exclude='*.o' --exclude='*.a' \
+		--exclude='*-client-protocol.h' --exclude='*-client-protocol-code.h' \
+		$(RAYLIB_SRC)/ $(RAYLIB_BUILD_DIR)/)" || exit $$?; \
+	if [ -n "$$changes" ] || [ ! -f "$(RAYLIB_LIB)" ] || [ ! -f "$(RAYLIB_PLATFORM_MARKER)" ]; then \
+		echo "Building raylib in $(RAYLIB_BUILD_DIR)..."; \
+		$(MAKE) WINDOWS=$(WINDOWS) CROSS=$(CROSS) raylib; \
+	fi
+endif
 endif
 
 # Build raylib from source (flags, -fPIC included: RAYLIB_OPT_FLAGS in rules.mk).
@@ -294,10 +314,10 @@ raylib:
 ifeq ($(RAYLIB_SHARED),0)
 	$(call print_status,"Building raylib...")
 ifeq ($(TARGET_PLATFORM),windows)
-	cd $(RAYLIB_SRC) && $(MAKE) CC=$(CC) AR=$(AR) \
-		PLATFORM=PLATFORM_DESKTOP PLATFORM_OS=WINDOWS RAYLIB_LIBTYPE=STATIC $(RAYLIB_OPT_FLAGS)
+	cd $(RAYLIB_BUILD_DIR) && $(MAKE) CC=$(CC) AR=$(AR) \
+		PLATFORM=$(RAYLIB_PLATFORM) PLATFORM_OS=WINDOWS RAYLIB_LIBTYPE=STATIC $(RAYLIB_OPT_FLAGS)
 else
-	cd $(RAYLIB_SRC) && $(MAKE) PLATFORM=PLATFORM_DESKTOP RAYLIB_LIBTYPE=STATIC $(RAYLIB_GLFW_FLAGS) $(RAYLIB_OPT_FLAGS)
+	cd $(RAYLIB_BUILD_DIR) && $(MAKE) PLATFORM=$(RAYLIB_PLATFORM) RAYLIB_LIBTYPE=STATIC $(RAYLIB_GLFW_FLAGS) $(RAYLIB_OPT_FLAGS)
 endif
 	@$(MKDIR_P) $(BUILDDIR)
 	@echo "$(RAYLIB_PLATFORM_TAG)" > $(RAYLIB_PLATFORM_MARKER)
@@ -305,10 +325,14 @@ else
 	$(call print_warning,"RAYLIB_SHARED=1 - using system raylib, skipping build")
 endif
 
-# Clean raylib build
+# Clean raylib build: raylib's own clean in-tree; the whole copy out of tree
 raylib-clean:
 ifeq ($(RAYLIB_SHARED),0)
+ifeq ($(RAYLIB_BUILD_DIR),$(RAYLIB_SRC))
 	cd $(RAYLIB_SRC) && $(MAKE) clean
+else
+	$(RMDIR) $(RAYLIB_BUILD_DIR)
+endif
 	@$(RM) $(RAYLIB_PLATFORM_MARKER)
 endif
 
@@ -334,7 +358,7 @@ $(LIBOUTDIR)/$(LIB_STATIC): $(OBJECTS) | $(LIBOUTDIR)
 # The bundled SDK is linked into the shared library. A rebuilt archive must
 # relink it even when the public headers and wrapper objects are unchanged.
 ifeq ($(RAYLIB_SHARED),0)
-_GRAYLIB_SDK_LINK_INPUT := $(RAYLIB_SRC)/libraylib.a
+_GRAYLIB_SDK_LINK_INPUT := $(RAYLIB_LIB)
 endif
 $(LIBOUTDIR)/$(LIB_SHARED): $(OBJECTS) $(_GRAYLIB_SDK_LINK_INPUT) | $(LIBOUTDIR)
 	$(call print_status,"Creating shared library: $(LIB_SHARED)")

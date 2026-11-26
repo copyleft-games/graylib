@@ -40,6 +40,7 @@ make help           # Show all targets
 **Build Variables:**
 - `DEBUG=1` - Enable debug build
 - `RAYLIB_SHARED=1` - Link against system raylib instead of bundled
+- `BUILDDIR=/path`, `RAYLIB_BUILD_DIR=/path` - Build out of tree (one copy per configuration; raylib's sources are rsync'd into `RAYLIB_BUILD_DIR`). Used by libregnum's cross targets; see `docs/guides/building.org`, "Out-of-tree builds"
 - `PREFIX=/path` - Installation prefix
 - `ASAN=1` - Enable AddressSanitizer (requires DEBUG=1)
 - `UBSAN=1` - Enable UndefinedBehaviorSanitizer (requires DEBUG=1)

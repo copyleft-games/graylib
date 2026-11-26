@@ -797,9 +797,13 @@ static guint   grl_event_mods;
 static guint64 grl_event_mods_serial;
 static guint   grl_focus_generation;
 
+#ifndef GRL_PLATFORM_ANDROID
 static GrlGlfwKeyFn         grl_prev_key_cb;
+#endif
 static GrlGlfwMouseButtonFn grl_prev_button_cb;
+#ifndef GRL_PLATFORM_ANDROID
 static GrlGlfwFocusFn       grl_prev_focus_cb;
+#endif
 static GrlGlfwCursorPosFn   grl_cursor_cb;   /* backend's, for injection */
 static GLFWwindow          *grl_hooked_win;
 static gboolean             grl_event_mods_armed;
@@ -836,6 +840,8 @@ grl_input_get_focus_generation (void)
     return grl_focus_generation;
 }
 
+#ifndef GRL_PLATFORM_ANDROID
+/* (only installed into GLFW, which Android does not have) */
 static void
 grl_chain_key_cb (GLFWwindow *window, int key, int scancode, int action,
                   int mods)
@@ -844,6 +850,7 @@ grl_chain_key_cb (GLFWwindow *window, int key, int scancode, int action,
     if (grl_prev_key_cb != NULL)
         grl_prev_key_cb (window, key, scancode, action, mods);
 }
+#endif
 
 static void
 grl_chain_button_cb (GLFWwindow *window, int button, int action, int mods)
@@ -853,6 +860,7 @@ grl_chain_button_cb (GLFWwindow *window, int button, int action, int mods)
         grl_prev_button_cb (window, button, action, mods);
 }
 
+#ifndef GRL_PLATFORM_ANDROID
 static void
 grl_chain_focus_cb (GLFWwindow *window, int focused)
 {
@@ -860,6 +868,7 @@ grl_chain_focus_cb (GLFWwindow *window, int focused)
     if (grl_prev_focus_cb != NULL)
         grl_prev_focus_cb (window, focused);
 }
+#endif
 
 gboolean
 grl_input_event_mods_armed (void)
@@ -870,6 +879,10 @@ grl_input_event_mods_armed (void)
 gboolean
 grl_input_event_mods_init (void)
 {
+#ifdef GRL_PLATFORM_ANDROID
+    /* raylib's Android platform has no GLFW: callers use polled state */
+    return FALSE;
+#else
     GLFWwindow *win;
     GrlGlfwKeyFn prev_key;
     GrlGlfwMouseButtonFn prev_button;
@@ -902,6 +915,7 @@ grl_input_event_mods_init (void)
     grl_hooked_win = win;
     grl_event_mods_armed = TRUE;
     return TRUE;
+#endif
 }
 
 /* Injection queue.  Injected events must be delivered INSIDE the poll

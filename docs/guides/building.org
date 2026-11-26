@@ -114,6 +114,12 @@ Build options are configured in =config.mk=. You can override them on the comman
 | =DEBUG=          | 0       | Enable debug build                   |
 | =WINDOWS=        | 0       | Cross-compile for 64-bit Windows     |
 | =CROSS=          | (empty) | Cross-compilation toolchain prefix   |
+| =BUILDDIR=       | =build= | Output directory (objects, libraries, GIR) |
+| =RAYLIB_BUILD_DIR= | =deps/raylib/src= | Where the embedded raylib is compiled |
+| =RAYLIB_PLATFORM= | =PLATFORM_DESKTOP= | raylib's =PLATFORM= for the embedded build |
+| =RAYLIB_EXTRA_FLAGS= | (empty) | Extra variables for raylib's own make |
+
+=BUILDDIR=, =RAYLIB_BUILD_DIR=, =RAYLIB_PLATFORM= and =RAYLIB_EXTRA_FLAGS= exist so an embedder can keep several configurations side by side; see [[#out-of-tree-builds][Out-of-tree builds]].
 
 ** Build Targets
 :PROPERTIES:
@@ -275,6 +281,24 @@ When using system raylib:
 - Make sure raylib 6.2 is installed (graylib uses API added in 6.2)
 - The embedded build pins =SUPPORT_GPU_SKINNING=0= (see =RAYLIB_FEATURE_FLAGS= in =rules.mk=); a system raylib keeps whatever it was built with
 
+** Out-of-tree builds
+:PROPERTIES:
+:CUSTOM_ID: out-of-tree-builds
+:END:
+By default graylib builds into =build/= and the embedded raylib inside its own submodule (raylib's Makefile writes its objects, =libraylib.a= and the generated Wayland protocol headers next to its sources). Two variables move both, so several configurations can coexist; libregnum uses them to give every cross target its own copy (=build/<type>-<target>/deps/= in libregnum):
+
+#+begin_src sh
+make BUILDDIR=/tmp/gl-arm64 RAYLIB_BUILD_DIR=/tmp/raylib-arm64 \
+     CC=aarch64-linux-gnu-gcc RAYLIB_EXTRA_FLAGS='CC=aarch64-linux-gnu-gcc AR=aarch64-linux-gnu-ar'
+#+end_src
+
+- =BUILDDIR= replaces =build/= for objects, libraries, GIR and the rebuild markers.
+- =RAYLIB_BUILD_DIR=, when it is not the submodule's =src/=, receives an =rsync= copy of raylib's sources (objects, archives and generated protocol headers excluded) on every build, and raylib is rebuilt whenever that copy changed, its archive is missing or the rebuild tag differs. An unchanged tree is a no-op, so nothing downstream relinks. An =rsync= failure fails the build. =make raylib-clean= deletes the copy.
+- =RAYLIB_PLATFORM= is passed as raylib's =PLATFORM= (=PLATFORM_ANDROID= for Android).
+- =RAYLIB_EXTRA_FLAGS= is appended to raylib's make command line (a cross toolchain, the Android NDK's =ANDROID_NDK=/=ANDROID_API_VERSION=, =GRAPHICS=...). A non-desktop platform and the extra flags both become part of the rebuild tag in =$(BUILDDIR)/.raylib-platform=.
+
+With none of them set, every command is exactly the in-tree one. Requires =rsync= for the out-of-tree case.
+
 ** Cross-Platform Support
 :PROPERTIES:
 :CUSTOM_ID: cross-platform-support
@@ -373,6 +397,22 @@ make WINDOWS=1 test
 - GObject Introspection (.gir/.typelib) is disabled when cross-compiling
 - Running Windows executables requires Wine or a Windows machine
 - Python bindings are not available for cross-compiled builds
+
+*** Android
+:PROPERTIES:
+:CUSTOM_ID: android
+:END:
+graylib builds for Android on arm64-v8a with the NDK's clang, as libregnum's =android-arm64= target does (=make ANDROID=1= there; its build container has the NDK and a static GLib stack):
+
+#+begin_src sh
+make BUILDDIR=/tmp/gl-android RAYLIB_BUILD_DIR=/tmp/raylib-android \
+     CC=$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android29-clang \
+     AR=$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar BUILD_GIR=0 \
+     RAYLIB_PLATFORM=PLATFORM_ANDROID \
+     RAYLIB_EXTRA_FLAGS="ANDROID_NDK=$NDK ANDROID_ARCH=arm64 ANDROID_API_VERSION=29 GRAPHICS=GRAPHICS_API_OPENGL_ES3"
+#+end_src
+
+=RAYLIB_PLATFORM=PLATFORM_ANDROID= builds raylib's Android layer (=rcore_android.c=, the NativeActivity glue) and makes graylib link EGL, GLES 3, libandroid and liblog. Compiled with =-DGRL_PLATFORM_ANDROID=, graylib leaves out what needs GLFW: the window's GLFW pre-flight, the input event-modifier callbacks (=grl_input_event_mods_init()= returns =FALSE=; input is polled) and clipboard images (=grl_window_get_clipboard_image()= returns =NULL=; text works). clang reports graylib's identical typedef redefinitions as a C11 extension in gnu89; the Android flags add =-Wno-typedef-redefinition= (gcc accepts them as GNU C), and every other warning stays on.
 
 *** macOS
 :PROPERTIES:
