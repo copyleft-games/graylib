@@ -69,7 +69,8 @@ TEST_SOURCES := \
 	test-model-skinning.c \
 	test-text-layout.c \
 	test-texture-mipmaps.c \
-	test-fast2d.c
+	test-fast2d.c \
+	test-window-adopt.c
 TEST_SOURCES += test-audio-owned.c
 
 # Executable-owned public SDK adapters, never a device or private SDK layout.
@@ -88,6 +89,12 @@ $(TESTOUTDIR)/test-raylib62$(EXE_EXT): $(LIBOUTDIR)/$(LIB_STATIC)
 $(TESTOUTDIR)/test-fast2d$(EXE_EXT): TEST_LDFLAGS := $(LIBOUTDIR)/$(LIB_STATIC) \
 	$(GLIB_LIBS) $(RAYLIB_LIBDIR)/libraylib.a $(PLATFORM_LIBS)
 $(TESTOUTDIR)/test-fast2d$(EXE_EXT): $(LIBOUTDIR)/$(LIB_STATIC)
+
+# The window adoption test asks raylib itself whether its window is open
+# (IsWindowReady, hidden in the shared library): link the static one.
+$(TESTOUTDIR)/test-window-adopt$(EXE_EXT): TEST_LDFLAGS := $(LIBOUTDIR)/$(LIB_STATIC) \
+	$(GLIB_LIBS) $(RAYLIB_LIBDIR)/libraylib.a $(PLATFORM_LIBS)
+$(TESTOUTDIR)/test-window-adopt$(EXE_EXT): $(LIBOUTDIR)/$(LIB_STATIC)
 
 # Test executables (with output directory and platform-specific extension)
 TEST_PROGRAMS := $(addprefix $(TESTOUTDIR)/,$(patsubst %.c,%$(EXE_EXT),$(TEST_SOURCES)))

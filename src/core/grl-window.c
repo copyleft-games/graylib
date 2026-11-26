@@ -63,6 +63,7 @@ typedef struct _GrlWindowPrivate
     gint            initial_width;
     gint            initial_height;
     gboolean        is_initialized;
+    gboolean        adopted;        /* took over a window already open; never closes it */
     gint            target_fps;
     guint64         frame_count;
 
@@ -340,6 +341,26 @@ grl_window_constructed (GObject *object)
 
     G_OBJECT_CLASS (grl_window_parent_class)->constructed (object);
 
+    /* raylib has one window per process.  A GrlWindow made while it is
+       already open (one GrlWindow alive and another made, or a window a
+       previous owner kept open) adopts it instead of calling InitWindow()
+       again: on Android a second InitWindow() waits for an activity
+       window that already arrived and never initializes the display, and
+       on the desktop it would leak the first context.  The adopting
+       object takes the title and frame rate it was given, and never
+       closes the window: whoever opened it does (docs/api/core.org,
+       "One window per process"). */
+    if (IsWindowReady ())
+    {
+        priv->is_initialized = TRUE;
+        priv->adopted = TRUE;
+        if (priv->title != NULL)
+            SetWindowTitle (priv->title);
+        if (priv->target_fps > 0)
+            SetTargetFPS (priv->target_fps);
+        return;
+    }
+
     /* Pre-flight GLFW before InitWindow: raylib's InitWindow() calls
        InitPlatform() but does NOT check its return value, so when GLFW cannot
        initialize (e.g. no usable display -- "X11: The DISPLAY environment
@@ -414,8 +435,9 @@ grl_window_dispose (GObject *object)
     GrlWindow *self = GRL_WINDOW (object);
     GrlWindowPrivate *priv = grl_window_get_instance_private (self);
 
-    /* Close the raylib window if it was initialized */
-    if (priv->is_initialized && IsWindowReady ())
+    /* Close the raylib window if this object opened it (an adopted
+       window stays open for its owner) */
+    if (priv->is_initialized && !priv->adopted && IsWindowReady ())
     {
         /* fences belong to the GL context about to be destroyed */
         grl_frame_sync_reset ();

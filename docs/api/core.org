@@ -127,6 +127,9 @@ Manages a window and its graphics context.
 g_autoptr(GrlWindow) window = grl_window_new (800, 600, "Window Title");
 #+end_src
 
+*** One window per process
+raylib has one window per process. A =GrlWindow= created while that window is already open (another =GrlWindow= still holds it, or an owner kept it open on purpose) adopts it instead of initializing a second one: it applies its own title and target frame rate and reports =grl_window_is_ready()=, and its disposal never closes the window; the object that opened it does. On Android this is what lets a program show one screen (a first-run setup screen, say) and then hand the activity's window to the game: a second =InitWindow()= there would wait for an activity window that has already arrived and never initialize the display.
+
 *** Window State
 :PROPERTIES:
 :CUSTOM_ID: window-state
