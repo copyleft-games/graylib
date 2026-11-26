@@ -70,7 +70,8 @@ TEST_SOURCES := \
 	test-text-layout.c \
 	test-texture-mipmaps.c \
 	test-fast2d.c \
-	test-window-adopt.c
+	test-window-adopt.c \
+	test-native-window.c
 TEST_SOURCES += test-audio-owned.c
 
 # Executable-owned public SDK adapters, never a device or private SDK layout.
@@ -95,6 +96,12 @@ $(TESTOUTDIR)/test-fast2d$(EXE_EXT): $(LIBOUTDIR)/$(LIB_STATIC)
 $(TESTOUTDIR)/test-window-adopt$(EXE_EXT): TEST_LDFLAGS := $(LIBOUTDIR)/$(LIB_STATIC) \
 	$(GLIB_LIBS) $(RAYLIB_LIBDIR)/libraylib.a $(PLATFORM_LIBS)
 $(TESTOUTDIR)/test-window-adopt$(EXE_EXT): $(LIBOUTDIR)/$(LIB_STATIC)
+
+# The native window test reads raylib's own getters (hidden in the
+# shared library): link the static one.
+$(TESTOUTDIR)/test-native-window$(EXE_EXT): TEST_LDFLAGS := $(LIBOUTDIR)/$(LIB_STATIC) \
+	$(GLIB_LIBS) $(RAYLIB_LIBDIR)/libraylib.a $(PLATFORM_LIBS)
+$(TESTOUTDIR)/test-native-window$(EXE_EXT): $(LIBOUTDIR)/$(LIB_STATIC)
 
 # Test executables (with output directory and platform-specific extension)
 TEST_PROGRAMS := $(addprefix $(TESTOUTDIR)/,$(patsubst %.c,%$(EXE_EXT),$(TEST_SOURCES)))
@@ -149,6 +156,9 @@ else
 		LD_LIBRARY_PATH=$(LIBOUTDIR):$$LD_LIBRARY_PATH $$test || exit 1; \
 	done
 endif
+	@echo ""
+	@echo "=== Running test-native-window-layout.sh ==="
+	@bash test-native-window-layout.sh $(PROJROOT)
 	@echo ""
 	@echo "All tests passed!"
 
