@@ -6592,6 +6592,73 @@ grl_image_composite_layer (GrlImage    *dst,
     dw = dst->handle.width;
     dh = dst->handle.height;
 
+    /*
+     * Fast path: both images RGBA8 (every GrlLayer and every frame canvas).
+     * Reads and writes the pixel buffers directly instead of going through
+     * raylib's per-pixel, per-format GetImageColor()/ImageDrawPixel(), and
+     * walks only the rows and columns where the layer overlaps @dst.  The
+     * colour math is the slow path's, line for line, so the output is
+     * byte-identical; tests/test-image-layer.c holds the two together.
+     */
+    if (src->handle.format == PIXELFORMAT_UNCOMPRESSED_R8G8B8A8
+        && dst->handle.format == PIXELFORMAT_UNCOMPRESSED_R8G8B8A8
+        && src->handle.data != NULL && dst->handle.data != NULL)
+    {
+        gint lx0 = MAX (0, -x);
+        gint ly0 = MAX (0, -y);
+        gint lx1 = MIN (lw, dw - x);
+        gint ly1 = MIN (lh, dh - y);
+
+        for (ly = ly0; ly < ly1; ly++)
+        {
+            const guint8 *sp = (const guint8 *) src->handle.data
+                               + ((gsize) ly * (gsize) lw + (gsize) lx0) * 4;
+            guint8 *dp = (guint8 *) dst->handle.data
+                         + ((gsize) (y + ly) * (gsize) dw + (gsize) (x + lx0)) * 4;
+
+            for (lx = lx0; lx < lx1; lx++, sp += 4, dp += 4)
+            {
+                gfloat sa, da, oa;
+                gfloat sr, sg, sb, dr, dg, db;
+                gfloat br_, bg, bb;
+
+                if (sp[3] == 0)
+                    continue;
+
+                sa = (sp[3] / 255.0f) * opacity;
+                da = dp[3] / 255.0f;
+                sr = sp[0] / 255.0f;
+                sg = sp[1] / 255.0f;
+                sb = sp[2] / 255.0f;
+                dr = dp[0] / 255.0f;
+                dg = dp[1] / 255.0f;
+                db = dp[2] / 255.0f;
+
+                br_ = blend_chan (dr, sr, mode);
+                bg  = blend_chan (dg, sg, mode);
+                bb  = blend_chan (db, sb, mode);
+
+                oa = sa + da * (1.0f - sa);
+                if (oa <= 0.0f)
+                {
+                    dp[0] = 0; dp[1] = 0; dp[2] = 0; dp[3] = 0;
+                }
+                else
+                {
+                    gfloat outR = (sa * br_ + (1.0f - sa) * da * dr) / oa;
+                    gfloat outG = (sa * bg  + (1.0f - sa) * da * dg) / oa;
+                    gfloat outB = (sa * bb  + (1.0f - sa) * da * db) / oa;
+
+                    dp[0] = (guint8) clamp_i ((gint) (outR * 255.0f + 0.5f), 0, 255);
+                    dp[1] = (guint8) clamp_i ((gint) (outG * 255.0f + 0.5f), 0, 255);
+                    dp[2] = (guint8) clamp_i ((gint) (outB * 255.0f + 0.5f), 0, 255);
+                    dp[3] = (guint8) clamp_i ((gint) (oa * 255.0f + 0.5f), 0, 255);
+                }
+            }
+        }
+        return;
+    }
+
     for (ly = 0; ly < lh; ly++) {
         for (lx = 0; lx < lw; lx++) {
             Color sp, dp;

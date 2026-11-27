@@ -617,6 +617,9 @@ context, so it works headless (asset bakers, tests, CLI tools).
   directly (byte-identical), anything else rasterises into a coverage mask and
   plots each covered pixel once through `grl_image_plot`. They still ignore the
   transform matrix.
+- `grl_image_composite_layer` has a direct-memory RGBA8 fast path (same float
+  math, byte-identical; `tests/test-image-layer.c` checks it against a copy of
+  the per-pixel reference).
 - **Animated GIF**: `GrlGifWriter` (`src/graphics/grl-gif-writer.c`) is a
   self-contained, in-tree GIF89a encoder (uncompressed LZW + web-safe palette).
   No external/vendored encoder.
