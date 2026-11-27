@@ -123,6 +123,223 @@ test_blend_add_saturates (void)
     assert_pixel (img, 4, 4, 255, 255, 255, 255, 1);
 }
 
+/*
+ * The raylib-backed primitives blend (graylib 0.13.2, libregnum issue #2).
+ *
+ * Each case draws 45% black ({0,0,0,115}) under OVER onto opaque white and
+ * must give about 140 grey, where it used to store {0,0,0,115} and punch a
+ * transparent hole.  The covered pixels must be exactly the ones the same
+ * primitive covers under REPLACE, each blended once.
+ */
+
+typedef void (*PrimFunc) (GrlImage *img, const GrlColor *c);
+
+static void prim_pixel (GrlImage *img, const GrlColor *c)
+{ grl_image_draw_pixel (img, 10, 10, c); }
+static void prim_line (GrlImage *img, const GrlColor *c)
+{ grl_image_draw_line (img, 2, 3, 29, 20, c); }
+static void prim_circle (GrlImage *img, const GrlColor *c)
+{ grl_image_draw_circle (img, 16, 16, 9, c); }
+static void prim_rect (GrlImage *img, const GrlColor *c)
+{ g_autoptr(GrlRectangle) r = grl_rectangle_new (3.0f, 4.0f, 20.0f, 15.0f);
+  grl_image_draw_rectangle (img, r, c); }
+static void prim_rect_lines (GrlImage *img, const GrlColor *c)
+{ g_autoptr(GrlRectangle) r = grl_rectangle_new (3.0f, 4.0f, 20.0f, 15.0f);
+  grl_image_draw_rectangle_lines (img, r, 3, c); }
+static void prim_rect_pro (GrlImage *img, const GrlColor *c)
+{ g_autoptr(GrlRectangle) r = grl_rectangle_new (16.0f, 16.0f, 14.0f, 6.0f);
+  g_autoptr(GrlVector2) o = grl_vector2_new (7.0f, 3.0f);
+  grl_image_draw_rectangle_pro (img, r, o, 30.0f, c); }
+static void prim_strip (GrlImage *img, const GrlColor *c)
+{ GrlVector2 pts[4] = { { 2.0f, 2.0f }, { 28.0f, 6.0f }, { 6.0f, 28.0f }, { 28.0f, 28.0f } };
+  grl_image_draw_line_strip (img, pts, 4, c); }
+
+static const struct
+{
+    const gchar *name;
+    PrimFunc     draw;
+} prims[] = {
+    { "pixel", prim_pixel },
+    { "line", prim_line },
+    { "circle", prim_circle },
+    { "rectangle", prim_rect },
+    { "rectangle-lines", prim_rect_lines },
+    { "rectangle-pro", prim_rect_pro },
+    { "line-strip", prim_strip },
+};
+
+/* Bytes per row of a 32x32 RGBA8 image. */
+#define PRIM_SIZE (32)
+
+static void
+test_blend_raylib_primitives_over (void)
+{
+    guint i;
+
+    for (i = 0; i < G_N_ELEMENTS (prims); i++)
+    {
+        g_autoptr(GrlColor) white = grl_color_new (255, 255, 255, 255);
+        g_autoptr(GrlColor) clear = grl_color_new (0, 0, 0, 0);
+        g_autoptr(GrlColor) band = grl_color_new (0, 0, 0, 115);
+        g_autoptr(GrlColor) mark = grl_color_new (255, 0, 0, 255);
+        g_autoptr(GrlImage) img = grl_image_new_color (PRIM_SIZE, PRIM_SIZE, white);
+        g_autoptr(GrlImage) cov = grl_image_new_color (PRIM_SIZE, PRIM_SIZE, clear);
+        guint8 *p;
+        guint8 *q;
+        gint n;
+        gint k;
+
+        /* Coverage reference: the primitive in REPLACE on a clear image. */
+        prims[i].draw (cov, mark);
+        grl_image_set_blend_mode (img, GRL_IMAGE_BLEND_OVER);
+        prims[i].draw (img, band);
+
+        p = grl_image_get_pixels (img, NULL);
+        q = grl_image_get_pixels (cov, NULL);
+        n = 0;
+        for (k = 0; k < PRIM_SIZE * PRIM_SIZE; k++)
+        {
+            if (q[k * 4 + 3] != 0)
+            {
+                /* Covered: 45% black over white, blended exactly once. */
+                n++;
+                if (ABS ((gint) p[k * 4] - 140) > 1 || p[k * 4] != p[k * 4 + 1]
+                    || p[k * 4 + 3] != 255)
+                    g_error ("%s: covered pixel %d is %u,%u,%u,%u, want ~140 grey",
+                             prims[i].name, k, p[k * 4], p[k * 4 + 1], p[k * 4 + 2],
+                             p[k * 4 + 3]);
+            }
+            else if (p[k * 4] != 255 || p[k * 4 + 3] != 255)
+                g_error ("%s: uncovered pixel %d changed", prims[i].name, k);
+        }
+        g_assert_cmpint (n, >, 0);
+    }
+}
+
+/* An opaque colour under OVER is byte-identical to REPLACE (raylib path). */
+static void
+test_blend_raylib_primitives_opaque_identical (void)
+{
+    guint i;
+
+    for (i = 0; i < G_N_ELEMENTS (prims); i++)
+    {
+        g_autoptr(GrlColor) bg = grl_color_new (30, 60, 90, 200);
+        g_autoptr(GrlColor) c = grl_color_new (200, 100, 50, 255);
+        g_autoptr(GrlImage) a = grl_image_new_color (PRIM_SIZE, PRIM_SIZE, bg);
+        g_autoptr(GrlImage) b = grl_image_new_color (PRIM_SIZE, PRIM_SIZE, bg);
+        gsize n;
+
+        prims[i].draw (a, c);
+        grl_image_set_blend_mode (b, GRL_IMAGE_BLEND_OVER);
+        prims[i].draw (b, c);
+        g_assert_cmpmem (grl_image_get_pixels (a, &n), (gsize) PRIM_SIZE * PRIM_SIZE * 4,
+                         grl_image_get_pixels (b, NULL), (gsize) PRIM_SIZE * PRIM_SIZE * 4);
+    }
+}
+
+/* REPLACE still stores the colour as is, alpha included (unchanged). */
+static void
+test_blend_raylib_primitives_replace (void)
+{
+    guint i;
+
+    for (i = 0; i < G_N_ELEMENTS (prims); i++)
+    {
+        g_autoptr(GrlColor) white = grl_color_new (255, 255, 255, 255);
+        g_autoptr(GrlColor) band = grl_color_new (0, 0, 0, 115);
+        g_autoptr(GrlImage) img = grl_image_new_color (PRIM_SIZE, PRIM_SIZE, white);
+        guint8 *p;
+        gint k;
+        gboolean seen = FALSE;
+
+        prims[i].draw (img, band);
+        p = grl_image_get_pixels (img, NULL);
+        for (k = 0; k < PRIM_SIZE * PRIM_SIZE; k++)
+            if (p[k * 4 + 3] == 115)
+            {
+                g_assert_cmpuint (p[k * 4], ==, 0);
+                seen = TRUE;
+            }
+        g_assert_true (seen);
+    }
+}
+
+/* ADD, MULTIPLY and SUBTRACT reach the raylib primitives too. */
+static void
+test_blend_raylib_primitives_modes (void)
+{
+    g_autoptr(GrlColor) bg = grl_color_new (200, 100, 50, 255);
+    g_autoptr(GrlColor) c = grl_color_new (100, 100, 100, 255);
+    g_autoptr(GrlRectangle) r = grl_rectangle_new (0.0f, 0.0f, 8.0f, 8.0f);
+    g_autoptr(GrlImage) add = grl_image_new_color (8, 8, bg);
+    g_autoptr(GrlImage) sub = grl_image_new_color (8, 8, bg);
+    g_autoptr(GrlImage) mul = grl_image_new_color (8, 8, bg);
+
+    grl_image_set_blend_mode (add, GRL_IMAGE_BLEND_ADD);
+    grl_image_draw_rectangle (add, r, c);
+    assert_pixel (add, 4, 4, 255, 200, 150, 255, 1);
+
+    grl_image_set_blend_mode (sub, GRL_IMAGE_BLEND_SUBTRACT);
+    grl_image_draw_circle (sub, 4, 4, 3, c);
+    assert_pixel (sub, 4, 4, 100, 0, 0, 255, 1);
+
+    grl_image_set_blend_mode (mul, GRL_IMAGE_BLEND_MULTIPLY);
+    grl_image_draw_line (mul, 0, 4, 7, 4, c);
+    assert_pixel (mul, 4, 4, 78, 39, 20, 255, 1);
+}
+
+/* The blended path honours the clip rect, as the other primitives do. */
+static void
+test_blend_raylib_primitives_clip (void)
+{
+    g_autoptr(GrlColor) white = grl_color_new (255, 255, 255, 255);
+    g_autoptr(GrlColor) band = grl_color_new (0, 0, 0, 115);
+    g_autoptr(GrlRectangle) r = grl_rectangle_new (0.0f, 0.0f, 16.0f, 16.0f);
+    g_autoptr(GrlImage) img = grl_image_new_color (16, 16, white);
+    g_autoptr(GrlRectangle) clip = grl_rectangle_new (4.0f, 4.0f, 4.0f, 4.0f);
+
+    grl_image_set_blend_mode (img, GRL_IMAGE_BLEND_OVER);
+    grl_image_set_clip_rect (img, clip);
+    grl_image_draw_rectangle (img, r, band);
+    assert_pixel (img, 5, 5, 140, 140, 140, 255, 1);
+    assert_pixel (img, 1, 1, 255, 255, 255, 255, 0);
+    assert_pixel (img, 12, 12, 255, 255, 255, 255, 0);
+}
+
+/* Gradients blend their per-pixel colours; off-image shapes are no-ops. */
+static void
+test_blend_raylib_gradients (void)
+{
+    g_autoptr(GrlColor) white = grl_color_new (255, 255, 255, 255);
+    g_autoptr(GrlColor) band = grl_color_new (0, 0, 0, 115);
+    g_autoptr(GrlRectangle) r = grl_rectangle_new (0.0f, 0.0f, 16.0f, 16.0f);
+    g_autoptr(GrlRectangle) off = grl_rectangle_new (40.0f, 40.0f, 8.0f, 8.0f);
+    g_autoptr(GrlVector2) ce = grl_vector2_new (8.0f, 8.0f);
+    g_autoptr(GrlVector2) v1 = grl_vector2_new (0.0f, 0.0f);
+    g_autoptr(GrlVector2) v2 = grl_vector2_new (0.0f, 15.0f);
+    g_autoptr(GrlVector2) v3 = grl_vector2_new (15.0f, 0.0f);
+    g_autoptr(GrlImage) a = grl_image_new_color (16, 16, white);
+    g_autoptr(GrlImage) b = grl_image_new_color (16, 16, white);
+    g_autoptr(GrlImage) c = grl_image_new_color (16, 16, white);
+
+    grl_image_set_blend_mode (a, GRL_IMAGE_BLEND_OVER);
+    grl_image_draw_rectangle_gradient_ex (a, r, band, band, band, band);
+    assert_pixel (a, 8, 8, 140, 140, 140, 255, 1);
+    grl_image_draw_rectangle (a, off, band);
+    grl_image_draw_circle (a, -50, -50, 4, band);
+
+    grl_image_set_blend_mode (b, GRL_IMAGE_BLEND_OVER);
+    grl_image_draw_circle_gradient (b, ce, 6.0f, band, band);
+    assert_pixel (b, 8, 8, 140, 140, 140, 255, 1);
+    assert_pixel (b, 0, 0, 255, 255, 255, 255, 0);
+
+    grl_image_set_blend_mode (c, GRL_IMAGE_BLEND_OVER);
+    grl_image_draw_triangle_gradient (c, v1, v2, v3, band, band, band);
+    assert_pixel (c, 3, 3, 140, 140, 140, 255, 1);
+    assert_pixel (c, 14, 14, 255, 255, 255, 255, 0);
+}
+
 static void
 test_blend_requires_rgba (void)
 {
@@ -1613,6 +1830,12 @@ main (int   argc,
     g_test_add_func ("/image-draw/blend/transparent-noop", test_blend_transparent_noop);
     g_test_add_func ("/image-draw/blend/over-onto-transparent", test_blend_over_onto_transparent);
     g_test_add_func ("/image-draw/blend/requires-rgba", test_blend_requires_rgba);
+    g_test_add_func ("/image-draw/blend/raylib-over", test_blend_raylib_primitives_over);
+    g_test_add_func ("/image-draw/blend/raylib-opaque-identical", test_blend_raylib_primitives_opaque_identical);
+    g_test_add_func ("/image-draw/blend/raylib-replace", test_blend_raylib_primitives_replace);
+    g_test_add_func ("/image-draw/blend/raylib-modes", test_blend_raylib_primitives_modes);
+    g_test_add_func ("/image-draw/blend/raylib-clip", test_blend_raylib_primitives_clip);
+    g_test_add_func ("/image-draw/blend/raylib-gradients", test_blend_raylib_gradients);
 
     g_test_add_func ("/image-draw/color-space/default-roundtrip", test_color_space_default_and_roundtrip);
     g_test_add_func ("/image-draw/color-space/gamma-byte-identical", test_color_space_gamma_byte_identical);
