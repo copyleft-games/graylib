@@ -1244,8 +1244,9 @@ grl_image_from_region (GrlImage           *self,
  * @new_width: New width.
  * @new_height: New height.
  *
- * Returns a new image that is a bicubically scaled copy of this image. Unlike
- * grl_image_resize(), the original image is left unchanged.
+ * Returns a new image that is a scaled copy of this image, resampled as
+ * grl_image_resize() describes. Unlike grl_image_resize(), the original
+ * image is left unchanged.
  *
  * Returns: (transfer full): A new, resized #GrlImage.
  */
@@ -1381,7 +1382,16 @@ grl_image_export_to_memory (GrlImage    *self,
  * @new_width: New width.
  * @new_height: New height.
  *
- * Resizes the image using bicubic scaling.
+ * Resizes the image with raylib's ImageResize(): stb_image_resize2 on the
+ * 8-bit values as stored, with its default filters (Mitchell when
+ * shrinking, Catmull-Rom when enlarging; alpha-weighted for RGBA).  It is
+ * not bicubic in the usual sense, and it filters the gamma-encoded sRGB
+ * values directly, so shrinking darkens fine bright detail (a 1-pixel
+ * black/white checkerboard halves to sRGB 128 instead of the perceptual
+ * mid grey 188).  For high-quality downsampling (supersampled renders)
+ * resample in linear light instead (libregnum's lrg_image_downsample()
+ * does).
+ * Images in formats other than 8-bit RGBA are converted first.
  */
 void
 grl_image_resize (GrlImage *self,

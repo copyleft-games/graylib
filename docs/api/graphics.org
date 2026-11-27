@@ -72,9 +72,11 @@ grl_image_rotate_cw (img);    /* 90 degrees clockwise */
 grl_image_rotate_ccw (img);   /* 90 degrees counter-clockwise */
 
 /* Scale to a NEW image, leaving the original untouched */
-g_autoptr(GrlImage) big = grl_image_resized (img, 256, 256);          /* bicubic */
+g_autoptr(GrlImage) big = grl_image_resized (img, 256, 256);          /* stb resize, see below */
 g_autoptr(GrlImage) px  = grl_image_scaled_nearest (img, 64, 64);     /* pixel-perfect */
 #+end_src
+
+=grl_image_resize()= and =grl_image_resized()= use raylib's =ImageResize()=: stb_image_resize2 with its default filters (Mitchell when shrinking, Catmull-Rom when enlarging; alpha-weighted for RGBA) on the 8-bit values as stored. Earlier docs called it bicubic; it is not, in the usual sense. It filters gamma-encoded sRGB directly, so shrinking darkens fine bright detail: a 1-pixel black and white checkerboard halves to sRGB 128 instead of the perceptual mid grey 188. For downsampling a supersampled render, resample in linear light instead (libregnum's =lrg_image_downsample()=).
 
 *** Color Operations
 :PROPERTIES:
