@@ -43,6 +43,7 @@ PUBLIC_HEADERS := \
 	src/core/grl-window.h \
 	src/core/grl-input.h \
 	src/core/grl-frame-sync.h \
+	src/core/grl-native-window.h \
 	src/graphics/grl-image.h \
 	src/graphics/grl-path.h \
 	src/graphics/grl-svg.h \
@@ -126,6 +127,7 @@ SOURCES := \
 	src/core/grl-window.c \
 	src/core/grl-input.c \
 	src/core/grl-frame-sync.c \
+	src/core/grl-native-window.c \
 	src/graphics/grl-image.c \
 	src/graphics/grl-path.c \
 	src/graphics/grl-svg.c \
@@ -524,6 +526,7 @@ endif
 	$(INSTALL_DATA) src/core/grl-window.h $(DESTDIR)$(INCLUDEDIR)/graylib/core/
 	$(INSTALL_DATA) src/core/grl-input.h $(DESTDIR)$(INCLUDEDIR)/graylib/core/
 	$(INSTALL_DATA) src/core/grl-frame-sync.h $(DESTDIR)$(INCLUDEDIR)/graylib/core/
+	$(INSTALL_DATA) src/core/grl-native-window.h $(DESTDIR)$(INCLUDEDIR)/graylib/core/
 	$(INSTALL_DATA) src/graphics/grl-image.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
 	$(INSTALL_DATA) src/graphics/grl-path.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
 	$(INSTALL_DATA) src/graphics/grl-svg.h $(DESTDIR)$(INCLUDEDIR)/graylib/graphics/
@@ -698,6 +701,10 @@ $(OBJDIR)/src/core/grl-input.o: src/core/grl-input.c
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 
 $(OBJDIR)/src/core/grl-frame-sync.o: src/core/grl-frame-sync.c
+	@$(MKDIR_P) $(dir $@)
+	$(CC) $(LIB_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/src/core/grl-native-window.o: src/core/grl-native-window.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(LIB_CFLAGS) -c -o $@ $<
 

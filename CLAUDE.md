@@ -210,7 +210,7 @@ Heap-allocated, reference-counted objects:
 
 **Software renderer:** GrlSoftwareRenderer (wraps raylib's header-only `rlsw` CPU rasterizer, 1.6 in raylib 6.2 — its options are spelled `RLSW_*` since 6.2; headless, no GPU. Singleton — one live instance.)
 
-**Modules of functions (no type):** `grl_fs_*` (filesystem helpers, `src/system/grl-fs.h`), `grl_text_*` (string utilities, `src/text/grl-text-utils.h`).
+**Modules of functions (no type):** `grl_fs_*` (filesystem helpers, `src/system/grl-fs.h`), `grl_text_*` (string utilities, `src/text/grl-text-utils.h`), `grl_native_window_*` (native window resizes raylib does not follow, Android; mirrors raylib's internal `CoreData`, checked by `tests/test-native-window-layout.sh`; `src/core/grl-native-window.h`).
 
 ### Interfaces
 - `GrlDrawable` - Objects that can be drawn (`draw()`)

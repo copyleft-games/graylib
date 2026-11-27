@@ -9,6 +9,7 @@
 
 #include "config.h"
 #include "grl-frame-sync.h"
+#include "grl-native-window-private.h"
 #include <raylib.h>
 #include <rlgl.h>		/* rlGetProcAddress, rlGetVersion, rlDrawRenderBatchActive */
 
@@ -316,6 +317,9 @@ grl_frame_sync_before_present (void)
 void
 grl_frame_sync_end_drawing (void)
 {
+    /* the frame a native window resize reported ends here */
+    grl_native_window_end_frame_private ();
+
     if (!grl_frame_sync_is_active ())
     {
         EndDrawing ();

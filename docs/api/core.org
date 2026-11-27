@@ -273,6 +273,22 @@ Support: sync objects are core in OpenGL 3.2+ and ES 3.0, so raylib's desktop GL
 
 When to use it: measured on Mesa (Iris Xe, Wayland and XWayland), the driver already holds GPU-bound and vsynced frames to about one frame of queue, so 2 changes nothing there and is a cheap guard elsewhere; 1 cut input-to-GPU-done latency from 3.5 to 2.5 ms on an uncapped GPU-bound scene at a 19% frame-rate cost, and changed nothing with vsync on. libregnum's =docs/performance.org= ("Input latency") has the full tables.
 
+*** Native Window Resizes (Android, foldables)
+
+On the desktop raylib follows window resizes itself. On Android it does not: it sizes its EGL buffers, its screen and render sizes, the viewport and the 2D projection once, when the window first appears, and keeps them. A foldable opened (or closed), split screen or a freeform window then shows the first picture scaled to the new window: stretched. raylib has no setter for that state there (=SetWindowSize()= is a no-op on Android), and raylib is never modified, so =src/core/grl-native-window.h= reaches it the way raylib's own platform files do, through raylib's global =CORE=, with a mirror of its internal =CoreData= layout (graylib 0.13.1).
+
+#+begin_src c
+/* the native buffers already resized (Android: ANativeWindow_setBuffersGeometry
+ * with the window's base size); between frames, the context current */
+if (grl_native_window_resize (width, height))
+    g_message ("now %dx%d", width, height);
+#+end_src
+
+- =grl_native_window_resize(width, height)= :: raylib's display, screen, render and framebuffer sizes become =width= x =height= (no offset, no scaling matrix); rlgl's framebuffer size, the default viewport and the top-left-origin projection follow; =IsWindowResized()= (=grl_window_is_resized()=) is =TRUE= for the next frame, as on the desktop (graylib clears it before that frame's =EndDrawing()=, in =grl_frame_sync_end_drawing()=, since raylib's Android platform never does). =FALSE=, with nothing changed, when no window is open, a size is not positive or the layout check fails.
+- =grl_native_window_can_resize()= :: the layout check: sentinel values written through the mirror must read back through raylib's own getters (=GetScreenWidth()=, =GetRenderWidth()=, =IsWindowResized()=, =GetGamepadButtonPressed()=, =GetFrameTime()=) and one written by a raylib setter (=SetMouseScale()=) through the mirror, from the struct's first section to its last; the old values are restored. It needs no window and is cached.
+- Who calls it :: libregnum's Android platform layer (=lrg-platform.c=), on every window, configuration or content-rect change; games only see =GetScreenWidth()= / =GetScreenHeight()= change and =IsWindowResized()= turn on for a frame.
+- Keeping the mirror honest :: =tests/test-native-window-layout.sh= (part of =make test=) compares the mirror with the pinned raylib's =rcore.c=, comments and spacing aside, checks the array sizes against =rcore.c='s defaults, and that raylib's =config.h= does not override them; =tests/test-native-window.c= runs the layout check and resizes a hidden window. A raylib bump that moves =CoreData= fails there; update the mirror (=GrlCoreData=, field names and order are raylib's) with it.
+
 *** Running the Window Loop
 :PROPERTIES:
 :CUSTOM_ID: running-the-window-loop
