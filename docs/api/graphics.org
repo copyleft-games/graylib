@@ -236,6 +236,16 @@ grl_image_set_clip_rect (img, NULL);
 grl_image_set_antialias (img, TRUE);
 #+end_src
 
+**** Which primitives blend
+:PROPERTIES:
+:CUSTOM_ID: which-primitives-blend
+:END:
+Since 0.13.2 every =grl_image_draw_*= primitive honours the blend mode. That includes the plain ones raylib rasterises: =draw_pixel=, =draw_line=, =draw_line_strip=, =draw_circle=, =draw_rectangle=, =draw_rectangle_lines=, =draw_rectangle_pro=, =draw_rectangle_gradient_ex=, =draw_circle_gradient= and =draw_triangle_gradient=. Before 0.13.2 those stored the colour as it was, alpha and all, under every mode, so a 45%-black rectangle drawn with =OVER= onto white left a transparent hole (=0,0,0,115=) instead of grey (=140,140,140,255=).
+
+How it works: under =REPLACE=, and under =OVER= with an opaque colour (every corner opaque, for the gradients), the call still goes straight to raylib, so the output is byte-identical to earlier releases. Any other case rasterises the primitive into a scratch coverage mask the size of its bounding box, then blends every covered pixel once through the same per-pixel code the other primitives use. Raylib's exact pixel coverage is kept, and pixels raylib draws twice (its circle spans overlap, a line strip's joints) are still blended only once. That path also honours the clip rect and the blend colour space. It does not apply the transform matrix: these primitives ignore the matrix in every mode, as before.
+
+Images drawn with =grl_image_draw_image()= always blend over with their tint, whatever the blend mode.
+
 A proper additive glow that saturates to white at the core (instead of the over-blend that an alpha stack produces):
 
 #+begin_src C

@@ -1782,6 +1782,310 @@ grl_image_clear_background (GrlImage       *self,
     ImageClearBackground (&self->handle, GRL_TO_RAYLIB_COLOR (color));
 }
 
+/*
+ * Blended raylib primitives
+ *
+ * The grl_image_draw_* wrappers below that hand straight to raylib
+ * (pixel, line, line strip, circle, rectangle, rectangle lines, rotated
+ * rectangle and the three gradients) store the source colour as is: raylib's
+ * ImageDraw* functions have no blending.  Under GRL_IMAGE_BLEND_REPLACE, and
+ * under GRL_IMAGE_BLEND_OVER with an opaque colour, that is the right
+ * answer and those calls still go straight to raylib, byte for byte as
+ * before.  Any other combination (a translucent colour under OVER, or ADD,
+ * MULTIPLY, SUBTRACT) goes through grl_image_blend_raster(): raylib
+ * rasterises the primitive into a scratch mask the size of its bounding box,
+ * and every covered pixel is then blended once through grl_image_plot(),
+ * which applies the blend mode, the blend colour space and the clip rect.
+ * Rasterising into a mask, rather than blending raylib's spans directly,
+ * keeps raylib's exact pixel coverage and blends each pixel once even where
+ * raylib draws it twice (its circle spans overlap).
+ */
+
+/* Draws a primitive into @dst, whose (0, 0) is image pixel (@ox, @oy). */
+typedef void (*GrlRasterFunc) (Image    *dst,
+                               gint      ox,
+                               gint      oy,
+                               Color     color,
+                               gpointer  data);
+
+/*
+ * grl_image_blend_needed:
+ *
+ * Whether drawing @c on @self must blend (see above) rather than store.
+ */
+static gboolean
+grl_image_blend_needed (GrlImage *self,
+                        Color     c)
+{
+    if (self->handle.format != PIXELFORMAT_UNCOMPRESSED_R8G8B8A8)
+        return FALSE;
+    if (self->blend_mode == GRL_IMAGE_BLEND_REPLACE)
+        return FALSE;
+    if (self->blend_mode == GRL_IMAGE_BLEND_OVER && c.a == 255)
+        return FALSE;
+    return TRUE;
+}
+
+/*
+ * grl_image_blend_raster:
+ * @self: the destination image (RGBA8, blend mode not REPLACE)
+ * @x0, @y0, @x1, @y1: bounding box of the primitive in image pixels
+ *   (inclusive), clipped here to the image
+ * @color: the solid colour, or %NULL when @shade draws its own colours
+ * @raster: draws the primitive's coverage
+ * @shade: (nullable): draws the primitive's colours (gradients)
+ *
+ * Rasterises the primitive into a transparent mask the size of the box,
+ * with @raster drawing in opaque white, and plots every covered pixel
+ * through grl_image_plot(): @color for a solid primitive, or the colour
+ * @shade drew at that pixel for a gradient.
+ */
+static void
+grl_image_blend_raster (GrlImage      *self,
+                        gint           x0,
+                        gint           y0,
+                        gint           x1,
+                        gint           y1,
+                        const Color   *color,
+                        GrlRasterFunc  raster,
+                        GrlRasterFunc  shade,
+                        gpointer       data)
+{
+    GrlDrawCtx ctx;
+    Color      white = { 255, 255, 255, 255 };
+    Image      mask;
+    Image      paint;
+    gint       w, h, px, py;
+
+    /* Clip the box to the image; nothing to do when it misses. */
+    if (x0 < 0) x0 = 0;
+    if (y0 < 0) y0 = 0;
+    if (x1 > self->handle.width - 1) x1 = self->handle.width - 1;
+    if (y1 > self->handle.height - 1) y1 = self->handle.height - 1;
+    if (x1 < x0 || y1 < y0)
+        return;
+    w = x1 - x0 + 1;
+    h = y1 - y0 + 1;
+
+    mask.data    = g_malloc0 ((gsize) w * (gsize) h * 4);
+    mask.width   = w;
+    mask.height  = h;
+    mask.mipmaps = 1;
+    mask.format  = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
+    raster (&mask, x0, y0, white, data);
+
+    paint.data = NULL;
+    if (shade != NULL)
+    {
+        paint = mask;
+        paint.data = g_malloc0 ((gsize) w * (gsize) h * 4);
+        shade (&paint, x0, y0, white, data);
+    }
+
+    grl_image_draw_ctx_init (self, &ctx);
+    for (py = 0; py < h; py++)
+    {
+        const guint8 *m = (const guint8 *) mask.data + (gsize) py * (gsize) w * 4;
+
+        for (px = 0; px < w; px++)
+        {
+            Color c;
+
+            if (m[px * 4 + 3] == 0)
+                continue;
+            if (shade != NULL)
+            {
+                const guint8 *q = (const guint8 *) paint.data
+                                  + ((gsize) py * (gsize) w + (gsize) px) * 4;
+
+                c.r = q[0]; c.g = q[1]; c.b = q[2]; c.a = q[3];
+            }
+            else
+                c = *color;
+            grl_image_plot (&ctx, x0 + px, y0 + py, c, 255);
+        }
+    }
+
+    g_free (paint.data);
+    g_free (mask.data);
+}
+
+/* Rasterisers for the solid primitives, each shifted by (-ox, -oy). */
+
+typedef struct
+{
+    gint x0, y0, x1, y1;
+} GrlRasterLine;
+
+static void
+grl_raster_line (Image *dst, gint ox, gint oy, Color c, gpointer data)
+{
+    GrlRasterLine *l = data;
+
+    ImageDrawLine (dst, l->x0 - ox, l->y0 - oy, l->x1 - ox, l->y1 - oy, c);
+}
+
+typedef struct
+{
+    const Vector2 *pts;
+    gint           n;
+} GrlRasterStrip;
+
+static void
+grl_raster_strip (Image *dst, gint ox, gint oy, Color c, gpointer data)
+{
+    GrlRasterStrip *st = data;
+    gint i;
+
+    for (i = 0; i + 1 < st->n; i++)
+    {
+        Vector2 a = st->pts[i];
+        Vector2 b = st->pts[i + 1];
+
+        a.x -= (gfloat) ox; a.y -= (gfloat) oy;
+        b.x -= (gfloat) ox; b.y -= (gfloat) oy;
+        ImageDrawLineV (dst, a, b, c);
+    }
+}
+
+typedef struct
+{
+    gint cx, cy, r;
+} GrlRasterCircle;
+
+static void
+grl_raster_circle (Image *dst, gint ox, gint oy, Color c, gpointer data)
+{
+    GrlRasterCircle *ci = data;
+
+    ImageDrawCircle (dst, ci->cx - ox, ci->cy - oy, ci->r, c);
+}
+
+typedef struct
+{
+    Rectangle rec;
+    gint      thick;   /* > 0: outline (ImageDrawRectangleLinesEx) */
+    Vector2   origin;
+    gfloat    rotation;
+    gboolean  pro;     /* ImageDrawRectanglePro */
+} GrlRasterRect;
+
+static void
+grl_raster_rect (Image *dst, gint ox, gint oy, Color c, gpointer data)
+{
+    GrlRasterRect *r = data;
+    Rectangle rec = r->rec;
+
+    rec.x -= (gfloat) ox;
+    rec.y -= (gfloat) oy;
+    if (r->pro)
+        ImageDrawRectanglePro (dst, rec, r->origin, r->rotation, c);
+    else if (r->thick > 0)
+        ImageDrawRectangleLinesEx (dst, rec, r->thick, c);
+    else
+        ImageDrawRectangleRec (dst, rec, c);
+}
+
+/* Gradients: the coverage pass draws white corners, the shade pass the
+ * caller's colours. */
+
+typedef struct
+{
+    Rectangle rec;
+    Color     c1, c2, c3, c4;
+} GrlRasterRectGrad;
+
+static void
+grl_raster_rect_grad_mask (Image *dst, gint ox, gint oy, Color c, gpointer data)
+{
+    GrlRasterRectGrad *g = data;
+    Rectangle rec = g->rec;
+
+    rec.x -= (gfloat) ox;
+    rec.y -= (gfloat) oy;
+    ImageDrawRectangleGradientEx (dst, rec, c, c, c, c);
+}
+
+static void
+grl_raster_rect_grad (Image *dst, gint ox, gint oy, Color c, gpointer data)
+{
+    GrlRasterRectGrad *g = data;
+    Rectangle rec = g->rec;
+
+    rec.x -= (gfloat) ox;
+    rec.y -= (gfloat) oy;
+    ImageDrawRectangleGradientEx (dst, rec, g->c1, g->c2, g->c3, g->c4);
+}
+
+typedef struct
+{
+    Vector2 center;
+    gfloat  radius;
+    Color   inner, outer;
+} GrlRasterCircleGrad;
+
+static void
+grl_raster_circle_grad_mask (Image *dst, gint ox, gint oy, Color c, gpointer data)
+{
+    GrlRasterCircleGrad *g = data;
+    Vector2 ce = { g->center.x - (gfloat) ox, g->center.y - (gfloat) oy };
+
+    ImageDrawCircleGradient (dst, ce, g->radius, c, c);
+}
+
+static void
+grl_raster_circle_grad (Image *dst, gint ox, gint oy, Color c, gpointer data)
+{
+    GrlRasterCircleGrad *g = data;
+    Vector2 ce = { g->center.x - (gfloat) ox, g->center.y - (gfloat) oy };
+
+    ImageDrawCircleGradient (dst, ce, g->radius, g->inner, g->outer);
+}
+
+typedef struct
+{
+    Vector2 v1, v2, v3;
+    Color   c1, c2, c3;
+} GrlRasterTriGrad;
+
+static void
+grl_raster_tri_grad_mask (Image *dst, gint ox, gint oy, Color c, gpointer data)
+{
+    GrlRasterTriGrad *g = data;
+    Vector2 a = { g->v1.x - (gfloat) ox, g->v1.y - (gfloat) oy };
+    Vector2 b = { g->v2.x - (gfloat) ox, g->v2.y - (gfloat) oy };
+    Vector2 d = { g->v3.x - (gfloat) ox, g->v3.y - (gfloat) oy };
+
+    ImageDrawTriangleGradient (dst, a, b, d, c, c, c);
+}
+
+static void
+grl_raster_tri_grad (Image *dst, gint ox, gint oy, Color c, gpointer data)
+{
+    GrlRasterTriGrad *g = data;
+    Vector2 a = { g->v1.x - (gfloat) ox, g->v1.y - (gfloat) oy };
+    Vector2 b = { g->v2.x - (gfloat) ox, g->v2.y - (gfloat) oy };
+    Vector2 d = { g->v3.x - (gfloat) ox, g->v3.y - (gfloat) oy };
+
+    ImageDrawTriangleGradient (dst, a, b, d, g->c1, g->c2, g->c3);
+}
+
+/* Integer bounding box of a float rectangle, widened by @pad pixels. */
+static void
+grl_rect_bounds (Rectangle  rec,
+                 gfloat     pad,
+                 gint      *x0,
+                 gint      *y0,
+                 gint      *x1,
+                 gint      *y1)
+{
+    *x0 = (gint) floorf (rec.x - pad);
+    *y0 = (gint) floorf (rec.y - pad);
+    *x1 = (gint) ceilf (rec.x + rec.width + pad);
+    *y1 = (gint) ceilf (rec.y + rec.height + pad);
+}
+
+
 /**
  * grl_image_draw_pixel:
  * @self: A #GrlImage.
@@ -1800,6 +2104,14 @@ grl_image_draw_pixel (GrlImage       *self,
     g_return_if_fail (GRL_IS_IMAGE (self));
     g_return_if_fail (color != NULL);
 
+    if (grl_image_blend_needed (self, GRL_TO_RAYLIB_COLOR (color)))
+    {
+        GrlDrawCtx ctx;
+
+        grl_image_draw_ctx_init (self, &ctx);
+        grl_image_plot (&ctx, x, y, GRL_TO_RAYLIB_COLOR (color), 255);
+        return;
+    }
     ImageDrawPixel (&self->handle, x, y, GRL_TO_RAYLIB_COLOR (color));
 }
 
@@ -1825,6 +2137,16 @@ grl_image_draw_line (GrlImage       *self,
     g_return_if_fail (GRL_IS_IMAGE (self));
     g_return_if_fail (color != NULL);
 
+    if (grl_image_blend_needed (self, GRL_TO_RAYLIB_COLOR (color)))
+    {
+        GrlRasterLine l = { start_x, start_y, end_x, end_y };
+        Color c = GRL_TO_RAYLIB_COLOR (color);
+
+        grl_image_blend_raster (self, MIN (start_x, end_x), MIN (start_y, end_y),
+                                MAX (start_x, end_x), MAX (start_y, end_y),
+                                &c, grl_raster_line, NULL, &l);
+        return;
+    }
     ImageDrawLine (&self->handle, start_x, start_y, end_x, end_y,
                    GRL_TO_RAYLIB_COLOR (color));
 }
@@ -1849,6 +2171,18 @@ grl_image_draw_circle (GrlImage       *self,
     g_return_if_fail (GRL_IS_IMAGE (self));
     g_return_if_fail (color != NULL);
 
+    if (grl_image_blend_needed (self, GRL_TO_RAYLIB_COLOR (color)))
+    {
+        GrlRasterCircle ci = { center_x, center_y, radius };
+        Color c = GRL_TO_RAYLIB_COLOR (color);
+
+        if (radius < 0)
+            return;
+        grl_image_blend_raster (self, center_x - radius, center_y - radius,
+                                center_x + radius, center_y + radius,
+                                &c, grl_raster_circle, NULL, &ci);
+        return;
+    }
     ImageDrawCircle (&self->handle, center_x, center_y, radius,
                      GRL_TO_RAYLIB_COLOR (color));
 }
@@ -1870,6 +2204,18 @@ grl_image_draw_rectangle (GrlImage           *self,
     g_return_if_fail (rect != NULL);
     g_return_if_fail (color != NULL);
 
+    if (grl_image_blend_needed (self, GRL_TO_RAYLIB_COLOR (color)))
+    {
+        GrlRasterRect r;
+        Color c = GRL_TO_RAYLIB_COLOR (color);
+        gint x0, y0, x1, y1;
+
+        memset (&r, 0, sizeof (r));
+        r.rec = GRL_TO_RAYLIB_RECTANGLE (rect);
+        grl_rect_bounds (r.rec, 1.0f, &x0, &y0, &x1, &y1);
+        grl_image_blend_raster (self, x0, y0, x1, y1, &c, grl_raster_rect, NULL, &r);
+        return;
+    }
     ImageDrawRectangleRec (&self->handle,
                            GRL_TO_RAYLIB_RECTANGLE (rect),
                            GRL_TO_RAYLIB_COLOR (color));
@@ -1894,6 +2240,21 @@ grl_image_draw_rectangle_lines (GrlImage           *self,
     g_return_if_fail (rect != NULL);
     g_return_if_fail (color != NULL);
 
+    if (grl_image_blend_needed (self, GRL_TO_RAYLIB_COLOR (color)))
+    {
+        GrlRasterRect r;
+        Color c = GRL_TO_RAYLIB_COLOR (color);
+        gint x0, y0, x1, y1;
+
+        if (thickness <= 0)
+            return;
+        memset (&r, 0, sizeof (r));
+        r.rec = GRL_TO_RAYLIB_RECTANGLE (rect);
+        r.thick = thickness;
+        grl_rect_bounds (r.rec, 1.0f, &x0, &y0, &x1, &y1);
+        grl_image_blend_raster (self, x0, y0, x1, y1, &c, grl_raster_rect, NULL, &r);
+        return;
+    }
     /* raylib 6.2 moved the (rec, thick) form to ImageDrawRectangleLinesEx() */
     ImageDrawRectangleLinesEx (&self->handle,
                                GRL_TO_RAYLIB_RECTANGLE (rect),
@@ -2350,6 +2711,23 @@ grl_image_draw_line_strip (GrlImage         *self,
     for (i = 0; i < point_count; i++)
         raw[i] = GRL_TO_RAYLIB_VECTOR2 (&points[i]);
 
+    if (grl_image_blend_needed (self, GRL_TO_RAYLIB_COLOR (color)))
+    {
+        GrlRasterStrip st = { raw, point_count };
+        Color c = GRL_TO_RAYLIB_COLOR (color);
+        gfloat lo_x = raw[0].x, lo_y = raw[0].y, hi_x = raw[0].x, hi_y = raw[0].y;
+
+        /* Shared joints are covered once in the mask, so blended once. */
+        for (i = 1; i < point_count; i++)
+        {
+            lo_x = MIN (lo_x, raw[i].x); hi_x = MAX (hi_x, raw[i].x);
+            lo_y = MIN (lo_y, raw[i].y); hi_y = MAX (hi_y, raw[i].y);
+        }
+        grl_image_blend_raster (self, (gint) floorf (lo_x) - 1, (gint) floorf (lo_y) - 1,
+                                (gint) ceilf (hi_x) + 1, (gint) ceilf (hi_y) + 1,
+                                &c, grl_raster_strip, NULL, &st);
+        return;
+    }
     ImageDrawLineStrip (&self->handle, raw, point_count, GRL_TO_RAYLIB_COLOR (color));
 }
 
@@ -2383,6 +2761,27 @@ grl_image_draw_rectangle_pro (GrlImage           *self,
     else
         org = (Vector2){ 0.0f, 0.0f };
 
+    if (grl_image_blend_needed (self, GRL_TO_RAYLIB_COLOR (color)))
+    {
+        GrlRasterRect r;
+        Color c = GRL_TO_RAYLIB_COLOR (color);
+        gfloat reach;
+        gfloat ox, oy;
+
+        memset (&r, 0, sizeof (r));
+        r.rec = GRL_TO_RAYLIB_RECTANGLE (rect);
+        r.origin = org;
+        r.rotation = rotation;
+        r.pro = TRUE;
+        /* Any rotation stays within the rectangle's reach of its pivot. */
+        ox = r.rec.x + org.x;
+        oy = r.rec.y + org.y;
+        reach = fabsf (org.x) + fabsf (org.y) + r.rec.width + r.rec.height + 2.0f;
+        grl_image_blend_raster (self, (gint) floorf (ox - reach), (gint) floorf (oy - reach),
+                                (gint) ceilf (ox + reach), (gint) ceilf (oy + reach),
+                                &c, grl_raster_rect, NULL, &r);
+        return;
+    }
     ImageDrawRectanglePro (&self->handle, GRL_TO_RAYLIB_RECTANGLE (rect), org,
                            rotation, GRL_TO_RAYLIB_COLOR (color));
 }
@@ -2415,6 +2814,25 @@ grl_image_draw_rectangle_gradient_ex (GrlImage           *self,
     g_return_if_fail (top_right != NULL);
     g_return_if_fail (bottom_right != NULL);
 
+    if (self->handle.format == PIXELFORMAT_UNCOMPRESSED_R8G8B8A8
+        && self->blend_mode != GRL_IMAGE_BLEND_REPLACE
+        && !(self->blend_mode == GRL_IMAGE_BLEND_OVER
+             && top_left->a == 255 && bottom_left->a == 255
+             && top_right->a == 255 && bottom_right->a == 255))
+    {
+        GrlRasterRectGrad g;
+        gint x0, y0, x1, y1;
+
+        g.rec = GRL_TO_RAYLIB_RECTANGLE (rect);
+        g.c1 = GRL_TO_RAYLIB_COLOR (top_left);
+        g.c2 = GRL_TO_RAYLIB_COLOR (bottom_left);
+        g.c3 = GRL_TO_RAYLIB_COLOR (bottom_right);
+        g.c4 = GRL_TO_RAYLIB_COLOR (top_right);
+        grl_rect_bounds (g.rec, 1.0f, &x0, &y0, &x1, &y1);
+        grl_image_blend_raster (self, x0, y0, x1, y1, NULL,
+                                grl_raster_rect_grad_mask, grl_raster_rect_grad, &g);
+        return;
+    }
     /* raylib's corners run counter-clockwise from the top left */
     ImageDrawRectangleGradientEx (&self->handle, GRL_TO_RAYLIB_RECTANGLE (rect),
                                   GRL_TO_RAYLIB_COLOR (top_left),
@@ -2447,6 +2865,25 @@ grl_image_draw_circle_gradient (GrlImage         *self,
     g_return_if_fail (inner != NULL);
     g_return_if_fail (outer != NULL);
 
+    if (self->handle.format == PIXELFORMAT_UNCOMPRESSED_R8G8B8A8
+        && self->blend_mode != GRL_IMAGE_BLEND_REPLACE
+        && !(self->blend_mode == GRL_IMAGE_BLEND_OVER
+             && inner->a == 255 && outer->a == 255))
+    {
+        GrlRasterCircleGrad g;
+
+        g.center = GRL_TO_RAYLIB_VECTOR2 (center);
+        g.radius = radius;
+        g.inner  = GRL_TO_RAYLIB_COLOR (inner);
+        g.outer  = GRL_TO_RAYLIB_COLOR (outer);
+        grl_image_blend_raster (self,
+                                (gint) floorf (g.center.x - radius) - 1,
+                                (gint) floorf (g.center.y - radius) - 1,
+                                (gint) ceilf (g.center.x + radius) + 1,
+                                (gint) ceilf (g.center.y + radius) + 1, NULL,
+                                grl_raster_circle_grad_mask, grl_raster_circle_grad, &g);
+        return;
+    }
     ImageDrawCircleGradient (&self->handle, GRL_TO_RAYLIB_VECTOR2 (center), radius,
                              GRL_TO_RAYLIB_COLOR (inner), GRL_TO_RAYLIB_COLOR (outer));
 }
@@ -2478,6 +2915,27 @@ grl_image_draw_triangle_gradient (GrlImage         *self,
     g_return_if_fail (v1 != NULL && v2 != NULL && v3 != NULL);
     g_return_if_fail (c1 != NULL && c2 != NULL && c3 != NULL);
 
+    if (self->handle.format == PIXELFORMAT_UNCOMPRESSED_R8G8B8A8
+        && self->blend_mode != GRL_IMAGE_BLEND_REPLACE
+        && !(self->blend_mode == GRL_IMAGE_BLEND_OVER
+             && c1->a == 255 && c2->a == 255 && c3->a == 255))
+    {
+        GrlRasterTriGrad g;
+
+        g.v1 = GRL_TO_RAYLIB_VECTOR2 (v1);
+        g.v2 = GRL_TO_RAYLIB_VECTOR2 (v2);
+        g.v3 = GRL_TO_RAYLIB_VECTOR2 (v3);
+        g.c1 = GRL_TO_RAYLIB_COLOR (c1);
+        g.c2 = GRL_TO_RAYLIB_COLOR (c2);
+        g.c3 = GRL_TO_RAYLIB_COLOR (c3);
+        grl_image_blend_raster (self,
+                                (gint) floorf (MIN (g.v1.x, MIN (g.v2.x, g.v3.x))) - 1,
+                                (gint) floorf (MIN (g.v1.y, MIN (g.v2.y, g.v3.y))) - 1,
+                                (gint) ceilf (MAX (g.v1.x, MAX (g.v2.x, g.v3.x))) + 1,
+                                (gint) ceilf (MAX (g.v1.y, MAX (g.v2.y, g.v3.y))) + 1, NULL,
+                                grl_raster_tri_grad_mask, grl_raster_tri_grad, &g);
+        return;
+    }
     ImageDrawTriangleGradient (&self->handle,
                                GRL_TO_RAYLIB_VECTOR2 (v1),
                                GRL_TO_RAYLIB_VECTOR2 (v2),
@@ -3897,7 +4355,17 @@ grl_image_flood_fill (GrlImage       *self,
  * @self: A #GrlImage.
  * @mode: The blend mode to use for subsequent drawing.
  *
- * Sets the blend mode applied by every grl_image_draw_* primitive.
+ * Sets the blend mode applied by every grl_image_draw_* primitive.  This
+ * includes the plain primitives that raylib rasterises (pixel, line, line
+ * strip, circle, rectangle, rectangle lines, rotated rectangle and the
+ * rectangle, circle and triangle gradients): since 0.13.2 a translucent
+ * colour under %GRL_IMAGE_BLEND_OVER, or any colour under the other blend
+ * modes, blends each covered pixel once, and honours the clip rect and the
+ * blend colour space, as the other primitives always have.  Those
+ * primitives still ignore the transform matrix.  (Before 0.13.2 they
+ * stored the colour, alpha and all, under every mode.)  Images and image
+ * sprites drawn with grl_image_draw_image() always blend over with their
+ * tint, whatever the mode.
  *
  * The default, %GRL_IMAGE_BLEND_REPLACE, overwrites destination pixels and is
  * byte-identical to drawing with no blend mode set. Other modes blend the

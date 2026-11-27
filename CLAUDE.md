@@ -611,8 +611,12 @@ context, so it works headless (asset bakers, tests, CLI tools).
   per-image blend mode (`GrlImageBlendMode`), clip rectangle and anti-alias flag.
   Default blend mode is `GRL_IMAGE_BLEND_REPLACE` (== legacy overwrite). Real
   blending requires `R8G8B8A8`; other formats fall back to REPLACE.
-- The basic raylib-backed wrappers (`grl_image_draw_pixel/line/circle/rectangle`)
-  remain overwrite-only and are unchanged.
+- The basic raylib-backed wrappers (`grl_image_draw_pixel/line/line_strip/
+  circle/rectangle/rectangle_lines/rectangle_pro` and the three raylib
+  gradients) blend too since 0.13.2: REPLACE and opaque OVER still call raylib
+  directly (byte-identical), anything else rasterises into a coverage mask and
+  plots each covered pixel once through `grl_image_plot`. They still ignore the
+  transform matrix.
 - **Animated GIF**: `GrlGifWriter` (`src/graphics/grl-gif-writer.c`) is a
   self-contained, in-tree GIF89a encoder (uncompressed LZW + web-safe palette).
   No external/vendored encoder.
